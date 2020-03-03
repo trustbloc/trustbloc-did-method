@@ -36,8 +36,8 @@ did-method-rest:
 	@cd cmd/did-method-rest && go build -o ../../.build/bin/did-method main.go
 
 
-.PHONY: rp-rest-docker
-rp-rest-docker:
+.PHONY: did-method-rest-docker
+did-method-rest-docker:
 	@echo "Building did method docker image"
 	@docker build -f ./images/did-method-rest/Dockerfile --no-cache -t $(DOCKER_OUTPUT_NS)/$(DID_METHOD_REST_IMAGE_NAME):latest \
 	--build-arg GO_VER=$(GO_VER) \

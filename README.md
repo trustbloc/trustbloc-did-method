@@ -2,7 +2,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://raw.githubusercontent.com/trustbloc/bloc-did-method/master/LICENSE)
 [![Godocs](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/trustbloc/bloc-did-method)
 
-[![Build Status](https://dev.azure.com/trustbloc/edge/_apis/build/status/trustbloc.bloc-did-method?branchName=master)](https://dev.azure.com/trustbloc/edge/_build/latest?definitionId=27&branchName=master)
+[![Build Status](https://dev.azure.com/trustbloc/edge/_apis/build/status/trustbloc.bloc-did-method?branchName=master)](https://dev.azure.com/trustbloc/edge/_build/latest?definitionId=38&branchName=master)
 [![codecov](https://codecov.io/gh/trustbloc/bloc-did-method/branch/master/graph/badge.svg)](https://codecov.io/gh/trustbloc/bloc-did-method)
 [![Go Report Card](https://goreportcard.com/badge/github.com/trustbloc/bloc-did-method)](https://goreportcard.com/report/github.com/trustbloc/bloc-did-method)
 
