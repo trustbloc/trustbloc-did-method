@@ -7,6 +7,8 @@ module github.com/trustbloc/bloc-did-method
 go 1.13
 
 require (
+	github.com/hyperledger/aries-framework-go v0.1.2
 	github.com/spf13/cobra v0.0.6
 	github.com/stretchr/testify v1.4.0
+	github.com/trustbloc/sidetree-core-go v0.1.2
 )
