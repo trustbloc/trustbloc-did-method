@@ -40,31 +40,21 @@ This file contains the current consortium configuration, according to this parti
 `history`: contains the history database.
 
 ##### Consortium Config Files
-A consortium config file is a concatenated JSON file:
-The first element is a JSON object containing:
+A consortium config file is a JWS, signed by the stakeholders, with the payload being a JSON object containing:
   - The domain name of the consortium
   - Consortium policy configuration settings
   - A list of stakeholders - containing, for each stakeholder:
     - The web domain where its configuration can be found
     - The did:bloc DID of the stakeholder, with the associated DID doc in Sidetree on the consortium ledger
   - The hash of the previous version of this config file
-After that, in order:
-  - A list of detached JWS signatures, from the stakeholders, on the config file
-  - A list of cached copies of the stakeholder config files
 
 ###### Consortium Endorsement Signatures
-Stakeholders endorse the contents of a consortium configuration file by signing the contents.
-
-First the file has appended data removed.
-- The signatures array is removed
-- The stakeholder config cache is removed
-
-Verification: The signatures array must be removed from the config file and the config file must be canonicalized before the signatures are verified against the file.
+Stakeholders endorse a consortium configuration file using JWS multi-signature - they sign the JWS payload, with the consortium adding their signatures to the JWS.
 
 ##### Stakeholder Config Files
 Each of these files is named `[domain].json`, where `[domain]` is the URL domain, owned by the stakeholder organization, where you can find the canonical copy of the stakeholder's configuration.
 
-A stakeholder configuration file contains:
+A stakeholder's config file is a JWS, signed by the stakeholder, with the payload being a JSON object containing:
 - The stakeholder's domain
 - The stakeholder's DID (did:bloc)
   - TODO: also include a did:web DID doc? Same DID, same verkeys, used for bootstrapping.
