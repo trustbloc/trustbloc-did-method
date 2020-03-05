@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 package staticdiscovery
 
 import (
+	"fmt"
+
 	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/endpoint"
 )
 
@@ -22,5 +24,5 @@ func NewService() *DiscoveryService {
 func (ds *DiscoveryService) GetEndpoints(domain string) ([]*endpoint.Endpoint, error) {
 	// TODO add logic to discover endpoints
 	// For now we just return domain as endpoint !!! need to be removed after adding discovery logic
-	return []*endpoint.Endpoint{{URL: domain}}, nil
+	return []*endpoint.Endpoint{{URL: fmt.Sprintf("http://%s/document", domain)}}, nil
 }

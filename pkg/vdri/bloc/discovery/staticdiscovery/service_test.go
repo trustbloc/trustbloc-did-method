@@ -17,6 +17,6 @@ func TestDiscoveryService_GetEndpoints(t *testing.T) {
 		endpoints, err := s.GetEndpoints("domain")
 		require.NoError(t, err)
 		require.Len(t, endpoints, 1)
-		require.Equal(t, "domain", endpoints[0].URL)
+		require.Equal(t, "http://domain/document", endpoints[0].URL)
 	})
 }

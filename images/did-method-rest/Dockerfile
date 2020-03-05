@@ -24,6 +24,6 @@ RUN make did-method-rest
 
 
 FROM alpine:${ALPINE_VER} as base
-COPY --from=bloc-did-method /opt/workspace/bloc-did-method/.build/bin /usr/local/bin
+COPY --from=bloc-did-method /opt/workspace/bloc-did-method/.build/bin/did-method /usr/local/bin
 WORKDIR /usr/local/bin
-ENTRYPOINT ["did-method-rest"]
+ENTRYPOINT ["did-method"]

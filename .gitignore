@@ -26,3 +26,5 @@ vendor
 coverage.txt
 
 .build
+*.log
+test/bdd/fixtures/keys/tls
