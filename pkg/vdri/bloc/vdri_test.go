@@ -21,32 +21,27 @@ import (
 
 func TestVDRI_Accept(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
-		v, err := New()
-		require.NoError(t, err)
+		v := New()
 		require.True(t, v.Accept("bloc"))
 	})
 
 	t.Run("test return false", func(t *testing.T) {
-		v, err := New()
-		require.NoError(t, err)
+		v := New()
 		require.False(t, v.Accept("bloc1"))
 	})
 }
 
 func TestVDRI_Store(t *testing.T) {
 	t.Run("test error", func(t *testing.T) {
-		v, err := New()
+		v := New()
+		err := v.Store(nil, nil)
 		require.NoError(t, err)
-		err = v.Store(nil, nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "store not supported in bloc vdri")
 	})
 }
 
 func TestVDRI_Build(t *testing.T) {
 	t.Run("test domain is empty", func(t *testing.T) {
-		v, err := New()
-		require.NoError(t, err)
+		v := New()
 
 		doc, err := v.Build(nil)
 		require.Error(t, err)
@@ -55,8 +50,7 @@ func TestVDRI_Build(t *testing.T) {
 	})
 
 	t.Run("test error from get endpoints", func(t *testing.T) {
-		v, err := New(WithDomain("testnet"))
-		require.NoError(t, err)
+		v := New(WithDomain("testnet"))
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -94,8 +88,7 @@ func TestVDRI_Build(t *testing.T) {
 	})
 
 	t.Run("test error from get http vdri", func(t *testing.T) {
-		v, err := New(WithDomain("testnet"))
-		require.NoError(t, err)
+		v := New(WithDomain("testnet"))
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -113,8 +106,7 @@ func TestVDRI_Build(t *testing.T) {
 	})
 
 	t.Run("test error from http vdri build", func(t *testing.T) {
-		v, err := New(WithDomain("testnet"))
-		require.NoError(t, err)
+		v := New(WithDomain("testnet"))
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -135,8 +127,7 @@ func TestVDRI_Build(t *testing.T) {
 	})
 
 	t.Run("test success", func(t *testing.T) {
-		v, err := New(WithDomain("testnet"))
-		require.NoError(t, err)
+		v := New(WithDomain("testnet"))
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -158,8 +149,7 @@ func TestVDRI_Build(t *testing.T) {
 
 func TestVDRI_Read(t *testing.T) {
 	t.Run("test error from get http vdri for resolver url", func(t *testing.T) {
-		v, err := New(WithResolverURL("url"))
-		require.NoError(t, err)
+		v := New(WithResolverURL("url"))
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
 			return nil, fmt.Errorf("get http vdri error")
@@ -172,8 +162,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error from http vdri build for resolver url", func(t *testing.T) {
-		v, err := New(WithResolverURL("url"))
-		require.NoError(t, err)
+		v := New(WithResolverURL("url"))
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
 			return &mockvdri.MockVDRI{
@@ -189,8 +178,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test success for resolver url", func(t *testing.T) {
-		v, err := New(WithResolverURL("url"))
-		require.NoError(t, err)
+		v := New(WithResolverURL("url"))
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
 			return &mockvdri.MockVDRI{
@@ -205,8 +193,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error parsing did", func(t *testing.T) {
-		v, err := New()
-		require.NoError(t, err)
+		v := New()
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
 			return nil, nil
@@ -219,8 +206,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error from get endpoints", func(t *testing.T) {
-		v, err := New()
-		require.NoError(t, err)
+		v := New()
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -234,8 +220,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error from get http vdri", func(t *testing.T) {
-		v, err := New()
-		require.NoError(t, err)
+		v := New()
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -253,8 +238,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error from http vdri read", func(t *testing.T) {
-		v, err := New()
-		require.NoError(t, err)
+		v := New()
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -275,8 +259,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test success", func(t *testing.T) {
-		v, err := New()
-		require.NoError(t, err)
+		v := New()
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -302,4 +285,9 @@ func TestVDRI_BuildSideTreeRequest(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, r)
 	})
+}
+
+func TestVDRI_Close(t *testing.T) {
+	v := New()
+	require.NoError(t, v.Close())
 }

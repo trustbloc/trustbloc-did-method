@@ -1,0 +1,23 @@
+
+#
+# SecureKey Technologies Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+version: '3'
+
+services:
+
+  uni-resolver-web:
+    image: universalresolver/uni-resolver-web:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.json:/opt/uni-resolver-java/uni-resolver-web/config.json
+    networks:
+      - did-method-rest_bdd_net
+
+networks:
+  did-method-rest_bdd_net:
+    external: true

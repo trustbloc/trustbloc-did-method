@@ -1,0 +1,24 @@
+
+#
+# Copyright SecureKey Technologies Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+version: '2'
+
+services:
+
+  bloc.did.method.example.com:
+    container_name: bloc.did.method.example.com
+    image: docker.pkg.github.com/trustbloc/bloc-did-method/did-method-rest:latest
+    environment:
+      - DID_METHOD_HOST_URL=0.0.0.0:8070
+    ports:
+      - 8070:8070
+    command: start
+    networks:
+      - bdd_net
+
+networks:
+  bdd_net:
+    driver: bridge

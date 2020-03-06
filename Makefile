@@ -29,6 +29,10 @@ license:
 unit-test:
 	@scripts/check_unit.sh
 
+.PHONY: bdd-test
+bdd-test: did-method-rest-docker generate-test-keys
+	@scripts/check_integration.sh
+
 .PHONY: did-method-rest
 did-method-rest:
 	@echo "Building did-method-rest"
@@ -44,6 +48,14 @@ did-method-rest-docker:
 	--build-arg ALPINE_VER=$(ALPINE_VER) .
 
 
+.PHONY: generate-test-keys
+generate-test-keys: clean
+	@mkdir -p -p test/bdd/fixtures/keys/tls
+	@docker run -i --rm \
+		-v $(abspath .):/opt/workspace/bloc-did-method \
+		--entrypoint "/opt/workspace/bloc-did-method/scripts/generate_test_keys.sh" \
+		frapsoft/openssl
+
 .PHONY: clean
 clean: clean-build
 
@@ -51,3 +63,4 @@ clean: clean-build
 clean-build:
 	@rm -Rf ./.build
 	@rm -Rf ./coverage.txt
+	@rm -Rf ./test/bdd/fixtures/keys/tls

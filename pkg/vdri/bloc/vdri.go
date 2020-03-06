@@ -63,7 +63,7 @@ type createPayloadSchema struct {
 }
 
 // New creates new bloc vdri
-func New(opts ...Option) (*VDRI, error) {
+func New(opts ...Option) *VDRI {
 	vdri := &VDRI{discovery: staticdiscovery.NewService(), selection: staticselection.NewService(),
 		getHTTPVDRI: func(url string) (vdri, error) {
 			return httpbinding.New(url)
@@ -73,7 +73,7 @@ func New(opts ...Option) (*VDRI, error) {
 		opt(vdri)
 	}
 
-	return vdri, nil
+	return vdri
 }
 
 // Accept did method
@@ -81,9 +81,14 @@ func (v *VDRI) Accept(method string) bool {
 	return method == "bloc"
 }
 
+// Close vdri
+func (v *VDRI) Close() error {
+	return nil
+}
+
 // Store did doc
 func (v *VDRI) Store(doc *docdid.Doc, by *[]vdriapi.ModifiedBy) error {
-	return errors.New("store not supported in bloc vdri")
+	return nil
 }
 func (v *VDRI) getEndpoints(domain string) ([]*endpoint.Endpoint, error) {
 	endpoints, err := v.discovery.GetEndpoints(domain)
@@ -150,7 +155,7 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 		return nil, fmt.Errorf("wrong did %s", did)
 	}
 
-	endpoints, err := v.getEndpoints(v.domain)
+	endpoints, err := v.getEndpoints(didParts[2])
 	if err != nil {
 		return nil, fmt.Errorf("failed to get endpoints: %w", err)
 	}
