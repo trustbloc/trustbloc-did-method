@@ -30,7 +30,7 @@ unit-test:
 	@scripts/check_unit.sh
 
 .PHONY: bdd-test
-bdd-test: did-method-rest-docker generate-test-keys
+bdd-test: generate-test-config did-method-rest-docker generate-test-keys
 	@scripts/check_integration.sh
 
 .PHONY: did-method-rest
@@ -47,6 +47,9 @@ did-method-rest-docker:
 	--build-arg GO_VER=$(GO_VER) \
 	--build-arg ALPINE_VER=$(ALPINE_VER) .
 
+.PHONY: generate-test-config
+generate-test-config:
+	@scripts/generate_test_config.sh
 
 .PHONY: generate-test-keys
 generate-test-keys: clean

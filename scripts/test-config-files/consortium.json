@@ -1,0 +1,18 @@
+{
+  "domain": "consortium",
+  "did": "did:bloc:testnet.trustbloc.local:zQ1234567890987654321",
+  "policy": {
+    "cache": {"max-age": 123456789}
+  },
+  "stakeholders": [
+    {
+      "domain": "stakeholder.one",
+      "url": "testnet.trustbloc.local"
+    },
+    {
+      "domain": "stakeholder.two",
+      "url": "testnet.trustbloc.local"
+    }
+  ],
+  "previous": ""
+}

@@ -26,7 +26,7 @@ func NewService() *DiscoveryService {
 
 // GetEndpoints discover endpoints from domain
 func (ds *DiscoveryService) GetEndpoints(domain string) ([]*endpoint.Endpoint, error) {
-	configData, err := ds.getConsortium(domain, domain)
+	configData, err := ds.getConsortium(domain, "consortium")
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ const consortiumURLSuffix = ".json"
 func configURL(urlDomain, consortiumDomain string) string {
 	prefix := ""
 	if !strings.HasPrefix(urlDomain, "http://") && !strings.HasPrefix(urlDomain, "https://") {
-		prefix = "https://"
+		prefix = "http://"
 	}
 
 	return prefix + urlDomain + consortiumURLInfix + consortiumDomain + consortiumURLSuffix

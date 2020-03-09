@@ -28,3 +28,4 @@ coverage.txt
 .build
 *.log
 test/bdd/fixtures/keys/tls
+test/bdd/fixtures/well-known-server/config

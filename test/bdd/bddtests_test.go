@@ -49,7 +49,8 @@ func TestMain(m *testing.M) {
 func runBDDTests(tags, format string) int {
 	return godog.RunWithOptions("godogs", func(s *godog.Suite) {
 		var composition []*dockerutil.Composition
-		var composeFiles = []string{"./fixtures/did-method-rest", "./fixtures/universalresolver", "./fixtures/sidetree-mock"}
+		var composeFiles = []string{"./fixtures/did-method-rest", "./fixtures/universalresolver",
+			"./fixtures/sidetree-mock", "./fixtures/well-known-server"}
 		s.BeforeSuite(func() {
 			if os.Getenv("DISABLE_COMPOSITION") != "true" {
 				// Need a unique name, but docker does not allow '-' in names

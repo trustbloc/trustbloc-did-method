@@ -18,3 +18,10 @@ services:
       - "80:80"
     volumes:
       - ./config:/web/.well-known/did-bloc
+    networks:
+      - did-method-rest_bdd_net
+
+networks:
+  did-method-rest_bdd_net:
+    external: true
+
