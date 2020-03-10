@@ -10,6 +10,9 @@
 
 This repo defines the bloc DID method, which is described [in the spec](/docs/overview/bloc-did-method.md).
 
+## Build
+To build from source see [here](/docs/build.md).
+
 ## Contributing
 Thank you for your interest in contributing. Please see our [community contribution guidelines](https://github.com/trustbloc/community/blob/master/CONTRIBUTING.md) for more information.
 
