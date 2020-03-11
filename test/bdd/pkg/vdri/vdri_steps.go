@@ -17,8 +17,8 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	"github.com/hyperledger/aries-framework-go/pkg/storage"
 	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
-	vdripkg "github.com/hyperledger/aries-framework-go/pkg/vdri"
 
+	didclient "github.com/trustbloc/bloc-did-method/pkg/did"
 	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc"
 	"github.com/trustbloc/bloc-did-method/test/bdd/pkg/context"
 )
@@ -45,21 +45,14 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 }
 
 func (e *Steps) createDIDBloc(domain string) error {
-	blocVDRI := bloc.New(bloc.WithDomain(domain))
-
 	kms, err := createKMS(mem.NewProvider())
 	if err != nil {
 		return err
 	}
 
-	vdriProvider, err := ariescontext.New(ariescontext.WithLegacyKMS(kms))
-	if err != nil {
-		return fmt.Errorf("failed to create new vdri provider: %w", err)
-	}
+	c := didclient.New(kms)
 
-	vdri := vdripkg.New(vdriProvider, vdripkg.WithVDRI(blocVDRI))
-	doc, err := vdri.Create("bloc")
-
+	doc, err := c.CreateDID(domain)
 	if err != nil {
 		return err
 	}
