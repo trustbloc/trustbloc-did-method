@@ -40,110 +40,11 @@ func TestVDRI_Store(t *testing.T) {
 }
 
 func TestVDRI_Build(t *testing.T) {
-	t.Run("test domain is empty", func(t *testing.T) {
+	t.Run("test error", func(t *testing.T) {
 		v := New()
-
-		doc, err := v.Build(nil)
+		_, err := v.Build(nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "domain is empty")
-		require.Nil(t, doc)
-	})
-
-	t.Run("test error from get endpoints", func(t *testing.T) {
-		v := New(WithDomain("testnet"))
-
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return nil, fmt.Errorf("discover error")
-			}}
-
-		doc, err := v.Build(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "discover error")
-		require.Nil(t, doc)
-
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return nil, nil
-			}}
-		v.selection = &mockselection.MockSelectionService{
-			SelectEndpointsFunc: func(endpoint []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
-				return nil, fmt.Errorf("select error")
-			}}
-
-		doc, err = v.Build(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "select error")
-		require.Nil(t, doc)
-
-		v.selection = &mockselection.MockSelectionService{
-			SelectEndpointsFunc: func(endpoint []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
-				return nil, nil
-			}}
-
-		doc, err = v.Build(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "list of endpoints is empty")
-		require.Nil(t, doc)
-	})
-
-	t.Run("test error from get http vdri", func(t *testing.T) {
-		v := New(WithDomain("testnet"))
-
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}}, nil
-			}}
-
-		v.getHTTPVDRI = func(url string) (v vdri, err error) {
-			return nil, fmt.Errorf("get http vdri error")
-		}
-
-		doc, err := v.Build(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "get http vdri error")
-		require.Nil(t, doc)
-	})
-
-	t.Run("test error from http vdri build", func(t *testing.T) {
-		v := New(WithDomain("testnet"))
-
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}}, nil
-			}}
-
-		v.getHTTPVDRI = func(url string) (v vdri, err error) {
-			return &mockvdri.MockVDRI{
-				BuildFunc: func(pubKey *vdriapi.PubKey, opts ...vdriapi.DocOpts) (doc *did.Doc, err error) {
-					return nil, fmt.Errorf("build error")
-				}}, nil
-		}
-
-		doc, err := v.Build(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "build error")
-		require.Nil(t, doc)
-	})
-
-	t.Run("test success", func(t *testing.T) {
-		v := New(WithDomain("testnet"))
-
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}}, nil
-			}}
-
-		v.getHTTPVDRI = func(url string) (v vdri, err error) {
-			return &mockvdri.MockVDRI{
-				BuildFunc: func(pubKey *vdriapi.PubKey, opts ...vdriapi.DocOpts) (doc *did.Doc, err error) {
-					return &did.Doc{ID: "did"}, nil
-				}}, nil
-		}
-
-		doc, err := v.Build(nil)
-		require.NoError(t, err)
-		require.Equal(t, "did", doc.ID)
+		require.Contains(t, err.Error(), "build method not supported for did bloc")
 	})
 }
 
@@ -217,6 +118,30 @@ func TestVDRI_Read(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "discover error")
 		require.Nil(t, doc)
+
+		v.discovery = &mockdiscovery.MockDiscoveryService{
+			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+				return nil, nil
+			}}
+		v.selection = &mockselection.MockSelectionService{
+			SelectEndpointsFunc: func(endpoint []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
+				return nil, fmt.Errorf("select error")
+			}}
+
+		doc, err = v.Read("did:bloc:testnet:123")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "select error")
+		require.Nil(t, doc)
+
+		v.selection = &mockselection.MockSelectionService{
+			SelectEndpointsFunc: func(endpoint []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
+				return nil, nil
+			}}
+
+		doc, err = v.Read("did:bloc:testnet:123")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "list of endpoints is empty")
+		require.Nil(t, doc)
 	})
 
 	t.Run("test error from get http vdri", func(t *testing.T) {
@@ -276,14 +201,6 @@ func TestVDRI_Read(t *testing.T) {
 		doc, err := v.Read("did:bloc:testnet:123")
 		require.NoError(t, err)
 		require.Equal(t, "did:bloc:testnet:123", doc.ID)
-	})
-}
-
-func TestVDRI_BuildSideTreeRequest(t *testing.T) {
-	t.Run("test success", func(t *testing.T) {
-		r, err := buildSideTreeRequest([]byte("doc"))
-		require.NoError(t, err)
-		require.NotNil(t, r)
 	})
 }
 
