@@ -1,4 +1,4 @@
-# Bloc-DID-Method - Build
+# TrustBloc-DID-Method - Build
 
 ## Prerequisites
 - Go 1.13

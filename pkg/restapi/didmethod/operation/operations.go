@@ -12,8 +12,8 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/trustbloc/bloc-did-method/pkg/internal/common/support"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 )
 
 const (

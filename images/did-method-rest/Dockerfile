@@ -15,15 +15,15 @@ RUN apk add --no-cache \
 	libtool \
 	bash \
 	make;
-ADD . /opt/workspace/bloc-did-method
-WORKDIR /opt/workspace/bloc-did-method
+ADD . /opt/workspace/trustbloc-did-method
+WORKDIR /opt/workspace/trustbloc-did-method
 ENV EXECUTABLES go git
 
-FROM golang as bloc-did-method
+FROM golang as trustbloc-did-method
 RUN make did-method-rest
 
 
 FROM alpine:${ALPINE_VER} as base
-COPY --from=bloc-did-method /opt/workspace/bloc-did-method/.build/bin/did-method /usr/local/bin
+COPY --from=trustbloc-did-method /opt/workspace/trustbloc-did-method/.build/bin/did-method /usr/local/bin
 WORKDIR /usr/local/bin
 ENTRYPOINT ["did-method"]

@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 
-	"github.com/trustbloc/bloc-did-method/pkg/restapi/didmethod"
-	cmdutils "github.com/trustbloc/bloc-did-method/pkg/utils/cmd"
+	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod"
+	cmdutils "github.com/trustbloc/trustbloc-did-method/pkg/utils/cmd"
 )
 
 const (

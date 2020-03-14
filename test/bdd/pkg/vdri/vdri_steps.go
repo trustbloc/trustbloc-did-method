@@ -18,9 +18,9 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/storage"
 	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
 
-	didclient "github.com/trustbloc/bloc-did-method/pkg/did"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc"
-	"github.com/trustbloc/bloc-did-method/test/bdd/pkg/context"
+	didclient "github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
+	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
 )
 
 const (

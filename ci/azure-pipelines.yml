@@ -76,8 +76,8 @@ jobs:
           source ci/version_var.sh
           echo $DOCKER_PASSWORD | docker login docker.pkg.github.com --username $DOCKER_USER --password-stdin
           make did-method-rest-docker
-          docker tag docker.pkg.github.com/trustbloc/bloc-did-method/did-method-rest:latest docker.pkg.github.com/trustbloc/bloc-did-method/did-method-rest:$BLOC_DID_METHOD_TAG
-          docker push docker.pkg.github.com/trustbloc/bloc-did-method/did-method-rest:$BLOC_DID_METHOD_TAG
+          docker tag docker.pkg.github.com/trustbloc/trustbloc-did-method/did-method-rest:latest docker.pkg.github.com/trustbloc/trustbloc-did-method/did-method-rest:$BLOC_DID_METHOD_TAG
+          docker push docker.pkg.github.com/trustbloc/trustbloc-did-method/did-method-rest:$BLOC_DID_METHOD_TAG
         env:
           DOCKER_USER: $(DOCKER_USER)
           DOCKER_PASSWORD: $(DOCKER_PASSWORD)

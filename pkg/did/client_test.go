@@ -17,9 +17,9 @@ import (
 	mocklegacykms "github.com/hyperledger/aries-framework-go/pkg/mock/kms/legacykms"
 	"github.com/stretchr/testify/require"
 
-	mockdiscovery "github.com/trustbloc/bloc-did-method/pkg/internal/mock/discovery"
-	mockselection "github.com/trustbloc/bloc-did-method/pkg/internal/mock/selection"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
+	mockdiscovery "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/discovery"
+	mockselection "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/selection"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
 )
 
 func TestVDRI_Build(t *testing.T) {

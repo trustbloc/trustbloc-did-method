@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/config"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
 )
 
 // DiscoveryService implements a static discovery service
