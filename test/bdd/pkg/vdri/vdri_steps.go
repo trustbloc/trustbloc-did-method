@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
 
 	didclient "github.com/trustbloc/bloc-did-method/pkg/did"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/bloc-did-method/test/bdd/pkg/context"
 )
 
@@ -40,7 +40,7 @@ func NewSteps(ctx *context.BDDContext) *Steps {
 
 // RegisterSteps registers agent steps
 func (e *Steps) RegisterSteps(s *godog.Suite) {
-	s.Step(`^Bloc DID is created from domain "([^"]*)"$`, e.createDIDBloc)
+	s.Step(`^TrustBloc DID is created from domain "([^"]*)"$`, e.createDIDBloc)
 	s.Step(`^Resolving created DID through resolver URL "([^"]*)"$`, e.resolveCreatedDID)
 }
 
@@ -63,7 +63,7 @@ func (e *Steps) createDIDBloc(domain string) error {
 }
 
 func (e *Steps) resolveCreatedDID(url string) error {
-	blocVDRI := bloc.New(bloc.WithResolverURL(url))
+	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url))
 
 	var doc *did.Doc
 

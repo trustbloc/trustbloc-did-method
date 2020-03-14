@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/endpoint"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
 )
 
 func TestSelectionService_SelectEndpoints(t *testing.T) {

@@ -1,10 +1,10 @@
-# Bloc DID Method Specification
+# TrustBloc DID Method Specification
 
-## `did:bloc` Method Specification
+## `did:trustbloc` Method Specification
 
 ### 
 
-The `did:bloc` DID method allows groups of independent organizations to share custody of a DID registry on a permissioned ledger.
+The `did:trustbloc` DID method allows groups of independent organizations to share custody of a DID registry on a permissioned ledger.
 
 Independent *stakeholder* organizations which wish to transact with one another using DIDs can come together to form a *consortium* to manage their shared custody of a ledger.
 
@@ -15,22 +15,22 @@ Definitions:
 - Consortium: a group of Stakeholder organizations which all manage DIDs with their own Sidetree nodes, all on the same ledger. A Consortium hosts the configuration files which a resolver uses when first connecting to the network.
 - Stakeholder organization (or just stakeholder): an independent organization which follows some cooperative rules with the other stakeholder organizations within the same consortium to allow them all to manage DIDs using their own Sidetree nodes on the same ledger, and allow resolvers to manage DIDs through any of the stakeholders. Stakeholders host ledger nodes, host sidetree endpoints, and sign policy changes.
 
-#### `did:bloc` DID Format
+#### `did:trustbloc` DID Format
 
 A DID for the Block DID Method has the following format:
 
-`did:bloc:[consortium domain]:[doc ID]`
+`did:trustbloc:[consortium domain]:[doc ID]`
 
 Where `[consortium domain]` is the URL hostname of the consortium (eg, `foo.example.net`) and `[doc ID]` is the document ID as used in Sidetree.
 
 #### Data Model
 
 ##### Consortium Files
-The policies of a consortium, along with information identifying the stakeholders, is stored under the consortium's domain, within `http://[consortium domain]/.well-known/did-bloc`
+The policies of a consortium, along with information identifying the stakeholders, is stored under the consortium's domain, within `http://[consortium domain]/.well-known/did-trustbloc`
 
-`.well-known/did-bloc` should have this file hierarchy:
+`.well-known/did-trustbloc` should have this file hierarchy:
 
-    .well-known/did-bloc/
+    .well-known/did-trustbloc/
         [domain].json
         history/
 
@@ -45,7 +45,7 @@ A consortium config file is a JWS, signed by the stakeholders, with the payload 
   - Consortium policy configuration settings
   - A list of stakeholders - containing, for each stakeholder:
     - The web domain where its configuration can be found
-    - The did:bloc DID of the stakeholder, with the associated DID doc in Sidetree on the consortium ledger
+    - The did:trustbloc DID of the stakeholder, with the associated DID doc in Sidetree on the consortium ledger
   - The hash of the previous version of this config file
 
 ###### Consortium Endorsement Signatures
@@ -56,7 +56,7 @@ Each of these files is named `[domain].json`, where `[domain]` is the URL domain
 
 A stakeholder's config file is a JWS, signed by the stakeholder, with the payload being a JSON object containing:
 - The stakeholder's domain
-- The stakeholder's DID (did:bloc)
+- The stakeholder's DID (did:trustbloc)
   - TODO: also include a did:web DID doc? Same DID, same verkeys, used for bootstrapping.
 - Stakeholder custom configuration settings
 - The stakeholder's Sidetree endpoints
@@ -74,7 +74,7 @@ TODO: consortium history may need to cache the stakeholder configs and verkeys -
 
 
 ##### Stakeholder Files
-    .well-known/did-bloc/
+    .well-known/did-trustbloc/
         [domain].json
         history/
 
@@ -104,9 +104,9 @@ The Bloc DID method is designed to offer several mechanisms for a resolver to co
 In each mechanism, the resolver has the option to cache verified configuration files for a period of time (the cache lifetime being specified in the configuration), and in some of these, the resolver can automatically fetch and verify updates.
 
 #### Automatic Bootstrapping
-Automatic bootstrapping relies on the assumption of trust in the owner of a web domain. In resolving a did:bloc DID, the resolver assumes the consortium domain in the DID is safe, and that the stakeholder domains within the consortium config are also safe and correct.
+Automatic bootstrapping relies on the assumption of trust in the owner of a web domain. In resolving a did:trustbloc DID, the resolver assumes the consortium domain in the DID is safe, and that the stakeholder domains within the consortium config are also safe and correct.
 
-On a first connection by a resolver to the did:bloc method, the did method provides a mechanism for the resolver to establish trust in the consortium and stakeholders.
+On a first connection by a resolver to the did:trustbloc method, the did method provides a mechanism for the resolver to establish trust in the consortium and stakeholders.
 
 A resolver can begin by assuming trust in the consortium domain contained within a bloc DID. The config found there will inform the resolver about all the stakeholder organizations within the consortium. The resolver can trust the authenticity of these stakeholders based on their domain name registration, as well as their inclusion within the consortium config. 
 
@@ -149,14 +149,14 @@ In some use cases, you might choose never to automatically update to the latest 
 When adding a stakeholder to a consortium:
  - The stakeholder is added to the underlying ledger
  - The stakeholder deploys its own ledger peers and sidetree peers
- - The stakeholder creates a `did:bloc` DID and DID doc on the ledger, using one of its sidetree endpoints.
- - The stakeholder constructs the configuration that will go in `[stakeholder domain]/.well-known/did-bloc/`, and deploys the configuration to that domain.
+ - The stakeholder creates a `did:trustbloc` DID and DID doc on the ledger, using one of its sidetree endpoints.
+ - The stakeholder constructs the configuration that will go in `[stakeholder domain]/.well-known/did-trustbloc/`, and deploys the configuration to that domain.
  - The consortium pushes an update which adds the new stakeholder to the stakeholder list. This update is signed by M of the stakeholders that were already members of the consortium - it is not signed by the new stakeholder.
  
 When removing a stakeholder from a consortium:
  - The consortium config pushes an update which removes the stakeholder from the consortium config list.
  - The stakeholder is removed from the ledger
- - Permission to change the stakeholder's did:bloc DID doc is revoked, meaning the DID doc will stay unchanged, allowing consortium history to be verified against this DID doc.
+ - Permission to change the stakeholder's did:trustbloc DID doc is revoked, meaning the DID doc will stay unchanged, allowing consortium history to be verified against this DID doc.
 
 TODO: Removals should probably require greater consent among the stakeholders than other operations.
 
@@ -165,7 +165,7 @@ TODO: Removals should probably require greater consent among the stakeholders th
 #### Finding a Sidetree Endpoint
 Most operations require the resolver to process configuration files before finding Sidetree endpoints for DID operations. This always follows the same procedure:
 
-- Given a bloc DID: `did:bloc:[domain]:[hash]`
+- Given a bloc DID: `did:trustbloc:[domain]:[hash]`
 - Check local cache for fresh config files from a previous bootstrapping.
 - If there isn't any cached consortium config that matches the DID's domain, the response depends on the configuration of the resolver - it could abort, or automatically bootstrap trust with the consortium, caching the config.
 - If, after that, there is a cached consortium config for the DID's domain, select a sidetree endpoint from a cached stakeholder and perform the sidetree operation.

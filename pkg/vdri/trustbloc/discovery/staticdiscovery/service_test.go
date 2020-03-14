@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/config"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/config"
 )
 
 func TestDiscoveryService_GetEndpoints(t *testing.T) {
@@ -263,31 +263,31 @@ func Test_configURL(t *testing.T) {
 	tests := [][2]string{ // first element is the test value, second is the correct value
 		{
 			configURL("http://foo.example.com", "foo.example.com"),
-			"http://foo.example.com/.well-known/did-bloc/foo.example.com.json",
+			"http://foo.example.com/.well-known/did-trustbloc/foo.example.com.json",
 		},
 		{ // adds http:// to the front of a domain
 			configURL("foo.example.com", "foo.example.com"),
-			"http://foo.example.com/.well-known/did-bloc/foo.example.com.json",
+			"http://foo.example.com/.well-known/did-trustbloc/foo.example.com.json",
 		},
 		{ // doesn't work with full URLs in the domain field
 			configURL("foo.example.com", "http://foo.example.com"),
-			"http://foo.example.com/.well-known/did-bloc/http://foo.example.com.json",
+			"http://foo.example.com/.well-known/did-trustbloc/http://foo.example.com.json",
 		},
 		{
 			configURL("http://foo.example.com", "bar.baz.qux"),
-			"http://foo.example.com/.well-known/did-bloc/bar.baz.qux.json",
+			"http://foo.example.com/.well-known/did-trustbloc/bar.baz.qux.json",
 		},
 		{
 			configURL("a", "b"),
-			"http://a/.well-known/did-bloc/b.json",
+			"http://a/.well-known/did-trustbloc/b.json",
 		},
 		{ // doesn't recognize urls that aren't http:// or https://
 			configURL("ws:abcdefg", "hijklmn"),
-			"http://ws:abcdefg/.well-known/did-bloc/hijklmn.json",
+			"http://ws:abcdefg/.well-known/did-trustbloc/hijklmn.json",
 		},
 		{ // doesn't work well with malformed urls
 			configURL("http:/abcdefg", "hijklmn"),
-			"http://http:/abcdefg/.well-known/did-bloc/hijklmn.json",
+			"http://http:/abcdefg/.well-known/did-trustbloc/hijklmn.json",
 		},
 	}
 

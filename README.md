@@ -6,9 +6,9 @@
 [![codecov](https://codecov.io/gh/trustbloc/bloc-did-method/branch/master/graph/badge.svg)](https://codecov.io/gh/trustbloc/bloc-did-method)
 [![Go Report Card](https://goreportcard.com/badge/github.com/trustbloc/bloc-did-method)](https://goreportcard.com/report/github.com/trustbloc/bloc-did-method)
 
-# Bloc DID Method
+# TrustBloc DID Method
 
-This repo defines the bloc DID method, which is described [in the spec](/docs/overview/bloc-did-method.md).
+This repo defines the trustbloc DID method, which is described [in the spec](/docs/overview/trustbloc-did-method.md).
 
 ## Build
 To build from source see [here](/docs/build.md).

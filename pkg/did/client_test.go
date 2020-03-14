@@ -19,7 +19,7 @@ import (
 
 	mockdiscovery "github.com/trustbloc/bloc-did-method/pkg/internal/mock/discovery"
 	mockselection "github.com/trustbloc/bloc-did-method/pkg/internal/mock/selection"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/endpoint"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
 )
 
 func TestVDRI_Build(t *testing.T) {

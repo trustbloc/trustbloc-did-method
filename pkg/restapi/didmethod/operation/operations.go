@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/trustbloc/bloc-did-method/pkg/internal/common/support"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc"
 )
 
 const (
@@ -37,7 +37,7 @@ type Operation struct {
 
 // New returns rp operation instance
 func New() *Operation {
-	svc := &Operation{blocVDRI: bloc.New()}
+	svc := &Operation{blocVDRI: trustbloc.New()}
 	svc.registerHandler()
 
 	return svc

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package staticselection
 
 import (
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/endpoint"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
 )
 
 // SelectionService implements a static selection service
