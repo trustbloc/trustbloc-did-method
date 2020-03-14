@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 package discovery
 
-import "github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
+import "github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
 
 // MockDiscoveryService implements a mock discovery service
 type MockDiscoveryService struct {

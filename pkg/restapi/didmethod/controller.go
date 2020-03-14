@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package didmethod
 
 import (
-	"github.com/trustbloc/bloc-did-method/pkg/restapi/didmethod/operation"
+	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 )
 
 // New returns new controller instance.

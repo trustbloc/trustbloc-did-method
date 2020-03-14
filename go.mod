@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-module github.com/trustbloc/bloc-did-method
+module github.com/trustbloc/trustbloc-did-method
 
 go 1.13
 

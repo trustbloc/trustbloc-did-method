@@ -5,7 +5,7 @@
 
 DOCKER_OUTPUT_NS                 ?= docker.pkg.github.com
 # Namespace for the did method image
-DID_METHOD_REST_IMAGE_NAME       ?= trustbloc/bloc-did-method/did-method-rest
+DID_METHOD_REST_IMAGE_NAME       ?= trustbloc/trustbloc-did-method/did-method-rest
 
 # Tool commands (overridable)
 ALPINE_VER ?= 3.10
@@ -55,8 +55,8 @@ generate-test-config:
 generate-test-keys: clean
 	@mkdir -p -p test/bdd/fixtures/keys/tls
 	@docker run -i --rm \
-		-v $(abspath .):/opt/workspace/bloc-did-method \
-		--entrypoint "/opt/workspace/bloc-did-method/scripts/generate_test_keys.sh" \
+		-v $(abspath .):/opt/workspace/trustbloc-did-method \
+		--entrypoint "/opt/workspace/trustbloc-did-method/scripts/generate_test_keys.sh" \
 		frapsoft/openssl
 
 .PHONY: clean

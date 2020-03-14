@@ -20,9 +20,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/selection/staticselection"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/selection/staticselection"
 )
 
 const (

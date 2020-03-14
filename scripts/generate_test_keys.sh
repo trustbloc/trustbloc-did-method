@@ -8,9 +8,9 @@
 set -e
 
 
-echo "Generating bloc-did-method Test PKI"
+echo "Generating trustbloc-did-method Test PKI"
 
-cd /opt/workspace/bloc-did-method
+cd /opt/workspace/trustbloc-did-method
 mkdir -p test/bdd/fixtures/keys/tls
 tmp=$(mktemp)
 echo "subjectKeyIdentifier=hash
@@ -27,8 +27,8 @@ openssl req -new -x509 -key test/bdd/fixtures/keys/tls/ec-cakey.pem -subj "/C=CA
 
 #create TLS creds
 openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/tls/ec-key.pem
-openssl req -new -key test/bdd/fixtures/keys/tls/ec-key.pem -subj "/C=CA/ST=ON/O=Example Inc.:bloc-did-method/OU=bloc-did-method/CN=localhost" -out test/bdd/fixtures/keys/tls/ec-key.csr
+openssl req -new -key test/bdd/fixtures/keys/tls/ec-key.pem -subj "/C=CA/ST=ON/O=Example Inc.:trustbloc-did-method/OU=trustbloc-did-method/CN=localhost" -out test/bdd/fixtures/keys/tls/ec-key.csr
 openssl x509 -req -in test/bdd/fixtures/keys/tls/ec-key.csr -CA test/bdd/fixtures/keys/tls/ec-cacert.pem -CAkey test/bdd/fixtures/keys/tls/ec-cakey.pem -CAcreateserial -extfile "$tmp" -out test/bdd/fixtures/keys/tls/ec-pubCert.pem -days 365
 
 
-echo "done generating bloc-did-method PKI"
+echo "done generating trustbloc-did-method PKI"

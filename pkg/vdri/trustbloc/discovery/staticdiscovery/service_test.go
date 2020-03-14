@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/config"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config"
 )
 
 func TestDiscoveryService_GetEndpoints(t *testing.T) {

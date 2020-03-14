@@ -17,9 +17,9 @@ import (
 
 	"github.com/cucumber/godog"
 
-	"github.com/trustbloc/bloc-did-method/test/bdd/dockerutil"
-	bddctx "github.com/trustbloc/bloc-did-method/test/bdd/pkg/context"
-	"github.com/trustbloc/bloc-did-method/test/bdd/pkg/vdri"
+	"github.com/trustbloc/trustbloc-did-method/test/bdd/dockerutil"
+	bddctx "github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
+	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/vdri"
 )
 
 func TestMain(m *testing.M) {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/trustbloc/bloc-did-method/cmd/did-method-rest/startcmd"
+	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-rest/startcmd"
 )
 
 func main() {
