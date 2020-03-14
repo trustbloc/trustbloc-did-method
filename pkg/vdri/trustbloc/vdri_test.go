@@ -3,7 +3,7 @@ Copyright SecureKey Technologies Inc. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package bloc
+package trustbloc
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 
 	mockdiscovery "github.com/trustbloc/bloc-did-method/pkg/internal/mock/discovery"
 	mockselection "github.com/trustbloc/bloc-did-method/pkg/internal/mock/selection"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/endpoint"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
 )
 
 func TestVDRI_Accept(t *testing.T) {
@@ -114,7 +114,7 @@ func TestVDRI_Read(t *testing.T) {
 				return nil, fmt.Errorf("discover error")
 			}}
 
-		doc, err := v.Read("did:bloc:testnet:123")
+		doc, err := v.Read("did:trustbloc:testnet:123")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "discover error")
 		require.Nil(t, doc)
@@ -128,7 +128,7 @@ func TestVDRI_Read(t *testing.T) {
 				return nil, fmt.Errorf("select error")
 			}}
 
-		doc, err = v.Read("did:bloc:testnet:123")
+		doc, err = v.Read("did:trustbloc:testnet:123")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "select error")
 		require.Nil(t, doc)
@@ -138,7 +138,7 @@ func TestVDRI_Read(t *testing.T) {
 				return nil, nil
 			}}
 
-		doc, err = v.Read("did:bloc:testnet:123")
+		doc, err = v.Read("did:trustbloc:testnet:123")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "list of endpoints is empty")
 		require.Nil(t, doc)
@@ -156,7 +156,7 @@ func TestVDRI_Read(t *testing.T) {
 			return nil, fmt.Errorf("get http vdri error")
 		}
 
-		doc, err := v.Read("did:bloc:testnet:123")
+		doc, err := v.Read("did:trustbloc:testnet:123")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "get http vdri error")
 		require.Nil(t, doc)
@@ -177,7 +177,7 @@ func TestVDRI_Read(t *testing.T) {
 				}}, nil
 		}
 
-		doc, err := v.Read("did:bloc:testnet:123")
+		doc, err := v.Read("did:trustbloc:testnet:123")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "read error")
 		require.Nil(t, doc)
@@ -194,13 +194,13 @@ func TestVDRI_Read(t *testing.T) {
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
 			return &mockvdri.MockVDRI{
 				ReadFunc: func(didID string, opts ...vdriapi.ResolveOpts) (*did.Doc, error) {
-					return &did.Doc{ID: "did:bloc:testnet:123"}, nil
+					return &did.Doc{ID: "did:trustbloc:testnet:123"}, nil
 				}}, nil
 		}
 
-		doc, err := v.Read("did:bloc:testnet:123")
+		doc, err := v.Read("did:trustbloc:testnet:123")
 		require.NoError(t, err)
-		require.Equal(t, "did:bloc:testnet:123", doc.ID)
+		require.Equal(t, "did:trustbloc:testnet:123", doc.ID)
 	})
 }
 

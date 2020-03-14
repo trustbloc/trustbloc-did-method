@@ -20,7 +20,7 @@ with the payload being a JSON object containing:
   - Consortium policy configuration settings
   - A list of stakeholders - containing, for each stakeholder:
     - The web domain where its configuration can be found
-    - The did:bloc DID of the stakeholder
+    - The did:trustbloc DID of the stakeholder
   - The hash of the previous version of this config file
 */
 

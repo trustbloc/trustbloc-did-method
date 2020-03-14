@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/config"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/endpoint"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/config"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
 )
 
 // DiscoveryService implements a static discovery service
@@ -50,7 +50,7 @@ func (ds *DiscoveryService) GetEndpoints(domain string) ([]*endpoint.Endpoint, e
 	return endpoints, nil
 }
 
-const consortiumURLInfix = "/.well-known/did-bloc/"
+const consortiumURLInfix = "/.well-known/did-trustbloc/"
 const consortiumURLSuffix = ".json"
 
 func configURL(urlDomain, consortiumDomain string) string {

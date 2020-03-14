@@ -17,7 +17,7 @@ import (
 A stakeholder's config file is a JWS, signed by the stakeholder,
 with the payload being a JSON object containing:
 - The stakeholder's domain
-- The stakeholder's DID (did:bloc)
+- The stakeholder's DID (did:trustbloc)
 - Stakeholder custom configuration settings
 - The stakeholder's Sidetree endpoints
 - the hash of the previous version of this config file

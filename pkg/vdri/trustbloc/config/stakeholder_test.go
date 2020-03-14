@@ -15,7 +15,7 @@ import (
 // nolint: gochecknoglobals
 var exampleStakeholders = []string{`{
 	"domain": "bar.baz",
-	"did": "did:bloc:foo.bar:zQ1234567890987654321",
+	"did": "did:trustbloc:foo.bar:zQ1234567890987654321",
 	"conf": {
 		"cache": {"max-age": 123456789}
 	},
@@ -27,7 +27,7 @@ var exampleStakeholders = []string{`{
 }`,
 	`{
 	"domain": "baz.qux",
-	"did": "did:bloc:foo.bar:zQ0987654321234567890",
+	"did": "did:trustbloc:foo.bar:zQ0987654321234567890",
 	"conf": {
 		"cache": {"max-age": 123456789}
 	},

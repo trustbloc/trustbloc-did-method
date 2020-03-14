@@ -3,7 +3,7 @@ Copyright SecureKey Technologies Inc. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package bloc
+package trustbloc
 
 import (
 	"errors"
@@ -14,9 +14,9 @@ import (
 	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
 	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
 
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/discovery/staticdiscovery"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/endpoint"
-	"github.com/trustbloc/bloc-did-method/pkg/vdri/bloc/selection/staticselection"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/endpoint"
+	"github.com/trustbloc/bloc-did-method/pkg/vdri/trustbloc/selection/staticselection"
 )
 
 type discovery interface {
