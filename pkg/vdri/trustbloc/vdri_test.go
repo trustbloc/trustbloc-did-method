@@ -22,7 +22,7 @@ import (
 func TestVDRI_Accept(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
 		v := New()
-		require.True(t, v.Accept("bloc"))
+		require.True(t, v.Accept("trustbloc"))
 	})
 
 	t.Run("test return false", func(t *testing.T) {

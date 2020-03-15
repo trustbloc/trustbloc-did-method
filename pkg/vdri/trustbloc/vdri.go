@@ -56,7 +56,7 @@ func New(opts ...Option) *VDRI {
 
 // Accept did method
 func (v *VDRI) Accept(method string) bool {
-	return method == "bloc"
+	return method == "trustbloc"
 }
 
 // Close vdri
