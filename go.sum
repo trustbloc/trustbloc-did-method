@@ -189,6 +189,8 @@ github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpP
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/trustbloc/sidetree-core-go v0.1.3-0.20200306222551-b9976a89a854 h1:uYqbC3t/YN1navNiqMxB4eJcGUUAPTlmE/TRBu1qSDI=
 github.com/trustbloc/sidetree-core-go v0.1.3-0.20200306222551-b9976a89a854/go.mod h1:qJ7oOPveEqrxTsO4KJsSHUM/Yivym221Dvd+IUq1V1U=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200316172436-5d9ccb59942d h1:fcwBIhwy5j2dPkYtuercCkNDd0Vl3bmmixwOMRSMysk=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200316172436-5d9ccb59942d/go.mod h1:qJ7oOPveEqrxTsO4KJsSHUM/Yivym221Dvd+IUq1V1U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb h1:zGWFAtiMcyryUHoUjUJX0/lt1H2+i2Ka2n+D3DImSNo=

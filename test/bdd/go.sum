@@ -283,6 +283,8 @@ github.com/trustbloc/sidetree-core-go v0.1.2/go.mod h1:qJ7oOPveEqrxTsO4KJsSHUM/Y
 github.com/trustbloc/sidetree-core-go v0.1.3-0.20200305165600-f5497066d447/go.mod h1:qJ7oOPveEqrxTsO4KJsSHUM/Yivym221Dvd+IUq1V1U=
 github.com/trustbloc/sidetree-core-go v0.1.3-0.20200306222551-b9976a89a854 h1:uYqbC3t/YN1navNiqMxB4eJcGUUAPTlmE/TRBu1qSDI=
 github.com/trustbloc/sidetree-core-go v0.1.3-0.20200306222551-b9976a89a854/go.mod h1:qJ7oOPveEqrxTsO4KJsSHUM/Yivym221Dvd+IUq1V1U=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200316172436-5d9ccb59942d h1:fcwBIhwy5j2dPkYtuercCkNDd0Vl3bmmixwOMRSMysk=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200316172436-5d9ccb59942d/go.mod h1:qJ7oOPveEqrxTsO4KJsSHUM/Yivym221Dvd+IUq1V1U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/urfave/cli v0.0.0-20171014202726-7bc6a0acffa5/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
