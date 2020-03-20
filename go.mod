@@ -14,6 +14,6 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/square/go-jose v2.4.1+incompatible
 	github.com/stretchr/testify v1.4.0
-	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200306222551-b9976a89a854
+	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200316172436-5d9ccb59942d
 	gopkg.in/square/go-jose.v2 v2.4.1 // indirect
 )

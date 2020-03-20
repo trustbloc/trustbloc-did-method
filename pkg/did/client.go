@@ -18,6 +18,7 @@ import (
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	log "github.com/sirupsen/logrus"
+	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
@@ -30,6 +31,7 @@ const (
 	recoveryOTP    = "recoveryOTP"
 	pubKeyIndex1   = "#key-1"
 	defaultKeyType = "Ed25519VerificationKey2018"
+	updateOTP      = "updateOTP"
 )
 
 type discovery interface {
@@ -126,7 +128,8 @@ func (c *Client) buildSideTreeRequest() ([]byte, error) {
 	req, err := helper.NewCreateRequest(&helper.CreateRequestInfo{
 		OpaqueDocument:  string(docBytes),
 		RecoveryKey:     "recoveryKey",
-		NextRecoveryOTP: recoveryOTP,
+		NextRecoveryOTP: docutil.EncodeToString([]byte(recoveryOTP)),
+		NextUpdateOTP:   docutil.EncodeToString([]byte(updateOTP)),
 		MultihashCode:   sha2_256,
 	})
 	if err != nil {
