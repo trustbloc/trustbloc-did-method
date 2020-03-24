@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package staticdiscovery
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -17,11 +18,17 @@ import (
 
 // DiscoveryService implements a static discovery service
 type DiscoveryService struct {
+	httpClient *http.Client
 }
 
 // NewService return static discovery service
 func NewService() *DiscoveryService {
-	return &DiscoveryService{}
+	return &DiscoveryService{httpClient: &http.Client{
+		// TODO add tls config
+		// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint: gosec
+		}}}
 }
 
 // GetEndpoints discover endpoints from domain
@@ -56,7 +63,7 @@ const consortiumURLSuffix = ".json"
 func configURL(urlDomain, consortiumDomain string) string {
 	prefix := ""
 	if !strings.HasPrefix(urlDomain, "http://") && !strings.HasPrefix(urlDomain, "https://") {
-		prefix = "http://"
+		prefix = "https://"
 	}
 
 	return prefix + urlDomain + consortiumURLInfix + consortiumDomain + consortiumURLSuffix
@@ -64,7 +71,7 @@ func configURL(urlDomain, consortiumDomain string) string {
 
 // getConsortiumFileData fetches and parses the consortium file at the given domain
 func (ds *DiscoveryService) getConsortium(url, domain string) (*config.ConsortiumFileData, error) {
-	res, err := http.Get(configURL(url, domain))
+	res, err := ds.httpClient.Get(configURL(url, domain))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +94,7 @@ func (ds *DiscoveryService) getConsortium(url, domain string) (*config.Consortiu
 
 // getStakeholder fetches and parses the stakeholder file at the given domain
 func (ds *DiscoveryService) getStakeholder(url, domain string) (*config.StakeholderFileData, error) {
-	res, err := http.Get(configURL(url, domain))
+	res, err := ds.httpClient.Get(configURL(url, domain))
 	if err != nil {
 		return nil, err
 	}
