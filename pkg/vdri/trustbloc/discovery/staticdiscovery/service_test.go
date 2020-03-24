@@ -267,11 +267,11 @@ func Test_configURL(t *testing.T) {
 		},
 		{ // adds http:// to the front of a domain
 			configURL("foo.example.com", "foo.example.com"),
-			"http://foo.example.com/.well-known/did-trustbloc/foo.example.com.json",
+			"https://foo.example.com/.well-known/did-trustbloc/foo.example.com.json",
 		},
 		{ // doesn't work with full URLs in the domain field
 			configURL("foo.example.com", "http://foo.example.com"),
-			"http://foo.example.com/.well-known/did-trustbloc/http://foo.example.com.json",
+			"https://foo.example.com/.well-known/did-trustbloc/http://foo.example.com.json",
 		},
 		{
 			configURL("http://foo.example.com", "bar.baz.qux"),
@@ -279,15 +279,15 @@ func Test_configURL(t *testing.T) {
 		},
 		{
 			configURL("a", "b"),
-			"http://a/.well-known/did-trustbloc/b.json",
+			"https://a/.well-known/did-trustbloc/b.json",
 		},
 		{ // doesn't recognize urls that aren't http:// or https://
 			configURL("ws:abcdefg", "hijklmn"),
-			"http://ws:abcdefg/.well-known/did-trustbloc/hijklmn.json",
+			"https://ws:abcdefg/.well-known/did-trustbloc/hijklmn.json",
 		},
 		{ // doesn't work well with malformed urls
 			configURL("http:/abcdefg", "hijklmn"),
-			"http://http:/abcdefg/.well-known/did-trustbloc/hijklmn.json",
+			"https://http:/abcdefg/.well-known/did-trustbloc/hijklmn.json",
 		},
 	}
 
