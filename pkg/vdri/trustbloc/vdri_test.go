@@ -52,6 +52,10 @@ func TestVDRI_Read(t *testing.T) {
 	t.Run("test error from get http vdri for resolver url", func(t *testing.T) {
 		v := New(WithResolverURL("url"))
 
+		_, err := v.getHTTPVDRI("")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "empty url")
+
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
 			return nil, fmt.Errorf("get http vdri error")
 		}
