@@ -24,7 +24,7 @@ type DiscoveryService struct {
 // NewService return static discovery service
 func NewService() *DiscoveryService {
 	return &DiscoveryService{httpClient: &http.Client{
-		// TODO add tls config
+		// TODO add tls config https://github.com/trustbloc/trustbloc-did-method/issues/43
 		// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint: gosec

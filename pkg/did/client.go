@@ -7,6 +7,7 @@ package did
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -52,7 +53,12 @@ type Client struct {
 
 // New return did bloc client
 func New(kms legacykms.KeyManager) *Client {
-	return &Client{client: &http.Client{}, kms: kms, discovery: staticdiscovery.NewService(),
+	return &Client{client: &http.Client{
+		// TODO add tls config https://github.com/trustbloc/trustbloc-did-method/issues/43
+		// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint: gosec
+		}}, kms: kms, discovery: staticdiscovery.NewService(),
 		selection: staticselection.NewService()}
 }
 

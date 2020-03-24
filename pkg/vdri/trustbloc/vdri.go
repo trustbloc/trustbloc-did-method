@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package trustbloc
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"strings"
@@ -44,7 +45,10 @@ type VDRI struct {
 func New(opts ...Option) *VDRI {
 	vdri := &VDRI{discovery: staticdiscovery.NewService(), selection: staticselection.NewService(),
 		getHTTPVDRI: func(url string) (vdri, error) {
-			return httpbinding.New(url)
+			return httpbinding.New(url,
+				// TODO add tls config https://github.com/trustbloc/trustbloc-did-method/issues/43
+				// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
+				httpbinding.WithTLSConfig(&tls.Config{InsecureSkipVerify: true})) //nolint: gosec
 		}}
 
 	for _, opt := range opts {
