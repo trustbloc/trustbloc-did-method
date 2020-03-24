@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
 	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
@@ -96,19 +97,23 @@ func (v *VDRI) getEndpoints(domain string) ([]*endpoint.Endpoint, error) {
 	return selectedEndpoints, nil
 }
 
+func (v *VDRI) sidetreeResolve(url, did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error) {
+	resolver, err := v.getHTTPVDRI(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new sidetree vdri: %w", err)
+	}
+
+	doc, err := resolver.Read(did, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve did: %w", err)
+	}
+
+	return doc, nil
+}
+
 func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error) {
 	if v.resolverURL != "" {
-		resolver, err := v.getHTTPVDRI(v.resolverURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new sidetree vdri: %w", err)
-		}
-
-		doc, err := resolver.Read(did, opts...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve did: %w", err)
-		}
-
-		return doc, nil
+		return v.sidetreeResolve(v.resolverURL, did, opts...)
 	}
 
 	// parse did
@@ -125,18 +130,16 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 	var doc *docdid.Doc
 
 	for _, e := range endpoints {
-		sideTreeVDRI, err := v.getHTTPVDRI(e.URL)
+		resp, err := v.sidetreeResolve(e.URL, did, opts...)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create new sidetree vdri: %w", err)
+			return nil, err
 		}
 
-		resp, err := sideTreeVDRI.Read(did, opts...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve did: %w", err)
+		if doc == nil {
+			doc = resp
+		} else if !cmp.Equal(resp, doc) {
+			return nil, fmt.Errorf("endpoints responded with different results for did")
 		}
-
-		// TODO add logic to compare response from each endpoint
-		doc = resp
 	}
 
 	return doc, nil

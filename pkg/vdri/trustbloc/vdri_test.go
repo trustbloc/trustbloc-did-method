@@ -187,12 +187,35 @@ func TestVDRI_Read(t *testing.T) {
 		require.Nil(t, doc)
 	})
 
+	t.Run("test error from endpoint disagreement", func(t *testing.T) {
+		v := New()
+
+		v.discovery = &mockdiscovery.MockDiscoveryService{
+			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+				return []*endpoint.Endpoint{{URL: "url"}, {URL: "url"}}, nil
+			}}
+
+		didCount := 0
+
+		v.getHTTPVDRI = func(url string) (v vdri, err error) {
+			return &mockvdri.MockVDRI{
+				ReadFunc: func(didID string, opts ...vdriapi.ResolveOpts) (*did.Doc, error) {
+					didCount++
+					return &did.Doc{ID: string(didCount)}, nil
+				}}, nil
+		}
+
+		_, err := v.Read("did:trustbloc:testnet:123")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "different results")
+	})
+
 	t.Run("test success", func(t *testing.T) {
 		v := New()
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}}, nil
+				return []*endpoint.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
 			}}
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
