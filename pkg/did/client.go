@@ -13,7 +13,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"time"
 
 	"github.com/btcsuite/btcutil/base58"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
@@ -52,20 +51,33 @@ type Client struct {
 }
 
 // New return did bloc client
-func New(kms legacykms.KeyManager) *Client {
-	return &Client{client: &http.Client{
+func New(opts ...Option) *Client {
+	c := &Client{client: &http.Client{
 		// TODO add tls config https://github.com/trustbloc/trustbloc-did-method/issues/43
 		// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint: gosec
-		}}, kms: kms, discovery: staticdiscovery.NewService(),
+		}}, discovery: staticdiscovery.NewService(),
 		selection: staticselection.NewService()}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
 }
 
 // CreateDID create did doc
-func (c *Client) CreateDID(domain string) (*docdid.Doc, error) {
+func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc, error) {
 	if domain == "" {
 		return nil, errors.New("domain is empty")
+	}
+
+	createDIDOpts := &CreateDIDOpts{}
+	// Apply options
+	for _, opt := range opts {
+		opt(createDIDOpts)
 	}
 
 	endpoints, err := c.getEndpoints(domain)
@@ -73,7 +85,7 @@ func (c *Client) CreateDID(domain string) (*docdid.Doc, error) {
 		return nil, fmt.Errorf("failed to get endpoints: %w", err)
 	}
 
-	req, err := c.buildSideTreeRequest()
+	req, err := c.buildSideTreeRequest(createDIDOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build sidetree request: %w", err)
 	}
@@ -105,25 +117,31 @@ func (c *Client) getEndpoints(domain string) ([]*endpoint.Endpoint, error) {
 }
 
 // buildSideTreeRequest request builder for sidetree public DID creation
-func (c *Client) buildSideTreeRequest() ([]byte, error) {
-	_, base58PubKey, err := c.kms.CreateKeySet()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create key set: %w", err)
-	}
+func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, error) {
+	didDoc := createDIDOpts.didDoc
 
-	publicKey := docdid.PublicKey{
-		ID:    pubKeyIndex1,
-		Type:  defaultKeyType,
-		Value: base58.Decode(base58PubKey),
-	}
+	// create default did doc if user didn't provide their DID
+	if didDoc == nil {
+		publicKeys := createDIDOpts.publicKeys
 
-	t := time.Now()
+		// create default public key if user didn't provide their public key
+		if len(publicKeys) == 0 {
+			_, base58PubKey, err := c.kms.CreateKeySet()
+			if err != nil {
+				return nil, fmt.Errorf("failed to create key set: %w", err)
+			}
 
-	didDoc := &docdid.Doc{
-		Context:   []string{},
-		PublicKey: []docdid.PublicKey{publicKey},
-		Created:   &t,
-		Updated:   &t,
+			publicKeys = append(publicKeys, docdid.PublicKey{
+				ID:    pubKeyIndex1,
+				Type:  defaultKeyType,
+				Value: base58.Decode(base58PubKey),
+			})
+		}
+
+		didDoc = &docdid.Doc{
+			Context:   []string{},
+			PublicKey: publicKeys,
+		}
 	}
 
 	docBytes, err := didDoc.JSONBytes()
@@ -182,5 +200,38 @@ func closeResponseBody(respBody io.Closer) {
 	e := respBody.Close()
 	if e != nil {
 		log.Errorf("Failed to close response body: %v", e)
+	}
+}
+
+// Option is a DID client instance option
+type Option func(opts *Client)
+
+// WithKMS add kms
+func WithKMS(kms legacykms.KeyManager) Option {
+	return func(opts *Client) {
+		opts.kms = kms
+	}
+}
+
+// CreateDIDOpts create did opts
+type CreateDIDOpts struct {
+	publicKeys []docdid.PublicKey
+	didDoc     *docdid.Doc
+}
+
+// CreateDIDOption is a create DID option
+type CreateDIDOption func(opts *CreateDIDOpts)
+
+// WithPublicKey add DID public key
+func WithPublicKey(publicKey docdid.PublicKey) CreateDIDOption {
+	return func(opts *CreateDIDOpts) {
+		opts.publicKeys = append(opts.publicKeys, publicKey)
+	}
+}
+
+// WithDID add DID doc
+func WithDID(didDoc *docdid.Doc) CreateDIDOption {
+	return func(opts *CreateDIDOpts) {
+		opts.didDoc = didDoc
 	}
 }

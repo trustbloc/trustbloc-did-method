@@ -50,7 +50,7 @@ func (e *Steps) createDIDBloc(domain string) error {
 		return err
 	}
 
-	c := didclient.New(kms)
+	c := didclient.New(didclient.WithKMS(kms))
 
 	doc, err := c.CreateDID(domain)
 	if err != nil {

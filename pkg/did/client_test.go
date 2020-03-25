@@ -24,7 +24,7 @@ import (
 
 func TestVDRI_Build(t *testing.T) {
 	t.Run("test domain is empty", func(t *testing.T) {
-		v := New(nil)
+		v := New()
 
 		doc, err := v.CreateDID("")
 		require.Error(t, err)
@@ -33,7 +33,7 @@ func TestVDRI_Build(t *testing.T) {
 	})
 
 	t.Run("test error from get endpoints", func(t *testing.T) {
-		v := New(nil)
+		v := New()
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -71,7 +71,7 @@ func TestVDRI_Build(t *testing.T) {
 	})
 
 	t.Run("test error from build sidetree request", func(t *testing.T) {
-		v := New(&mocklegacykms.CloseableKMS{CreateKeyErr: fmt.Errorf("create key error")})
+		v := New(WithKMS(&mocklegacykms.CloseableKMS{CreateKeyErr: fmt.Errorf("create key error")}))
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -88,7 +88,7 @@ func TestVDRI_Build(t *testing.T) {
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		v := New(&mocklegacykms.CloseableKMS{CreateSigningKeyValue: string(pubKey)})
+		v := New(WithKMS(&mocklegacykms.CloseableKMS{CreateSigningKeyValue: string(pubKey)}))
 
 		// failed to create http request
 		v.discovery = &mockdiscovery.MockDiscoveryService{
@@ -160,7 +160,7 @@ func TestVDRI_Build(t *testing.T) {
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		v := New(&mocklegacykms.CloseableKMS{CreateSigningKeyValue: string(pubKey)})
+		v := New(WithKMS(&mocklegacykms.CloseableKMS{CreateSigningKeyValue: string(pubKey)}))
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -170,5 +170,32 @@ func TestVDRI_Build(t *testing.T) {
 		doc, err := v.CreateDID("testnet")
 		require.NoError(t, err)
 		require.Equal(t, "did1", doc.ID)
+	})
+
+	t.Run("test create did opts", func(t *testing.T) {
+		// test WithPublicKey
+		var opts []CreateDIDOption
+		opts = append(opts, WithPublicKey(did.PublicKey{ID: "#key-2"}))
+
+		createDIDOpts := &CreateDIDOpts{}
+		// Apply options
+		for _, opt := range opts {
+			opt(createDIDOpts)
+		}
+
+		require.Equal(t, 1, len(createDIDOpts.publicKeys))
+		require.Equal(t, "#key-2", createDIDOpts.publicKeys[0].ID)
+
+		// test WithDID
+		opts = make([]CreateDIDOption, 0)
+		opts = append(opts, WithDID(&did.Doc{ID: "didID"}))
+
+		createDIDOpts = &CreateDIDOpts{}
+		// Apply options
+		for _, opt := range opts {
+			opt(createDIDOpts)
+		}
+
+		require.Equal(t, "didID", createDIDOpts.didDoc.ID)
 	})
 }
