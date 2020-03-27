@@ -19,16 +19,21 @@ import (
 // DiscoveryService implements a static discovery service
 type DiscoveryService struct {
 	httpClient *http.Client
+	tlsConfig  *tls.Config
 }
 
 // NewService return static discovery service
-func NewService() *DiscoveryService {
-	return &DiscoveryService{httpClient: &http.Client{
-		// TODO add tls config https://github.com/trustbloc/trustbloc-did-method/issues/43
-		// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint: gosec
-		}}}
+func NewService(opts ...Option) *DiscoveryService {
+	d := &DiscoveryService{httpClient: &http.Client{}}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(d)
+	}
+
+	d.httpClient.Transport = &http.Transport{TLSClientConfig: d.tlsConfig}
+
+	return d
 }
 
 // GetEndpoints discover endpoints from domain
@@ -113,4 +118,14 @@ func (ds *DiscoveryService) getStakeholder(url, domain string) (*config.Stakehol
 	}
 
 	return config.ParseStakeholder(body)
+}
+
+// Option is a discovery service instance option
+type Option func(opts *DiscoveryService)
+
+// WithTLSConfig option is for definition of secured HTTP transport using a tls.Config instance
+func WithTLSConfig(tlsConfig *tls.Config) Option {
+	return func(opts *DiscoveryService) {
+		opts.tlsConfig = tlsConfig
+	}
 }

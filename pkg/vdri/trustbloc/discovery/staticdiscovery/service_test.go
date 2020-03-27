@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package staticdiscovery
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -57,7 +58,7 @@ func TestDiscoveryService_GetEndpoints(t *testing.T) {
 		}))
 		defer consortiumServ.Close()
 
-		s := NewService()
+		s := NewService(WithTLSConfig(&tls.Config{}))
 		endpoints, err := s.GetEndpoints(consortiumServ.URL)
 		require.NoError(t, err)
 		require.Len(t, endpoints, 4)
@@ -294,4 +295,21 @@ func Test_configURL(t *testing.T) {
 	for _, test := range tests {
 		require.Equal(t, test[1], test[0])
 	}
+}
+
+func TestOpts(t *testing.T) {
+	t.Run("test opts", func(t *testing.T) {
+		// test WithTLSConfig
+		var opts []Option
+		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}))
+
+		s := &DiscoveryService{}
+
+		// Apply options
+		for _, opt := range opts {
+			opt(s)
+		}
+
+		require.Equal(t, "test", s.tlsConfig.ServerName)
+	})
 }

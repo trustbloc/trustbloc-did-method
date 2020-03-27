@@ -8,6 +8,7 @@ package did
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -172,14 +173,27 @@ func TestVDRI_Build(t *testing.T) {
 		require.Equal(t, "did1", doc.ID)
 	})
 
-	t.Run("test create did opts", func(t *testing.T) {
+	t.Run("test opts", func(t *testing.T) {
+		// test WithTLSConfig
+		var opts []Option
+		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}))
+
+		c := &Client{}
+
+		// Apply options
+		for _, opt := range opts {
+			opt(c)
+		}
+
+		require.Equal(t, "test", c.tlsConfig.ServerName)
+
 		// test WithPublicKey
-		var opts []CreateDIDOption
-		opts = append(opts, WithPublicKey(did.PublicKey{ID: "#key-2"}))
+		var createOpts []CreateDIDOption
+		createOpts = append(createOpts, WithPublicKey(did.PublicKey{ID: "#key-2"}))
 
 		createDIDOpts := &CreateDIDOpts{}
 		// Apply options
-		for _, opt := range opts {
+		for _, opt := range createOpts {
 			opt(createDIDOpts)
 		}
 
@@ -187,12 +201,12 @@ func TestVDRI_Build(t *testing.T) {
 		require.Equal(t, "#key-2", createDIDOpts.publicKeys[0].ID)
 
 		// test WithDID
-		opts = make([]CreateDIDOption, 0)
-		opts = append(opts, WithDID(&did.Doc{ID: "didID"}))
+		createOpts = make([]CreateDIDOption, 0)
+		createOpts = append(createOpts, WithDID(&did.Doc{ID: "didID"}))
 
 		createDIDOpts = &CreateDIDOpts{}
 		// Apply options
-		for _, opt := range opts {
+		for _, opt := range createOpts {
 			opt(createDIDOpts)
 		}
 

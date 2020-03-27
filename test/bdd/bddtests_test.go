@@ -118,7 +118,10 @@ func generateUUID() string {
 }
 
 func FeatureContext(s *godog.Suite) {
-	bddContext := bddctx.NewBDDContext()
+	bddContext, err := bddctx.NewBDDContext("fixtures/keys/tls/ec-cacert.pem")
+	if err != nil {
+		panic(err.Error())
+	}
 
 	vdri.NewSteps(bddContext).RegisterSteps(s)
 }
