@@ -50,7 +50,7 @@ func (e *Steps) createDIDBloc(domain string) error {
 		return err
 	}
 
-	c := didclient.New(didclient.WithKMS(kms))
+	c := didclient.New(didclient.WithKMS(kms), didclient.WithTLSConfig(e.bddContext.TLSConfig))
 
 	doc, err := c.CreateDID(domain)
 	if err != nil {
@@ -63,7 +63,7 @@ func (e *Steps) createDIDBloc(domain string) error {
 }
 
 func (e *Steps) resolveCreatedDID(url string) error {
-	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url))
+	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig))
 
 	var doc *did.Doc
 

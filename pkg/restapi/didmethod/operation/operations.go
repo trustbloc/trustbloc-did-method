@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package operation
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 
@@ -35,9 +36,14 @@ type Operation struct {
 	blocVDRI vdri.VDRI
 }
 
-// New returns rp operation instance
-func New() *Operation {
-	svc := &Operation{blocVDRI: trustbloc.New()}
+// Config defines configuration for trustbloc did method operations
+type Config struct {
+	TLSConfig *tls.Config
+}
+
+// New returns did method operation instance
+func New(config *Config) *Operation {
+	svc := &Operation{blocVDRI: trustbloc.New(trustbloc.WithTLSConfig(config.TLSConfig))}
 	svc.registerHandler()
 
 	return svc

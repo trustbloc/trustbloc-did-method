@@ -11,10 +11,11 @@ require (
 	github.com/google/go-cmp v0.4.0
 	github.com/gorilla/mux v1.7.4
 	github.com/hyperledger/aries-framework-go v0.1.3-0.20200325175154-d18ad2581ed9
-	github.com/sirupsen/logrus v1.3.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.6
 	github.com/square/go-jose v2.4.1+incompatible
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
+	github.com/trustbloc/edge-core v0.1.3-0.20200327145813-a7f3264865e6
 	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200316172436-5d9ccb59942d
 	gopkg.in/square/go-jose.v2 v2.4.1 // indirect
 )

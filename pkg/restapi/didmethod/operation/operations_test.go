@@ -21,7 +21,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	svc := New()
+	svc := New(&Config{})
 	require.NotNil(t, svc)
 	require.Equal(t, 1, len(svc.GetRESTHandlers()))
 }
@@ -80,7 +80,7 @@ func handleRequest(handler Handler, path string) (*bytes.Buffer, int, error) { /
 }
 
 func getHandler(t *testing.T, blocVDRI vdri.VDRI, lookup string) Handler {
-	svc := New()
+	svc := New(&Config{})
 	require.NotNil(t, svc)
 
 	if blocVDRI != nil {

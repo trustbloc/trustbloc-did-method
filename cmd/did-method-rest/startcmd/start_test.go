@@ -63,12 +63,21 @@ func TestStartCmdValidArgsEnvVar(t *testing.T) {
 	startCmd := GetStartCmd(&mockServer{})
 
 	err := os.Setenv(hostURLEnvKey, "localhost:8080")
-	require.Nil(t, err)
-
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	err = startCmd.Execute()
-	require.Nil(t, err)
+	require.NoError(t, err)
+}
+
+func TestTLSSystemCertPoolInvalidArgsEnvVar(t *testing.T) {
+	startCmd := GetStartCmd(&mockServer{})
+
+	require.NoError(t, os.Setenv(hostURLEnvKey, "localhost:8080"))
+	require.NoError(t, os.Setenv(tlsSystemCertPoolEnvKey, "wrongvalue"))
+
+	err := startCmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid syntax")
 }
 
 func checkFlagPropertiesCorrect(t *testing.T, cmd *cobra.Command, flagName, flagShorthand, flagUsage string) {

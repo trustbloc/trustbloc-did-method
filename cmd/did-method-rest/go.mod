@@ -9,7 +9,7 @@ replace github.com/trustbloc/trustbloc-did-method => ../..
 require (
 	github.com/gorilla/mux v1.7.4
 	github.com/spf13/cobra v0.0.6
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/trustbloc/trustbloc-did-method v0.0.0-00010101000000-000000000000
 )
 

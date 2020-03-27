@@ -20,7 +20,9 @@ keyUsage = Digital Signature, Key Encipherment
 subjectAltName = @alt_names
 [alt_names]
 DNS.1 = localhost
-DNS.1 = testnet.trustbloc.local" >> "$tmp"
+DNS.2 = testnet.trustbloc.local
+DNS.3 = stakeholder.one
+DNS.4 = sidetree-mock" >> "$tmp"
 
 #create CA
 openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/tls/ec-cakey.pem

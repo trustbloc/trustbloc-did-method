@@ -40,23 +40,25 @@ type VDRI struct {
 	discovery   discovery
 	selection   selection
 	getHTTPVDRI func(url string) (vdri, error) // needed for unit test
+	tlsConfig   *tls.Config
 }
 
 // New creates new bloc vdri
 func New(opts ...Option) *VDRI {
-	vdri := &VDRI{discovery: staticdiscovery.NewService(), selection: staticselection.NewService(),
-		getHTTPVDRI: func(url string) (vdri, error) {
-			return httpbinding.New(url,
-				// TODO add tls config https://github.com/trustbloc/trustbloc-did-method/issues/43
-				// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
-				httpbinding.WithTLSConfig(&tls.Config{InsecureSkipVerify: true})) //nolint: gosec
-		}}
+	v := &VDRI{selection: staticselection.NewService()}
 
 	for _, opt := range opts {
-		opt(vdri)
+		opt(v)
 	}
 
-	return vdri
+	v.discovery = staticdiscovery.NewService(staticdiscovery.WithTLSConfig(v.tlsConfig))
+
+	v.getHTTPVDRI = func(url string) (vdri, error) {
+		return httpbinding.New(url,
+			httpbinding.WithTLSConfig(v.tlsConfig))
+	}
+
+	return v
 }
 
 // Accept did method
@@ -152,5 +154,12 @@ type Option func(opts *VDRI)
 func WithResolverURL(resolverURL string) Option {
 	return func(opts *VDRI) {
 		opts.resolverURL = resolverURL
+	}
+}
+
+// WithTLSConfig option is for definition of secured HTTP transport using a tls.Config instance
+func WithTLSConfig(tlsConfig *tls.Config) Option {
+	return func(opts *VDRI) {
+		opts.tlsConfig = tlsConfig
 	}
 }

@@ -48,22 +48,20 @@ type Client struct {
 	selection selection
 	kms       legacykms.KeyManager
 	client    *http.Client
+	tlsConfig *tls.Config
 }
 
 // New return did bloc client
 func New(opts ...Option) *Client {
-	c := &Client{client: &http.Client{
-		// TODO add tls config https://github.com/trustbloc/trustbloc-did-method/issues/43
-		// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint: gosec
-		}}, discovery: staticdiscovery.NewService(),
-		selection: staticselection.NewService()}
+	c := &Client{client: &http.Client{}, selection: staticselection.NewService()}
 
 	// Apply options
 	for _, opt := range opts {
 		opt(c)
 	}
+
+	c.client.Transport = &http.Transport{TLSClientConfig: c.tlsConfig}
+	c.discovery = staticdiscovery.NewService(staticdiscovery.WithTLSConfig(c.tlsConfig))
 
 	return c
 }
@@ -210,6 +208,13 @@ type Option func(opts *Client)
 func WithKMS(kms legacykms.KeyManager) Option {
 	return func(opts *Client) {
 		opts.kms = kms
+	}
+}
+
+// WithTLSConfig option is for definition of secured HTTP transport using a tls.Config instance
+func WithTLSConfig(tlsConfig *tls.Config) Option {
+	return func(opts *Client) {
+		opts.tlsConfig = tlsConfig
 	}
 }
 

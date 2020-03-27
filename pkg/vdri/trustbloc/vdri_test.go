@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package trustbloc
 
 import (
+	"crypto/tls"
 	"fmt"
 	"testing"
 
@@ -234,4 +235,21 @@ func TestVDRI_Read(t *testing.T) {
 func TestVDRI_Close(t *testing.T) {
 	v := New()
 	require.NoError(t, v.Close())
+}
+
+func TestOpts(t *testing.T) {
+	t.Run("test opts", func(t *testing.T) {
+		// test WithTLSConfig
+		var opts []Option
+		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}))
+
+		v := &VDRI{}
+
+		// Apply options
+		for _, opt := range opts {
+			opt(v)
+		}
+
+		require.Equal(t, "test", v.tlsConfig.ServerName)
+	})
 }

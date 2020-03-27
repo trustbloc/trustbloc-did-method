@@ -9,16 +9,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 )
 
 func TestController_New(t *testing.T) {
-	controller, err := New()
+	controller, err := New(&operation.Config{})
 	require.NoError(t, err)
 	require.NotNil(t, controller)
 }
 
 func TestController_GetOperations(t *testing.T) {
-	controller, err := New()
+	controller, err := New(&operation.Config{})
 	require.NoError(t, err)
 	require.NotNil(t, controller)
 
