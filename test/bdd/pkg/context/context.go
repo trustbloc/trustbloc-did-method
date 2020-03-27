@@ -8,7 +8,7 @@ package context
 import (
 	"crypto/tls"
 
-	tlsutils "github.com/trustbloc/trustbloc-did-method/pkg/utils/tls"
+	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 )
 
 // BDDContext is a global context shared between different test suites in bddtests

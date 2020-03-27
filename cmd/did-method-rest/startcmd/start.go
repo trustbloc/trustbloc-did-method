@@ -13,11 +13,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
+	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
+	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
-	cmdutils "github.com/trustbloc/trustbloc-did-method/pkg/utils/cmd"
-	tlsutils "github.com/trustbloc/trustbloc-did-method/pkg/utils/tls"
 )
 
 const (
