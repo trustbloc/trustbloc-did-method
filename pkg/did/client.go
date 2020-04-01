@@ -18,7 +18,6 @@ import (
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	log "github.com/sirupsen/logrus"
-	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
@@ -27,11 +26,11 @@ import (
 )
 
 const (
-	sha2_256       = 18
-	recoveryOTP    = "recoveryOTP"
-	pubKeyIndex1   = "#key-1"
-	defaultKeyType = "Ed25519VerificationKey2018"
-	updateOTP      = "updateOTP"
+	sha2_256            = 18
+	pubKeyIndex1        = "#key-1"
+	defaultKeyType      = "Ed25519VerificationKey2018"
+	recoveryRevealValue = "recoveryOTP"
+	updateRevealValue   = "updateOTP"
 )
 
 type discovery interface {
@@ -148,11 +147,11 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 	}
 
 	req, err := helper.NewCreateRequest(&helper.CreateRequestInfo{
-		OpaqueDocument:  string(docBytes),
-		RecoveryKey:     "recoveryKey",
-		NextRecoveryOTP: docutil.EncodeToString([]byte(recoveryOTP)),
-		NextUpdateOTP:   docutil.EncodeToString([]byte(updateOTP)),
-		MultihashCode:   sha2_256,
+		OpaqueDocument:          string(docBytes),
+		RecoveryKey:             "recoveryKey",
+		NextRecoveryRevealValue: []byte(recoveryRevealValue),
+		NextUpdateRevealValue:   []byte(updateRevealValue),
+		MultihashCode:           sha2_256,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sidetree request: %w", err)
