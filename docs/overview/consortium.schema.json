@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/trustbloc/trustbloc-did-method/docs/overview/consortium.schema.json",
+  "title": "Consortium Config Object",
+  "description": "The payload of a Consortium config JWS",
+  "type": "object",
+  "properties": {
+    "required": ["domain", "policy", "members"],
+    "domain": {
+      "type": "string"
+    },
+    "policy": {
+      "type": "object",
+      "required": ["sidetree"],
+      "properties" : {
+        "cache": {
+          "type": "object",
+          "properties": {
+            "max-age": {
+              "type": "integer"
+            }
+          },
+          "required": ["max-age"]
+        },
+        "num-queries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sidetree": {
+          "type": "object",
+          "properties" : {
+            "hash-algorithm": {"type": "string"},
+            "key-algorithm": {"type": "string"},
+            "max-encoded-hash-length": {"type": "integer"},
+            "max-operation-size": {"type": "integer"},
+            "genesis-time": {"type": "integer"},
+            "max-operations-per-batch": {"type": "integer"}
+          },
+          "required": ["hash-algorithm", "key-algorithm", "max-encoded-hash-length", "max-operation-size"]
+        }
+      }
+    },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["domain", "did"],
+        "properties": {
+          "domain": "string",
+          "did": "string",
+          "key": "string"
+        }
+      }
+    },
+    "previous": {
+      "type": "string"
+    }
+  }
+}
