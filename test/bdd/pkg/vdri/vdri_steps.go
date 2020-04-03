@@ -6,9 +6,17 @@ SPDX-License-Identifier: Apache-2.0
 package vdri
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
 
 	"github.com/cucumber/godog"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
@@ -16,48 +24,85 @@ import (
 	ariescontext "github.com/hyperledger/aries-framework-go/pkg/framework/context"
 	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	"github.com/hyperledger/aries-framework-go/pkg/storage"
-	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
 
-	didclient "github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
 )
 
 const (
-	maxRetry = 10
+	maxRetry     = 10
+	pubKeyIndex1 = "#key-1"
+	keyType      = "Ed25519VerificationKey2018"
 )
 
 // Steps is steps for VC BDD tests
 type Steps struct {
 	bddContext *context.BDDContext
 	createdDID string
+	httpClient *http.Client
 }
 
 // NewSteps returns new agent from client SDK
 func NewSteps(ctx *context.BDDContext) *Steps {
-	return &Steps{bddContext: ctx}
+	return &Steps{bddContext: ctx, httpClient: &http.Client{}}
 }
 
 // RegisterSteps registers agent steps
 func (e *Steps) RegisterSteps(s *godog.Suite) {
-	s.Step(`^TrustBloc DID is created from domain "([^"]*)"$`, e.createDIDBloc)
+	s.Step(`^TrustBloc DID is created through registrar "([^"]*)"$`, e.createDIDBloc)
 	s.Step(`^Resolving created DID through resolver URL "([^"]*)"$`, e.resolveCreatedDID)
 }
 
-func (e *Steps) createDIDBloc(domain string) error {
+func (e *Steps) createDIDBloc(url string) error {
 	kms, err := createKMS(mem.NewProvider())
 	if err != nil {
 		return err
 	}
 
-	c := didclient.New(didclient.WithKMS(kms), didclient.WithTLSConfig(e.bddContext.TLSConfig))
-
-	doc, err := c.CreateDID(domain)
+	_, base58PubKey, err := kms.CreateKeySet()
 	if err != nil {
 		return err
 	}
 
-	e.createdDID = doc.ID
+	jobID := uuid.New().String()
+
+	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID,
+		AddPublicKeys: []operation.PublicKey{{ID: pubKeyIndex1, Type: keyType, Value: base58PubKey}}})
+	if err != nil {
+		return err
+	}
+
+	resp, err := e.httpClient.Post(url, "application/json", bytes.NewBuffer(reqBytes))
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if errClose := resp.Body.Close(); errClose != nil {
+			fmt.Println(errClose.Error())
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("http status code is not ok: %s", body)
+	}
+
+	var registerResponse operation.RegisterResponse
+	if err := json.Unmarshal(body, &registerResponse); err != nil {
+		return err
+	}
+
+	if jobID != registerResponse.JobID {
+		return fmt.Errorf("register response jobID=%s not equal %s", registerResponse.JobID, jobID)
+	}
+
+	e.createdDID = registerResponse.DIDState.Identifier
 
 	return nil
 }

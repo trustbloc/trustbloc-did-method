@@ -8,18 +8,15 @@ version: '3'
 
 services:
 
-  dns-proxy-server:
-    image: defreitas/dns-proxy-server:latest
-    hostname: dns.mageddo
-    ports:
-      - "5380:5380"
+  uni-registrar-web:
+    image: universalregistrar/uni-registrar-web:latest
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/resolv.conf:/etc/resolv.conf
+      - ./config.json:/opt/uni-registrar-java/uni-registrar-web/config.json
+    ports:
+      - "9080:9080"
     networks:
       - did-method-rest_bdd_net
 
 networks:
   did-method-rest_bdd_net:
     external: true
-

@@ -14,7 +14,13 @@ func New(config *operation.Config) (*Controller, error) {
 	var allHandlers []operation.Handler
 
 	didMethodService := operation.New(config)
-	allHandlers = append(allHandlers, didMethodService.GetRESTHandlers()...)
+
+	handlers, err := didMethodService.GetRESTHandlers(config.Mode)
+	if err != nil {
+		return nil, err
+	}
+
+	allHandlers = append(allHandlers, handlers...)
 
 	return &Controller{handlers: allHandlers}, nil
 }

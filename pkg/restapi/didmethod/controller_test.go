@@ -14,16 +14,21 @@ import (
 )
 
 func TestController_New(t *testing.T) {
-	controller, err := New(&operation.Config{})
+	controller, err := New(&operation.Config{Mode: "combined"})
 	require.NoError(t, err)
 	require.NotNil(t, controller)
+
+	controller, err = New(&operation.Config{Mode: "invalid"})
+	require.Error(t, err)
+	require.Nil(t, controller)
+	require.Contains(t, err.Error(), "invalid operation mode")
 }
 
 func TestController_GetOperations(t *testing.T) {
-	controller, err := New(&operation.Config{})
+	controller, err := New(&operation.Config{Mode: "combined"})
 	require.NoError(t, err)
 	require.NotNil(t, controller)
 
 	ops := controller.GetOperations()
-	require.Equal(t, 1, len(ops))
+	require.Equal(t, 2, len(ops))
 }
