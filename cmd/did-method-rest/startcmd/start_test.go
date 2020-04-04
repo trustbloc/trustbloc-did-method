@@ -6,10 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package startcmd
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
 
+	"github.com/hyperledger/aries-framework-go/pkg/storage"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
@@ -65,8 +67,57 @@ func TestStartCmdValidArgsEnvVar(t *testing.T) {
 	err := os.Setenv(hostURLEnvKey, "localhost:8080")
 	require.NoError(t, err)
 
+	err = os.Setenv(domainEnvKey, "domain")
+	require.NoError(t, err)
+
 	err = startCmd.Execute()
 	require.NoError(t, err)
+}
+
+func TestInValidModeVar(t *testing.T) {
+	startCmd := GetStartCmd(&mockServer{})
+
+	err := os.Setenv(modeEnvKey, "invalid")
+	require.NoError(t, err)
+
+	err = startCmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unsupported mode")
+}
+
+func TestDomainFlagVar(t *testing.T) {
+	t.Run("test domain is optional when mode is resolver", func(t *testing.T) {
+		os.Clearenv()
+
+		startCmd := GetStartCmd(&mockServer{})
+
+		err := os.Setenv(hostURLEnvKey, "localhost:8080")
+		require.NoError(t, err)
+
+		err = os.Setenv(modeEnvKey, string(resolver))
+		require.NoError(t, err)
+
+		err = startCmd.Execute()
+		require.NoError(t, err)
+	})
+
+	t.Run("test domain is required when mode is registrar", func(t *testing.T) {
+		os.Clearenv()
+
+		startCmd := GetStartCmd(&mockServer{})
+
+		err := os.Setenv(hostURLEnvKey, "localhost:8080")
+		require.NoError(t, err)
+
+		err = os.Setenv(modeEnvKey, string(registrar))
+		require.NoError(t, err)
+
+		err = startCmd.Execute()
+		require.Error(t, err)
+		require.Equal(t,
+			"Neither domain (command line flag) nor DID_METHOD_DOMAIN (environment variable) have been set.",
+			err.Error())
+	})
 }
 
 func TestTLSSystemCertPoolInvalidArgsEnvVar(t *testing.T) {
@@ -93,13 +144,54 @@ func checkFlagPropertiesCorrect(t *testing.T, cmd *cobra.Command, flagName, flag
 	require.Nil(t, flagAnnotations)
 }
 
+func TestCreateKMS(t *testing.T) {
+	t.Run("test error from create new kms", func(t *testing.T) {
+		v, err := createKMS(&MockStoreProvider{
+			ErrOpenStoreHandle: fmt.Errorf("error open store")})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to create new kms")
+		require.Nil(t, v)
+	})
+
+	t.Run("test success", func(t *testing.T) {
+		v, err := createKMS(&MockStoreProvider{})
+		require.NoError(t, err)
+		require.NotNil(t, v)
+	})
+}
+
 func getValidArgs() []string {
 	var args []string
 	args = append(args, hostURLArg()...)
+	args = append(args, domainArg()...)
 
 	return args
 }
 
 func hostURLArg() []string {
 	return []string{flag + hostURLFlagName, "localhost:8080"}
+}
+
+func domainArg() []string {
+	return []string{flag + domainFlagName, "domain"}
+}
+
+// MockStoreProvider mock store provider.
+type MockStoreProvider struct {
+	ErrOpenStoreHandle error
+}
+
+// OpenStore opens and returns a store for given name space.
+func (s *MockStoreProvider) OpenStore(name string) (storage.Store, error) {
+	return nil, s.ErrOpenStoreHandle
+}
+
+// Close closes all stores created under this store provider
+func (s *MockStoreProvider) Close() error {
+	return nil
+}
+
+// CloseStore closes store for given name space
+func (s *MockStoreProvider) CloseStore(name string) error {
+	return nil
 }

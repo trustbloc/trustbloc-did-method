@@ -1,0 +1,8 @@
+{
+  "drivers": [
+   {
+      "image": "did-method-rest",
+      "url": "http://trustbloc.did.method.example.com:8070/"
+    }
+  ]
+}
