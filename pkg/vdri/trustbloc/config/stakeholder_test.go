@@ -16,7 +16,7 @@ import (
 var exampleStakeholders = []string{`{
 	"domain": "bar.baz",
 	"did": "did:trustbloc:foo.bar:zQ1234567890987654321",
-	"conf": {
+	"policy": {
 		"cache": {"max-age": 123456789}
 	},
 	"endpoints": [
@@ -28,7 +28,7 @@ var exampleStakeholders = []string{`{
 	`{
 	"domain": "baz.qux",
 	"did": "did:trustbloc:foo.bar:zQ0987654321234567890",
-	"conf": {
+	"policy": {
 		"cache": {"max-age": 123456789}
 	},
 	"endpoints": [

@@ -20,7 +20,7 @@ var payload = `
 	"policy": {
 		"cache": {"max-age": 123456789}
 	},
-	"stakeholders": [
+	"members": [
 		{
 			"domain": "bar.baz",
 			"did": "did:trustbloc:foo.bar:zQ1234567890987654321"

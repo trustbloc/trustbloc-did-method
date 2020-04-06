@@ -30,8 +30,8 @@ type Stakeholder struct {
 	Domain string `json:"domain,omitempty"`
 	// DID is the DID of this stakeholder
 	DID string `json:"did,omitempty"`
-	// Config contains stakeholder-specific configuration settings
-	Config StakeholderSettings `json:"conf"`
+	// Policy contains stakeholder-specific configuration settings
+	Policy StakeholderSettings `json:"policy"`
 	// Endpoints is a list of sidetree endpoints owned by this stakeholder organization
 	Endpoints []string `json:"endpoints"`
 	// Previous is a hashlink to the previous version of this file
