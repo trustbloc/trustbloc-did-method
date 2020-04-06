@@ -30,8 +30,8 @@ type Consortium struct {
 	Domain string `json:"domain,omitempty"`
 	// Policy contains the consortium policy configuration
 	Policy ConsortiumPolicy `json:"policy"`
-	// Stakeholders is a list containing references to the stakeholders on this consortium
-	Stakeholders []StakeholderListElement `json:"stakeholders"`
+	// Members is a list containing references to the stakeholders on this consortium
+	Members []StakeholderListElement `json:"members"`
 	// Previous contains a hashlink to the previous version of this file. Optional.
 	Previous string `json:"previous,omitempty"`
 }

@@ -229,10 +229,10 @@ func dummyJWSWrap(data string) string {
 
 func dummyConsortiumConfig(consortiumDomain string, stakeholders []config.StakeholderListElement) (string, error) {
 	cc := config.Consortium{
-		Domain:       consortiumDomain,
-		Policy:       config.ConsortiumPolicy{Cache: config.CacheControl{MaxAge: 0}},
-		Stakeholders: stakeholders,
-		Previous:     "",
+		Domain:   consortiumDomain,
+		Policy:   config.ConsortiumPolicy{Cache: config.CacheControl{MaxAge: 0}},
+		Members:  stakeholders,
+		Previous: "",
 	}
 
 	out, err := json.Marshal(cc)
@@ -247,7 +247,7 @@ func dummyStakeholderConfig(stakeholderDomain string, endpoints []string) (strin
 	sc := config.Stakeholder{
 		Domain:    stakeholderDomain,
 		DID:       "",
-		Config:    config.StakeholderSettings{Cache: config.CacheControl{MaxAge: 0}},
+		Policy:    config.StakeholderSettings{Cache: config.CacheControl{MaxAge: 0}},
 		Endpoints: endpoints,
 		Previous:  "",
 	}

@@ -45,7 +45,7 @@ func (ds *DiscoveryService) GetEndpoints(domain string) ([]*endpoint.Endpoint, e
 
 	var endpoints []*endpoint.Endpoint
 
-	for _, s := range configData.Config.Stakeholders {
+	for _, s := range configData.Config.Members {
 		stakeholderConfig, err := ds.getStakeholder(s.Domain, s.Domain)
 		if err != nil {
 			return nil, err
