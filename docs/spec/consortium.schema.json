@@ -48,8 +48,15 @@
         "required": ["domain", "did"],
         "properties": {
           "domain": "string",
-          "did": "string",
-          "key": "string"
+          "did": "string"
+        },
+        "public_key": {
+          "type": "object",
+          "required": ["id", "jwk"],
+          "properties": {
+            "id": "string",
+            "jwk": "object"
+          }
         }
       }
     },
