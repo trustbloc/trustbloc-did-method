@@ -16,27 +16,27 @@
         "cache": {
           "type": "object",
           "properties": {
-            "max-age": {
+            "max_age": {
               "type": "integer"
             }
           },
-          "required": ["max-age"]
+          "required": ["max_age"]
         },
-        "num-queries": {
+        "num_queries": {
           "type": "integer",
           "minimum": 0
         },
         "sidetree": {
           "type": "object",
           "properties" : {
-            "hash-algorithm": {"type": "string"},
-            "key-algorithm": {"type": "string"},
-            "max-encoded-hash-length": {"type": "integer"},
-            "max-operation-size": {"type": "integer"},
-            "genesis-time": {"type": "integer"},
-            "max-operations-per-batch": {"type": "integer"}
+            "hash_algorithm": {"type": "string"},
+            "key_algorithm": {"type": "string"},
+            "max_encoded_hash_length": {"type": "integer"},
+            "max_operation_size": {"type": "integer"},
+            "genesis_time": {"type": "integer"},
+            "max_operations_per_batch": {"type": "integer"}
           },
-          "required": ["hash-algorithm", "key-algorithm", "max-encoded-hash-length", "max-operation-size"]
+          "required": ["hash_algorithm", "key_algorithm", "max_encoded_hash_length", "max_operation_size"]
         }
       }
     },
