@@ -393,7 +393,7 @@ Each stakeholder has a DID Doc which identifies their key (`s1VERKEY123456789`, 
 - Given the above consortium config as a [genesis file](#genesis-file-bootstrapping), cache the file.
 
 ###### Client Steps:
-- start with DID `did:trustbloc:consortium.net:IDCode123456789`
+- Start with DID `did:trustbloc:consortium.net:IDCode123456789`
 - Check consortium of DID
 - Consortium matches a cached consortium config (the above)
 - Check cached config's cache time
@@ -401,8 +401,8 @@ Each stakeholder has a DID Doc which identifies their key (`s1VERKEY123456789`, 
 - Fetch and process 2 of the stakeholder configs, since the consortium config indicates that 2 stakeholder queries need to be made.
 - Verify these stakeholders' signatures
 - Pick out several endpoints
-- use each stakeholder's endpoints to fetch the stakeholder's DID doc
-- verify stakeholder key in consortium config is a verification key in the did doc
+- Use each stakeholder's endpoints to fetch the stakeholder's DID doc
+- Verify stakeholder key in consortium config is a verification key in the did doc
 
 At this point, discovery and verification are complete. The client can now execute its desired DID method operation, using one of the endpoints from one of the validated stakeholders.
 
@@ -411,7 +411,7 @@ At this point, discovery and verification are complete. The client can now execu
 - If the client needs to be configured to allow [automatic bootstrapping](#automatic-bootstrapping), enable this setting.
 
 ###### Client Steps:
-- start with DID `did:trustbloc:consortium.net:IDCode123456789`
+- Start with DID `did:trustbloc:consortium.net:IDCode123456789`
 - Check consortium of DID
 - Consortium `consortium.net` missing from cache
 - Fetch `consortium.net/.well-known/did-trustbloc/consortium.net.json`, validate format, and process as a consortium config file
