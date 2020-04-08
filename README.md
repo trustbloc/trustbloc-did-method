@@ -8,7 +8,7 @@
 
 # TrustBloc DID Method
 
-This repo defines the trustbloc DID method, which is described [in the spec](/docs/overview/trustbloc-did-method.md).
+This repo defines the trustbloc DID method, which is described [in the spec](/docs/spec/trustbloc-did-method.md).
 
 ## Build
 To build from source see [here](/docs/build.md).
