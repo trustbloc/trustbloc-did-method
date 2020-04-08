@@ -10,7 +10,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.1
 	github.com/google/go-cmp v0.4.0
 	github.com/gorilla/mux v1.7.4
-	github.com/hyperledger/aries-framework-go v0.1.3-0.20200325175154-d18ad2581ed9
+	github.com/hyperledger/aries-framework-go v0.1.3-0.20200408160748-24c4bd1cdda2
 	github.com/sirupsen/logrus v1.4.2
 	github.com/square/go-jose v2.4.1+incompatible
 	github.com/stretchr/testify v1.5.1

@@ -189,7 +189,7 @@ func TestVDRI_Build(t *testing.T) {
 
 		// test WithPublicKey
 		var createOpts []CreateDIDOption
-		createOpts = append(createOpts, WithPublicKey(did.PublicKey{ID: "#key-2"}))
+		createOpts = append(createOpts, WithPublicKey(&did.PublicKey{ID: "#key-2"}))
 
 		createDIDOpts := &CreateDIDOpts{}
 		// Apply options
