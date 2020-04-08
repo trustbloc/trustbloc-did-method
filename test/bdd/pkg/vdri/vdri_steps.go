@@ -34,6 +34,7 @@ const (
 	maxRetry     = 10
 	pubKeyIndex1 = "#key-1"
 	keyType      = "Ed25519VerificationKey2018"
+	serviceID    = "#service"
 )
 
 // Steps is steps for VC BDD tests
@@ -68,7 +69,8 @@ func (e *Steps) createDIDBloc(url string) error {
 	jobID := uuid.New().String()
 
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID,
-		AddPublicKeys: []operation.PublicKey{{ID: pubKeyIndex1, Type: keyType, Value: base58PubKey}}})
+		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: keyType, Value: base58PubKey}},
+		AddServices:   []*did.Service{{ID: serviceID, ServiceEndpoint: "http://www.example.com/"}}})
 	if err != nil {
 		return err
 	}
@@ -125,6 +127,15 @@ func (e *Steps) resolveCreatedDID(url string) error {
 
 	if doc.ID != e.createdDID {
 		return fmt.Errorf("resolved did %s not equal to created did %s", doc.ID, e.createdDID)
+	}
+
+	if doc.Service[0].ID != serviceID {
+		return fmt.Errorf("resolved did service ID %s not equal to %s", doc.Service[0].ID, serviceID)
+	}
+
+	if doc.PublicKey[0].ID != doc.ID+pubKeyIndex1 {
+		return fmt.Errorf("resolved did public key ID %s not equal to %s",
+			doc.PublicKey[0].ID, doc.ID+pubKeyIndex1)
 	}
 
 	return nil

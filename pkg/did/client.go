@@ -138,6 +138,7 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 		didDoc = &docdid.Doc{
 			Context:   []string{},
 			PublicKey: publicKeys,
+			Service:   createDIDOpts.services,
 		}
 	}
 
@@ -220,6 +221,7 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 // CreateDIDOpts create did opts
 type CreateDIDOpts struct {
 	publicKeys []docdid.PublicKey
+	services   []docdid.Service
 	didDoc     *docdid.Doc
 }
 
@@ -230,6 +232,13 @@ type CreateDIDOption func(opts *CreateDIDOpts)
 func WithPublicKey(publicKey docdid.PublicKey) CreateDIDOption {
 	return func(opts *CreateDIDOpts) {
 		opts.publicKeys = append(opts.publicKeys, publicKey)
+	}
+}
+
+// WithService add service
+func WithService(service *docdid.Service) CreateDIDOption {
+	return func(opts *CreateDIDOpts) {
+		opts.services = append(opts.services, *service)
 	}
 }
 

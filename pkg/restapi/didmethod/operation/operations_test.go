@@ -142,8 +142,8 @@ func TestRegisterDIDHandler(t *testing.T) {
 			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"},
 			&didbloc.Client{CreateDIDValue: &did.Doc{ID: "did1"}}, registerPath)
 
-		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", AddPublicKeys: []PublicKey{{ID: "#key2",
-			Type: "type", Value: "value"}}})
+		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", AddPublicKeys: []*PublicKey{{ID: "#key2",
+			Type: "type", Value: "value"}}, AddServices: []*did.Service{{ID: "serviceID"}}})
 		require.NoError(t, err)
 
 		body, status, err := handleRequest(handler, registerPath, req)
