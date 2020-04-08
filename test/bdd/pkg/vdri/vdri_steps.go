@@ -70,7 +70,7 @@ func (e *Steps) createDIDBloc(url string) error {
 
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID,
 		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: keyType, Value: base58PubKey}},
-		AddServices:   []*did.Service{{ID: serviceID, ServiceEndpoint: "http://www.example.com/"}}})
+		AddServices:   []*operation.Service{{ID: serviceID, ServiceEndpoint: "http://www.example.com/"}}})
 	if err != nil {
 		return err
 	}
