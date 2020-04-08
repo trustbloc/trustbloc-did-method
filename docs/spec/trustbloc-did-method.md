@@ -281,7 +281,7 @@ _This section is non-normative_
 This section contains worked examples demonstrating the full process a client takes, to discover endpoints in the consortium and perform a Sidetree operation.
 
 ###### Consortium files:
-The consortium has a config JWS file at `consortium.net/.well-known/did-bloc/consortium.net.json` containing the payload:
+The consortium has a config JWS file at `consortium.net/.well-known/did-trustbloc/consortium.net.json` containing the payload:
 ```json
 {
     "domain": "consortium.net",
@@ -318,7 +318,7 @@ The JWS is signed by the keys listed within this file, namely, `s1VERKEY12345678
 
 ###### Stakeholder Files:
 _Stakeholder one:_  
-`stakeholder.one/.well-known/did-bloc/stakeholder.one.json` is a JWS signed by `s1VERKEY123456789` wrapping the following:
+`stakeholder.one/.well-known/did-trustbloc/stakeholder.one.json` is a JWS signed by `s1VERKEY123456789` wrapping the following:
 ```json
 {
     "domain": "stakeholder.one",
@@ -339,7 +339,7 @@ _Stakeholder one:_
 ```
 
 _Stakeholder two:_  
-`stakeholder.two/.well-known/did-bloc/stakeholder.two.json` is a JWS signed by `s2VERKEY123456789` wrapping the following:
+`stakeholder.two/.well-known/did-trustbloc/stakeholder.two.json` is a JWS signed by `s2VERKEY123456789` wrapping the following:
 ```json
 {
     "domain": "stakeholder.two",
@@ -361,7 +361,7 @@ _Stakeholder two:_
 ```
 
 _Stakeholder three:_  
-`stakeholder.three/.well-known/did-bloc/stakeholder.three.json` is a JWS signed by `s3VERKEY123456789` wrapping the following:
+`stakeholder.three/.well-known/did-trustbloc/stakeholder.three.json` is a JWS signed by `s3VERKEY123456789` wrapping the following:
 ```json
 {
     "domain": "stakeholder.three",
@@ -414,7 +414,7 @@ At this point, discovery and verification are complete. The client can now execu
 - start with DID `did:trustbloc:consortium.net:IDCode123456789`
 - Check consortium of DID
 - Consortium `consortium.net` missing from cache
-- Fetch `consortium.net/.well-known/did-bloc/consortium.net.json`, validate format, and process as a consortium config file
+- Fetch `consortium.net/.well-known/did-trustbloc/consortium.net.json`, validate format, and process as a consortium config file
 - Perform the rest of the [Automatic Bootstrapping](#automatic-bootstrapping) algorithm. In summary:
   - Fetch and validate sufficiently many stakeholder configs, from the domains listed in the consortium config, to satisfy the `num-queries` policy in the consortium config.
   - Retrieve endpoints from these stakeholder configs, use these to retrieve the stakeholders' DID docs, verify stakeholder signatures.
