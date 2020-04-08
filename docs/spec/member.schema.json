@@ -15,11 +15,11 @@
         "cache": {
           "type": "object",
           "properties": {
-            "max-age": {
+            "max_age": {
               "type": "integer"
             }
           },
-          "required": ["max-age"]
+          "required": ["max_age"]
         }
       }
     },

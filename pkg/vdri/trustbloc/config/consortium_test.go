@@ -18,7 +18,7 @@ var payload = `
 {
 	"domain": "foo.bar",
 	"policy": {
-		"cache": {"max-age": 123456789}
+		"cache": {"max_age": 123456789}
 	},
 	"members": [
 		{

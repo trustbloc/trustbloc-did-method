@@ -44,7 +44,7 @@ type ConsortiumPolicy struct {
 // CacheControl holds cache settings for this file,
 //  indicating to the recipient how long until they should check for a new version of the file.
 type CacheControl struct {
-	MaxAge uint32 `json:"max-age"`
+	MaxAge uint32 `json:"max_age"`
 }
 
 // StakeholderListElement holds the domain and DID of a stakeholder within the consortium

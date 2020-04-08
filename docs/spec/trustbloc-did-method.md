@@ -89,7 +89,7 @@ Example of the format of the configuration data wrapped within the JWS:
 {
     "domain": "[consortium domain]",
     "policy": {
-        "cache": {"max-age": 604800}
+        "cache": {"max_age": 604800}
     },
     "members": [
         {
@@ -158,7 +158,7 @@ A stakeholder's config file is a JWS, signed by the stakeholder, with the payloa
 {
     "domain": "stakeholder.one",
     "did": "[stakeholder one's DID]",
-    "policy": {"cache": {"max-age": 604800}},
+    "policy": {"cache": {"max_age": 604800}},
     "endpoints": [
         "http://endpoints.stakeholder.one/peer1/",
         "http://endpoints.stakeholder.one/peer2/"
@@ -173,16 +173,16 @@ The stakeholder config object JSON schema is [here](member.schema.json).
 The `policy` element of a consortium config object is a JSON object. Each key-value pair is a specific rule for the client to follow when processing consortium or stakeholder configuration files, or when resolving DIDs within the consortium.
 
 ##### Caching
-`"cache": {"max-age": [number in seconds]}`
+`"cache": {"max_age": [number in seconds]}`
 
 This 64 bit unsigned integer element specifies the length of time that a client should cache a copy of the consortium config.
 
 ##### Stakeholder Queries
-`"num-queries": [number of queries]`
+`"num_queries": [number of queries]`
 
 This 64 bit unsigned integer element specifies the number of stakeholders that a client should query when verifying a consortium configuration - whether for bootstrapping or for updating.
 
-If this element is not present in the consortium policy, the default value of `num-queries` is the number of stakeholders within the consortium.
+If this element is not present in the consortium policy, the default value of `num_queries` is the number of stakeholders within the consortium.
 
 ##### Sidetree Parameters
 `"sidetree": {[parameters]}`
@@ -191,23 +191,23 @@ This object holds parameters which the client needs for Sidetree requests. The k
 
 **Key** | **Value Type** | **Description** | **Example Value**
 --- | --- | --- | ---
-`"hash-algorithm"` | `string` | The hash algorithm used for Sidetree operation requests |  `"SHA256"`
-`"key-algorithm"` | `string` | The key algorithm used for signing Sidetree operation requests | `ES256`
-`"max-encoded-hash-length"` | `uint64` | The maximum string length of the hash created for the operation request | `100`
-`"max-operation-size"` | `uint64` | The maximum size of the Sidetree operation request, in bytes | `8192`
+`"hash_algorithm"` | `string` | The hash algorithm used for Sidetree operation requests |  `"SHA256"`
+`"key_algorithm"` | `string` | The key algorithm used for signing Sidetree operation requests | `ES256`
+`"max_encoded_hash_length"` | `uint64` | The maximum string length of the hash created for the operation request | `100`
+`"max_operation_size"` | `uint64` | The maximum size of the Sidetree operation request, in bytes | `8192`
 
 The following keys are used for validating the backing datastructures used by Sidetree, and can be ignored by clients that don't intend to validate:
 
 **Key** | **Value Type** | **Description** | **Example Value**
 --- | --- | --- | ---
 `"genesis-time"` | `uint` | The block in the blockchain's history where Sidetree is first activated | 0
-`"max-operations-per-batch"` | `unit` | The maximum number of sidetree operations per batch | 10000
+`"max_operations-per-batch"` | `unit` | The maximum number of sidetree operations per batch | 10000
 
 ### Stakeholder Policy
 The `policy` element of a stakeholder config object is a JSON object. Each key-value pair is a rule for the client to follow when processing this specific stakeholder config file, or for resolving DIDs using endpoints listed within this stakeholder config file.
 
 ##### Caching
-`"cache": {"max-age": [number in seconds]}`
+`"cache": {"max_age": [number in seconds]}`
 
 This 64 bit unsigned integer element specifies the length of time that a client should cache a copy of the stakeholder config.
 
@@ -222,7 +222,7 @@ Automatic bootstrapping starts from a consortium domain - for example, the domai
 Automatic bootstrapping verifies that the consortium domain and stakeholder domains are endorsed by the DIDs of the stakeholders, but does not offer any proof of the identity or trust of the consortium or stakeholders. It can be used, for example, for resolving DIDs under the assumption that a DID owner would register a DID under a consortium that *they* trust.
 
 The process is as follows:
-- The client fetches the consortium configuration, and picks N of the listed stakeholders, where N is the value of the `num-queries` consortium policy configuration.
+- The client fetches the consortium configuration, and picks N of the listed stakeholders, where N is the value of the `num_queries` consortium policy configuration.
 - For each of these stakeholders:
   - Fetch the stakeholder's TrustBloc configuration and did-configuration.
   - Use one of the Sidetree endpoints listed within to resolve the stakeholder's DID and retrieve its DID doc.
@@ -292,13 +292,13 @@ The consortium has a config JWS file at `consortium.net/.well-known/did-trustblo
 {
     "domain": "consortium.net",
     "policy": {
-        "cache": {"max-age": 2419200},
-        "num-queries": 2,
+        "cache": {"max_age": 2419200},
+        "num_queries": 2,
         "sidetree": {
-            "hash-algorithm": "SHA256",
-            "key-algorithm": "NotARealAlg2018",
-            "max-encoded-hash-length": 100,
-            "max-operation-size": 8192
+            "hash_algorithm": "SHA256",
+            "key_algorithm": "NotARealAlg2018",
+            "max_encoded_hash_length": 100,
+            "max_operation_size": 8192
         }
     },
     "members": [
@@ -338,7 +338,7 @@ _Stakeholder one:_
 {
     "domain": "stakeholder.one",
     "did": "did:trustbloc:consortium.net:s1did12345",
-    "policy": {"cache": {"max-age": 604800}},
+    "policy": {"cache": {"max_age": 604800}},
     "endpoints": [
         "http://endpoints.stakeholder.one/peer1/",
         "http://endpoints.stakeholder.one/peer2/"
@@ -359,7 +359,7 @@ _Stakeholder two:_
 {
     "domain": "stakeholder.two",
     "did": "did:trustbloc:consortium.net:s2did12345",
-    "policy": {"cache": {"max-age": 604800}},
+    "policy": {"cache": {"max_age": 604800}},
     "endpoints": [
         "http://endpoints.stakeholder.two/peer1/",
         "http://endpoints.stakeholder.two/peer2/",
@@ -381,7 +381,7 @@ _Stakeholder three:_
 {
     "domain": "stakeholder.three",
     "did": "did:trustbloc:consortium.net:s3did12345",
-    "policy": {"cache": {"max-age": 604800}},
+    "policy": {"cache": {"max_age": 604800}},
     "endpoints": [
         "http://endpoints.stakeholder.three/peer1/"
     ]
@@ -431,7 +431,7 @@ At this point, discovery and verification are complete. The client can now execu
 - Consortium `consortium.net` missing from cache
 - Fetch `consortium.net/.well-known/did-trustbloc/consortium.net.json`, validate format, and process as a consortium config file
 - Perform the rest of the [Automatic Bootstrapping](#automatic-bootstrapping) algorithm. In summary:
-  - Fetch and validate sufficiently many stakeholder configs, from the domains listed in the consortium config, to satisfy the `num-queries` policy in the consortium config.
+  - Fetch and validate sufficiently many stakeholder configs, from the domains listed in the consortium config, to satisfy the `num_queries` policy in the consortium config.
   - Retrieve endpoints from these stakeholder configs, use these to retrieve the stakeholders' DID docs, verify stakeholder signatures.
   - Cache validated config files.
   - Present the list of endpoints parsed from said stakeholder configs, to be used for client DID method operations.
