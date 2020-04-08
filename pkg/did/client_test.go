@@ -211,5 +211,18 @@ func TestVDRI_Build(t *testing.T) {
 		}
 
 		require.Equal(t, "didID", createDIDOpts.didDoc.ID)
+
+		// test WithService
+		createOpts = make([]CreateDIDOption, 0)
+		createOpts = append(createOpts, WithService(&did.Service{ID: "serviceID"}))
+
+		createDIDOpts = &CreateDIDOpts{}
+		// Apply options
+		for _, opt := range createOpts {
+			opt(createDIDOpts)
+		}
+
+		require.Equal(t, 1, len(createDIDOpts.services))
+		require.Equal(t, "serviceID", createDIDOpts.services[0].ID)
 	})
 }

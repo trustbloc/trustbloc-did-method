@@ -76,7 +76,7 @@ func New(config *Config) *Operation {
 	return svc
 }
 
-func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) {
+func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen
 	data := RegisterDIDRequest{}
 
 	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
@@ -115,6 +115,11 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			opts = append(opts, didclient.WithPublicKey(did.PublicKey{ID: v.ID, Type: v.Type,
 				Value: base58.Decode(v.Value)}))
 		}
+	}
+
+	// Add services
+	for _, service := range data.AddServices {
+		opts = append(opts, didclient.WithService(service))
 	}
 
 	didDoc, err := o.didBlocClient.CreateDID(o.blocDomain, opts...)
