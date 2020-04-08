@@ -119,7 +119,9 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 	// Add services
 	for _, service := range data.AddServices {
-		opts = append(opts, didclient.WithService(service))
+		opts = append(opts, didclient.WithService(&did.Service{ID: service.ID, Type: service.Type,
+			Priority: service.Priority, RecipientKeys: service.RecipientKeys, RoutingKeys: service.RoutingKeys,
+			ServiceEndpoint: service.ServiceEndpoint}))
 	}
 
 	didDoc, err := o.didBlocClient.CreateDID(o.blocDomain, opts...)

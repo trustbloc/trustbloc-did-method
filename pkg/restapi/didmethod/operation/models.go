@@ -5,8 +5,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package operation
 
-import "github.com/hyperledger/aries-framework-go/pkg/doc/did"
-
 const (
 	// RegistrationStateFinished registration state finished
 	RegistrationStateFinished = "finished"
@@ -19,7 +17,7 @@ type RegisterDIDRequest struct {
 	JobID         string            `json:"jobId,omitempty"`
 	Options       map[string]string `json:"options,omitempty"`
 	AddPublicKeys []*PublicKey      `json:"addPublicKeys,omitempty"`
-	AddServices   []*did.Service    `json:"addServices,omitempty"`
+	AddServices   []*Service        `json:"addServices,omitempty"`
 }
 
 // RegisterResponse register response
@@ -55,4 +53,14 @@ type PublicKey struct {
 	ID    string `json:"id,omitempty"`
 	Type  string `json:"type,omitempty"`
 	Value string `json:"value,omitempty"`
+}
+
+// Service DID doc service
+type Service struct {
+	ID              string   `json:"id,omitempty"`
+	Type            string   `json:"type,omitempty"`
+	Priority        uint     `json:"priority,omitempty"`
+	RecipientKeys   []string `json:"recipientKeys,omitempty"`
+	RoutingKeys     []string `json:"routingKeys,omitempty"`
+	ServiceEndpoint string   `json:"serviceEndpoint,omitempty"`
 }
