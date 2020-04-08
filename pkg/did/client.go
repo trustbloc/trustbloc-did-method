@@ -229,9 +229,9 @@ type CreateDIDOpts struct {
 type CreateDIDOption func(opts *CreateDIDOpts)
 
 // WithPublicKey add DID public key
-func WithPublicKey(publicKey docdid.PublicKey) CreateDIDOption {
+func WithPublicKey(publicKey *docdid.PublicKey) CreateDIDOption {
 	return func(opts *CreateDIDOpts) {
-		opts.publicKeys = append(opts.publicKeys, publicKey)
+		opts.publicKeys = append(opts.publicKeys, *publicKey)
 	}
 }
 

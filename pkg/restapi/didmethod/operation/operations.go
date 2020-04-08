@@ -106,13 +106,13 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 		keysID[pubKeyIndex1] = base58PubKey
 
-		opts = append(opts, didclient.WithPublicKey(did.PublicKey{ID: pubKeyIndex1, Type: keyType,
+		opts = append(opts, didclient.WithPublicKey(&did.PublicKey{ID: pubKeyIndex1, Type: keyType,
 			Value: base58.Decode(base58PubKey)}))
 	} else {
 		for _, v := range data.AddPublicKeys {
 			keysID[v.ID] = v.Value
 
-			opts = append(opts, didclient.WithPublicKey(did.PublicKey{ID: v.ID, Type: v.Type,
+			opts = append(opts, didclient.WithPublicKey(&did.PublicKey{ID: v.ID, Type: v.Type,
 				Value: base58.Decode(v.Value)}))
 		}
 	}
