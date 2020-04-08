@@ -95,12 +95,18 @@ Example of the format of the configuration data wrapped within the JWS:
         {
             "domain": "stakeholder.one",
             "did": "[stakeholder one's DID]",
-            "key": "[stakeholder one's did:key verification key]"
+            "public_key": {
+                "id": "[stakeholder one's verification public key DID URL]",
+                "jwk": {stakeholder one's verification public key in JWK format},
+            }
         },
         {
             "domain": "stakeholder.two",
             "did": "[stakeholder two's DID]",
-            "key": "[stakeholder two's did:key verification key]"
+            "public_key": {
+                "id": "[stakeholder two's verification public key DID URL]",
+                "jwk": {stakeholder two's verification public key in JWK format},
+            }
         }
     ],
     "previous": "[hash of previous consortium config file]"
@@ -118,7 +124,7 @@ The `"members"` element of a consortium config object is a JSON array, where eac
 Each element of `"members"` is a JSON object containing the elements:
 - `"domain"`: The web domain where its configuration can be found
 - `"did"`: The `did:trustbloc` DID of the stakeholder, with the associated DID doc in Sidetree on the consortium ledger
-- `"key"`: The [`did:key`](https://w3c-ccg.github.io/did-method-key/) verification key which can be used to verify this stakeholder's signature. The key should match the verification key in the stakeholder's DID doc.
+- `"public_key"`: The verification key DID URL and public key in [IETF RFC 7517](https://tools.ietf.org/html/rfc7517) JWK format which can be used to verify this stakeholder's signature. The key should match the verification key in the stakeholder's DID doc.
 
 ##### History
 The `history/` directory contains historical consortium configs. Each such file is named `[hash].json`, where `[hash]` is the SHA-256 hash of the given file.
@@ -135,9 +141,8 @@ A stakeholder must expose the following files and directories within
 
 `history/` is a directory of previous stakeholder configs for this stakeholder.
 
-[`.well-known/did-configuration`](https://identity.foundation/specs/did-configuration/), a Well-Known DID Configuration resource, asserts a linkage between a group of DIDs and the domain which the configuration is exposed under. A stakeholder must have a Well-Known DID Configuration which asserts two domain linkages:
- - One between the stakeholder's `did:key` DID (the same one contained within the consortium config) and its domain.
- - One between the stakeholder's `did:trustbloc` DID (the same one contained within the consortium config) and its domain.
+[`.well-known/did-configuration`](https://identity.foundation/specs/did-configuration/), a Well-Known DID Configuration resource, asserts a linkage between a group of DIDs and the domain which the configuration is exposed under. A stakeholder must have a Well-Known DID Configuration which asserts domain linkage:
+ - Between the stakeholder's `did:trustbloc` DID (the same one contained within the consortium config) and its domain.
 
 ##### Stakeholder Configuration Files
 Each of these files is named `[domain].json`, where `[domain]` is the URL domain, owned by the stakeholder, where you can find the canonical copy of the stakeholder's configuration.
@@ -221,7 +226,8 @@ The process is as follows:
 - For each of these stakeholders:
   - Fetch the stakeholder's TrustBloc configuration and did-configuration.
   - Use one of the Sidetree endpoints listed within to resolve the stakeholder's DID and retrieve its DID doc.
-  - Verify that the `did:key` DID resolves to a key matching one of the keys within the DID doc.
+  - Verify that the `"public_key"` identified by its `"id"` DID URL value is expressed by the stakeholder's DID document.
+  - Verify that the `"public_key"` JWK value matches the JWK of the key identified by the `"id"` DID URL.
   - Verify the signature on the stakeholder configuration, the stakeholder's signature on the consortium configuration and the signature on the did-configuration linkage assertions using this key.
   - If any of these steps fail, add another stakeholder to the list to replace this one.
 - If less then N stakeholders have successfully verified (meaning the client has tried all stakeholders), this consortium's configuration is invalid.
@@ -299,17 +305,26 @@ The consortium has a config JWS file at `consortium.net/.well-known/did-trustblo
         {
             "domain": "stakeholder.one",
             "did": "did:trustbloc:consortium.net:s1did12345",
-            "key": "did:key:s1VERKEY123456789"
+            "public_key": {
+                "id": "did:trustbloc:consortium.net:s1did12345#s1VERKEY123456789",
+                "jwk": {"kty":"EC",...}
+            }
         },
         {
             "domain": "stakeholder.two",
             "did": "did:trustbloc:consortium.net:s2did12345",
-            "key": "did:key:s3VERKEY123456789"
+            "public_key": {
+                "id": "did:trustbloc:consortium.net:s2did12345#s2VERKEY123456789",
+                "jwk": {"kty":"EC",...}
+            }
         },
         {
             "domain": "stakeholder.three",
             "did": "did:trustbloc:consortium.net:s3did12345",
-            "key": "did:key:s3VERKEY123456789"
+            "public_key": {
+                "id": "did:trustbloc:consortium.net:s3did12345#s3VERKEY123456789",
+                "jwk": {"kty":"EC",...}
+            }
         }
     ]
 }
