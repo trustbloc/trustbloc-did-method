@@ -299,17 +299,17 @@ The consortium has a config JWS file at `consortium.net/.well-known/did-trustblo
         {
             "domain": "stakeholder.one",
             "did": "did:trustbloc:consortium.net:s1did12345",
-            "key": "s1VERKEY123456789"
+            "key": "did:key:s1VERKEY123456789"
         },
         {
             "domain": "stakeholder.two",
             "did": "did:trustbloc:consortium.net:s2did12345",
-            "key": "s3VERKEY123456789"
+            "key": "did:key:s3VERKEY123456789"
         },
         {
             "domain": "stakeholder.three",
             "did": "did:trustbloc:consortium.net:s3did12345",
-            "key": "s3VERKEY123456789"
+            "key": "did:key:s3VERKEY123456789"
         }
     ]
 }
