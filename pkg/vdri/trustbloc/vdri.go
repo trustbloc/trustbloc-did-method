@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-cmp/cmp"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
 	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
@@ -137,11 +136,8 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 			return nil, err
 		}
 
-		if doc == nil {
-			doc = resp
-		} else if !cmp.Equal(resp, doc) {
-			return nil, fmt.Errorf("endpoints responded with different results for did")
-		}
+		// TODO add logic to compare response from each endpoint
+		doc = resp
 	}
 
 	return doc, nil
