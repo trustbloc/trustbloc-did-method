@@ -6,7 +6,7 @@ This is version `0.1` of the TrustBloc DID Method Specification.
 ## Introduction
 _This section is non-normative_
 
-The `did:trustbloc` DID method allows groups of independent entities to share custody of a DID registry consisting of [Sidetree](https://identity.foundation/sidetree/docs/spec/) over a permissioned ledger.
+The `did:trustbloc` DID method allows groups of independent entities to share custody of a DID registry consisting of a Sidetree implementation over a permissioned ledger. For more information on Sidetree, please refer to the [Sidetree protocol specification](https://identity.foundation/sidetree/docs/spec/).
 
 Independent [*stakeholders*](#stakeholder) wishing to transact with one another using DIDs can come together to form a [*consortium*](#consortium) to manage their shared custody of a ledger.
 
@@ -466,3 +466,21 @@ This allows cryptographic primitives to be phased out and replaced as needed, wh
 ### Trust on First Use
 
 The TrustBloc DID Method is designed to address the trust-on-first-use (TOFU) problem with respect to trusting DID method endpoints. The [bootstrapping](#bootstrapping-trust) section details several methods by which a client may trust and verify the configuration of a consortium, and from there, use a set of DID method operation endpoints (ie, Sidetree endpoints) which it can trust on the basis of their inclusion in the configurations of endorsed stakeholders.
+
+## Privacy Considerations
+
+_This section is non-normative._
+
+### Keep Personally-Identifiable Information (PII) Private
+
+DID Documents should not contain Personally-Identifiable Information (PII). Please see [Decentralized Identifiers specification](https://www.w3.org/TR/did-core/#keep-personally-identifiable-information-pii-private) for more information.
+
+### DID Correlation Risks and Pseudonymous DIDs
+
+Public DIDs have the risk of being used for correlation. Pairwise unique DIDs can be used to mitigate this risk. Please see [Decentralized Identifiers specification](https://www.w3.org/TR/did-core/#did-correlation-risks-and-pseudonymous-dids) for more information.
+
+As an example, the DID controller can make use of a unique [did:key](https://github.com/w3c-ccg/did-method-key) or [did:peer](https://openssi.github.io/peer-did-method-spec/) for each relationship, when they do not wish to be publicly identified.
+
+### Consortium Controls
+
+A particular consortium may implement additional controls to limit the contents of DID documents.

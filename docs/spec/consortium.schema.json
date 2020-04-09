@@ -26,7 +26,7 @@
           "type": "integer",
           "minimum": 0
         },
-        "history-hash": {
+        "history_hash": {
           "type": "string"
         },
         "sidetree": {
