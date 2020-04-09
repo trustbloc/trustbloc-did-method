@@ -171,7 +171,7 @@ func getMode(cmd *cobra.Command) (string, error) {
 
 func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(hostURLFlagName, hostURLFlagShorthand, "", hostURLFlagUsage)
-	startCmd.Flags().BoolP(tlsSystemCertPoolFlagName, tlsSystemCertPoolFlagShorthand, false,
+	startCmd.Flags().StringP(tlsSystemCertPoolFlagName, tlsSystemCertPoolFlagShorthand, "",
 		tlsSystemCertPoolFlagUsage)
 	startCmd.Flags().StringArrayP(tlsCACertsFlagName, tlsCACertsFlagShorthand, []string{}, tlsCACertsFlagUsage)
 	startCmd.Flags().StringP(domainFlagName, domainFlagShorthand, "", domainFlagUsage)
