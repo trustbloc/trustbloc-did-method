@@ -6,7 +6,7 @@ This is version `0.1` of the TrustBloc DID Method Specification.
 ## Introduction
 _This section is non-normative_
 
-The `did:trustbloc` DID method allows groups of independent entities to share custody of a DID registry consisting of [Sidetree](https://identity.foundation/sidetree/spec/) over a permissioned ledger.
+The `did:trustbloc` DID method allows groups of independent entities to share custody of a DID registry consisting of [Sidetree](https://identity.foundation/sidetree/docs/spec/) over a permissioned ledger.
 
 Independent [*stakeholders*](#stakeholder) wishing to transact with one another using DIDs can come together to form a [*consortium*](#consortium) to manage their shared custody of a ledger.
 
@@ -85,7 +85,7 @@ A consortium config file is a JWS, signed by the stakeholders, with the payload 
   - `previous`: The SHA256 hash of the previous version of this config file
   
 Example of the format of the configuration data wrapped within the JWS:
-```json
+```
 {
     "domain": "[consortium domain]",
     "policy": {
@@ -124,7 +124,7 @@ The `"members"` element of a consortium config object is a JSON array, where eac
 Each element of `"members"` is a JSON object containing the elements:
 - `"domain"`: The web domain where its configuration can be found
 - `"did"`: The `did:trustbloc` DID of the stakeholder, with the associated DID doc in Sidetree on the consortium ledger
-- `"public_key"`: The verification key DID URL and public key in [IETF RFC 7517](https://tools.ietf.org/html/rfc7517) JWK format which can be used to verify this stakeholder's signature. The key should match the verification key in the stakeholder's DID doc.
+- `"public_key"`: The verification key DID URL and public key in [IETF RFC 7517](https://tools.ietf.org/html/rfc7517) JWK format which can be used to verify this stakeholder's signature. The key should match the verification key in the stakeholder's DID doc. The key is mirrored here in the consortium config so historical signatures can be verified even if the DID doc no longer has the key, or is no longer available.
 
 ##### History
 The `history/` directory contains historical consortium configs. Each such file is named `[hash].json`, where `[hash]` is the SHA-256 hash of the given file.
@@ -184,6 +184,11 @@ This 64 bit unsigned integer element specifies the number of stakeholders that a
 
 If this element is not present in the consortium policy, the default value of `num_queries` is the number of stakeholders within the consortium.
 
+##### History Hash
+`"history_hash": [hash ID string]`
+
+The hash algorithm used for identifying history files. Defaults to the value `"SHA256"`.
+
 ##### Sidetree Parameters
 `"sidetree": {[parameters]}`
 
@@ -192,7 +197,7 @@ This object holds parameters which the client needs for Sidetree requests. The k
 **Key** | **Value Type** | **Description** | **Example Value**
 --- | --- | --- | ---
 `"hash_algorithm"` | `string` | The hash algorithm used for Sidetree operation requests |  `"SHA256"`
-`"key_algorithm"` | `string` | The key algorithm used for signing Sidetree operation requests | `ES256`
+`"key_algorithm"` | `string` | The key algorithm used for signing Sidetree operation requests | `"ES256"`
 `"max_encoded_hash_length"` | `uint64` | The maximum string length of the hash created for the operation request | `100`
 `"max_operation_size"` | `uint64` | The maximum size of the Sidetree operation request, in bytes | `8192`
 
@@ -200,8 +205,8 @@ The following keys are used for validating the backing datastructures used by Si
 
 **Key** | **Value Type** | **Description** | **Example Value**
 --- | --- | --- | ---
-`"genesis-time"` | `uint` | The block in the blockchain's history where Sidetree is first activated | 0
-`"max_operations-per-batch"` | `unit` | The maximum number of sidetree operations per batch | 10000
+`"genesis_time"` | `uint` | The block in the blockchain's history where Sidetree is first activated | `0`
+`"max_operations_per_batch"` | `unit` | The maximum number of sidetree operations per batch | `10000`
 
 ### Stakeholder Policy
 The `policy` element of a stakeholder config object is a JSON object. Each key-value pair is a rule for the client to follow when processing this specific stakeholder config file, or for resolving DIDs using endpoints listed within this stakeholder config file.
@@ -274,26 +279,39 @@ When removing a stakeholder from a consortium:
  - The consortium config pushes an update which removes the stakeholder from the consortium config list.
  - The stakeholder is removed from the ledger
 
-### Implementation Notes
+### Error Cases
+Error cases which terminate the discovery process in a failure state:
+- Consortium config unavailable: The consortium domain points to a server that isn't functional
+- Insufficient endorsement: Insufficient stakeholders endorse the consortium
+
+Error cases for a specific stakeholder, which can be ignored if sufficient other stakeholders are available:
+- Stakeholder down: if a stakeholder's config servers are all down
+- Stakeholder endpoints unavailable: if none of the stakeholder's Sidetree endpoints are functional
+- No signature: The stakeholder has not signed a config it is expected to
+- Invalid stakeholder signature: if a stakeholder signature fails to verify against the stakeholder's verification key(s)
+- Inconsistent configuration: if the stakeholder mirrors consortium files, and these files are inconsistent across stakeholders.
+
+## Implementation Notes
 _This section is non-normative_
 
 When implementing a client which performs DID operations in a consortium, it is useful to split out the *read* operation (Resolve) from the *edit* operations (Create, Update, Recover, Deactivate). A resolver does not need any special permissions, and resolution is the most common operation, being needed for any transaction using a DID as an identifier.
 
 The edit operations require a client which can securely store key material - it must sign the contents of edit operation messages, and must generate and store one-time passwords for later provision, to prove ownership of the DID.
 
-### Example Client Flows
+## Example Client Flows
 _This section is non-normative_
 
 This section contains worked examples demonstrating the full process a client takes, to discover endpoints in the consortium and perform a Sidetree operation.
 
 ###### Consortium files:
 The consortium has a config JWS file at `consortium.net/.well-known/did-trustbloc/consortium.net.json` containing the payload:
-```json
+```
 {
     "domain": "consortium.net",
     "policy": {
         "cache": {"max_age": 2419200},
         "num_queries": 2,
+        "history_hash": "SHA256",
         "sidetree": {
             "hash_algorithm": "SHA256",
             "key_algorithm": "NotARealAlg2018",
@@ -436,14 +454,15 @@ At this point, discovery and verification are complete. The client can now execu
   - Cache validated config files.
   - Present the list of endpoints parsed from said stakeholder configs, to be used for client DID method operations.
 
-### Error Cases
-Error cases which terminate the discovery process in a failure state:
-- Consortium config unavailable: The consortium domain points to a server that isn't functional
-- Insufficient endorsement: Insufficient stakeholders endorse the consortium
+## Security Considerations
+_This section is non-normative._
 
-Error cases for a specific stakeholder, which can be ignored if sufficient other stakeholders are available:
-- Stakeholder down: if a stakeholder's config servers are all down
-- Stakeholder endpoints unavailable: if none of the stakeholder's Sidetree endpoints are functional
-- No signature: The stakeholder has not signed a config it is expected to
-- Invalid stakeholder signature: if a stakeholder signature fails to verify against the stakeholder's verification key(s)
-- Inconsistent configuration: if the stakeholder mirrors consortium files, and these files are inconsistent across stakeholders.
+### Cryptographic Agility
+
+The TrustBloc DID Method relies on cryptographic hashes and signatures to prove stakeholder endorsement of consortium config files. The specific primitives used are identified in the configuration, so they can be replaced with different primitives at a later time - even within the same consortium. The history system maintains a traceable history of configuration changes, so the configuration can be verified to have a continuity of endorsement leading from the beginning of the consortium.
+
+This allows cryptographic primitives to be phased out and replaced as needed, while the consortium may remain in continuous use for discovery and DID method operations.
+
+### Trust on First Use
+
+The TrustBloc DID Method is designed to address the trust-on-first-use (TOFU) problem with respect to trusting DID method endpoints. The [bootstrapping](#bootstrapping-trust) section details several methods by which a client may trust and verify the configuration of a consortium, and from there, use a set of DID method operation endpoints (ie, Sidetree endpoints) which it can trust on the basis of their inclusion in the configurations of endorsed stakeholders.

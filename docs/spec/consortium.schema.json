@@ -26,6 +26,9 @@
           "type": "integer",
           "minimum": 0
         },
+        "history-hash": {
+          "type": "string"
+        },
         "sidetree": {
           "type": "object",
           "properties" : {
