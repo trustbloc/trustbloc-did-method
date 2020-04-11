@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/framework/context"
 	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	ariesstorage "github.com/hyperledger/aries-framework-go/pkg/storage"
-	ariesmemstore "github.com/hyperledger/aries-framework-go/pkg/storage/mem"
+	"github.com/hyperledger/aries-framework-go/pkg/storage/leveldb"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
@@ -59,6 +59,10 @@ const (
 
 // mode in which to run the did-method service
 type mode string
+
+// TODO remove leveldb store when aries starting to support couchdb
+// TODO https://github.com/hyperledger/aries-framework-go/issues/1599
+var dbPath = "/tmp/ariesstore/" //nolint: gochecknoglobals
 
 const (
 	registrar mode = "registrar"
@@ -185,7 +189,10 @@ func startDidMethod(parameters *rpParameters) error {
 	}
 
 	// Create KMS
-	kms, err := createKMS(ariesmemstore.NewProvider())
+	// TODO remove leveldb store when aries starting to support couchdb
+	// TODO https://github.com/hyperledger/aries-framework-go/issues/1599
+	// TODO make it configurable after switching to couchdb
+	kms, err := createKMS(leveldb.NewProvider(dbPath))
 	if err != nil {
 		return err
 	}

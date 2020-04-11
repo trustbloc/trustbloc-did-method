@@ -7,6 +7,7 @@ package startcmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
@@ -62,6 +63,11 @@ func TestStartCmdValidArgs(t *testing.T) {
 }
 
 func TestStartCmdValidArgsEnvVar(t *testing.T) {
+	path, cleanup := setupLevelDB(t)
+	defer cleanup()
+
+	dbPath = path
+
 	startCmd := GetStartCmd(&mockServer{})
 
 	err := os.Setenv(hostURLEnvKey, "localhost:8080")
@@ -89,6 +95,11 @@ func TestDomainFlagVar(t *testing.T) {
 	t.Run("test domain is optional when mode is resolver", func(t *testing.T) {
 		os.Clearenv()
 
+		path, cleanup := setupLevelDB(t)
+		defer cleanup()
+
+		dbPath = path
+
 		startCmd := GetStartCmd(&mockServer{})
 
 		err := os.Setenv(hostURLEnvKey, "localhost:8080")
@@ -103,6 +114,11 @@ func TestDomainFlagVar(t *testing.T) {
 
 	t.Run("test domain is required when mode is registrar", func(t *testing.T) {
 		os.Clearenv()
+
+		path, cleanup := setupLevelDB(t)
+		defer cleanup()
+
+		dbPath = path
 
 		startCmd := GetStartCmd(&mockServer{})
 
@@ -158,6 +174,20 @@ func TestCreateKMS(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, v)
 	})
+}
+
+func setupLevelDB(t testing.TB) (string, func()) {
+	dbPath, err := ioutil.TempDir("", "db")
+	if err != nil {
+		t.Fatalf("Failed to create leveldb directory: %s", err)
+	}
+
+	return dbPath, func() {
+		err := os.RemoveAll(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to clear leveldb directory: %s", err)
+		}
+	}
 }
 
 func getValidArgs() []string {
