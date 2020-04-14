@@ -8,7 +8,7 @@ replace github.com/trustbloc/trustbloc-did-method => ../..
 
 require (
 	github.com/gorilla/mux v1.7.4
-	github.com/hyperledger/aries-framework-go v0.1.3-0.20200414165502-24ea84b2c08b
+	github.com/hyperledger/aries-framework-go v0.1.3-0.20200414183703-ab951b13327a
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.5.1
 	github.com/trustbloc/edge-core v0.1.3-0.20200414165955-488d2227b903
