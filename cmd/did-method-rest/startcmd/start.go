@@ -17,7 +17,8 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/framework/context"
 	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	ariesstorage "github.com/hyperledger/aries-framework-go/pkg/storage"
-	"github.com/hyperledger/aries-framework-go/pkg/storage/leveldb"
+	couchdbstorage "github.com/hyperledger/aries-framework-go/pkg/storage/couchdb"
+	memstorage "github.com/hyperledger/aries-framework-go/pkg/storage/mem"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
@@ -55,14 +56,26 @@ const (
 	modeFlagUsage     = "Mode in which the did-method service will run. Possible values: " +
 		"['registrar', 'resolver', 'combined'] (default: combined)."
 	modeEnvKey = "DID_METHOD_MODE"
+
+	databaseTypeFlagName      = "database-type"
+	databaseTypeEnvKey        = "DID_METHOD_DATABASE_TYPE"
+	databaseTypeFlagShorthand = "t"
+	databaseTypeFlagUsage     = "The type of database to use internally in the did driver. Supported options: mem, couchdb." + //nolint: lll
+		" Alternatively, this can be set with the following environment variable: " + databaseTypeEnvKey
+
+	databaseTypeMemOption     = "mem"
+	databaseTypeCouchDBOption = "couchdb"
+
+	databaseURLFlagName      = "database-url"
+	databaseURLEnvKey        = "DID_METHOD_DATABASE_URL"
+	databaseURLFlagShorthand = "l"
+	databaseURLFlagUsage     = "The URL of the database. Not needed if using memstore." +
+		" For CouchDB, include the username:password@ text if required." +
+		" Alternatively, this can be set with the following environment variable: " + databaseURLEnvKey
 )
 
 // mode in which to run the did-method service
 type mode string
-
-// TODO remove leveldb store when aries starting to support couchdb
-// TODO https://github.com/hyperledger/aries-framework-go/issues/1599
-var dbPath = "/tmp/ariesstore/" //nolint: gochecknoglobals
 
 const (
 	registrar mode = "registrar"
@@ -82,13 +95,15 @@ func (s *HTTPServer) ListenAndServe(host string, router http.Handler) error {
 	return http.ListenAndServe(host, router)
 }
 
-type rpParameters struct {
+type parameters struct {
 	srv               server
 	hostURL           string
 	tlsSystemCertPool bool
 	tlsCACerts        []string
 	blocDomain        string
 	mode              string
+	databaseType      string
+	databaseURL       string
 }
 
 // GetStartCmd returns the Cobra start command.
@@ -100,7 +115,7 @@ func GetStartCmd(srv server) *cobra.Command {
 	return startCmd
 }
 
-func createStartCmd(srv server) *cobra.Command {
+func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 	return &cobra.Command{
 		Use:   "start",
 		Short: "Start did-method",
@@ -142,13 +157,27 @@ func createStartCmd(srv server) *cobra.Command {
 				return err
 			}
 
-			parameters := &rpParameters{
+			databaseType, err := cmdutils.GetUserSetVarFromString(cmd, databaseTypeFlagName,
+				databaseTypeEnvKey, false)
+			if err != nil {
+				return err
+			}
+
+			databaseURL, err := cmdutils.GetUserSetVarFromString(cmd, databaseURLFlagName,
+				databaseURLEnvKey, true)
+			if err != nil {
+				return err
+			}
+
+			parameters := &parameters{
 				srv:               srv,
 				hostURL:           strings.TrimSpace(hostURL),
 				tlsSystemCertPool: tlsSystemCertPool,
 				tlsCACerts:        tlsCACerts,
 				blocDomain:        blocDomain,
 				mode:              mode,
+				databaseType:      databaseType,
+				databaseURL:       databaseURL,
 			}
 
 			return startDidMethod(parameters)
@@ -180,19 +209,23 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringArrayP(tlsCACertsFlagName, tlsCACertsFlagShorthand, []string{}, tlsCACertsFlagUsage)
 	startCmd.Flags().StringP(domainFlagName, domainFlagShorthand, "", domainFlagUsage)
 	startCmd.Flags().StringP(modeFlagName, modeFlagShorthand, "", modeFlagUsage)
+	startCmd.Flags().StringP(databaseTypeFlagName, databaseTypeFlagShorthand, "", databaseTypeFlagUsage)
+	startCmd.Flags().StringP(databaseURLFlagName, databaseURLFlagShorthand, "", databaseURLFlagUsage)
 }
 
-func startDidMethod(parameters *rpParameters) error {
+func startDidMethod(parameters *parameters) error {
 	rootCAs, err := tlsutils.GetCertPool(parameters.tlsSystemCertPool, parameters.tlsCACerts)
 	if err != nil {
 		return err
 	}
 
+	storeProvider, err := createProvider(parameters)
+	if err != nil {
+		return err
+	}
+
 	// Create KMS
-	// TODO remove leveldb store when aries starting to support couchdb
-	// TODO https://github.com/hyperledger/aries-framework-go/issues/1599
-	// TODO make it configurable after switching to couchdb
-	kms, err := createKMS(leveldb.NewProvider(dbPath))
+	kms, err := createKMS(storeProvider)
 	if err != nil {
 		return err
 	}
@@ -211,6 +244,27 @@ func startDidMethod(parameters *rpParameters) error {
 	}
 
 	return parameters.srv.ListenAndServe(parameters.hostURL, router)
+}
+
+func createProvider(parameters *parameters) (ariesstorage.Provider, error) {
+	var provider ariesstorage.Provider
+
+	switch {
+	case strings.EqualFold(parameters.databaseType, databaseTypeMemOption):
+		provider = memstorage.NewProvider()
+	case strings.EqualFold(parameters.databaseType, databaseTypeCouchDBOption):
+		couchDBProvider, err := couchdbstorage.NewProvider(parameters.databaseURL)
+		if err != nil {
+			return nil, err
+		}
+
+		provider = couchDBProvider
+	default:
+		return nil, fmt.Errorf("database type not set to a valid type." +
+			" run start --help to see the available options")
+	}
+
+	return provider, nil
 }
 
 func createKMS(s ariesstorage.Provider) (ariesapi.CloseableKMS, error) {
