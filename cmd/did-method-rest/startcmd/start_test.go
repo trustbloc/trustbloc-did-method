@@ -7,7 +7,6 @@ package startcmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
@@ -30,6 +29,20 @@ func TestListenAndServe(t *testing.T) {
 	err := h.ListenAndServe("7", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "listen tcp: address 7: missing port in address")
+}
+
+func TestStartCmdWithBlankArg(t *testing.T) {
+	t.Run("test blank database type arg", func(t *testing.T) {
+		startCmd := GetStartCmd(&mockServer{})
+
+		args := []string{"--" + hostURLFlagName, "test", "--" + domainFlagName,
+			"domain", "--" + databaseTypeFlagName, ""}
+		startCmd.SetArgs(args)
+
+		err := startCmd.Execute()
+		require.Error(t, err)
+		require.Equal(t, "database-type value is empty", err.Error())
+	})
 }
 
 func TestStartCmdContents(t *testing.T) {
@@ -63,17 +76,15 @@ func TestStartCmdValidArgs(t *testing.T) {
 }
 
 func TestStartCmdValidArgsEnvVar(t *testing.T) {
-	path, cleanup := setupLevelDB(t)
-	defer cleanup()
-
-	dbPath = path
-
 	startCmd := GetStartCmd(&mockServer{})
 
 	err := os.Setenv(hostURLEnvKey, "localhost:8080")
 	require.NoError(t, err)
 
 	err = os.Setenv(domainEnvKey, "domain")
+	require.NoError(t, err)
+
+	err = os.Setenv(databaseTypeEnvKey, databaseTypeMemOption)
 	require.NoError(t, err)
 
 	err = startCmd.Execute()
@@ -95,11 +106,6 @@ func TestDomainFlagVar(t *testing.T) {
 	t.Run("test domain is optional when mode is resolver", func(t *testing.T) {
 		os.Clearenv()
 
-		path, cleanup := setupLevelDB(t)
-		defer cleanup()
-
-		dbPath = path
-
 		startCmd := GetStartCmd(&mockServer{})
 
 		err := os.Setenv(hostURLEnvKey, "localhost:8080")
@@ -108,17 +114,15 @@ func TestDomainFlagVar(t *testing.T) {
 		err = os.Setenv(modeEnvKey, string(resolver))
 		require.NoError(t, err)
 
+		err = os.Setenv(databaseTypeEnvKey, databaseTypeMemOption)
+		require.NoError(t, err)
+
 		err = startCmd.Execute()
 		require.NoError(t, err)
 	})
 
 	t.Run("test domain is required when mode is registrar", func(t *testing.T) {
 		os.Clearenv()
-
-		path, cleanup := setupLevelDB(t)
-		defer cleanup()
-
-		dbPath = path
 
 		startCmd := GetStartCmd(&mockServer{})
 
@@ -176,24 +180,25 @@ func TestCreateKMS(t *testing.T) {
 	})
 }
 
-func setupLevelDB(t testing.TB) (string, func()) {
-	dbPath, err := ioutil.TempDir("", "db")
-	if err != nil {
-		t.Fatalf("Failed to create leveldb directory: %s", err)
-	}
+func TestCreateProvider(t *testing.T) {
+	t.Run("test error from create new couchdb", func(t *testing.T) {
+		err := startDidMethod(&parameters{databaseType: databaseTypeCouchDBOption})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "hostURL for new CouchDB provider can't be blank")
+	})
 
-	return dbPath, func() {
-		err := os.RemoveAll(dbPath)
-		if err != nil {
-			t.Fatalf("Failed to clear leveldb directory: %s", err)
-		}
-	}
+	t.Run("test invalid database type", func(t *testing.T) {
+		err := startDidMethod(&parameters{databaseType: "data1"})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "database type not set to a valid type")
+	})
 }
 
 func getValidArgs() []string {
 	var args []string
 	args = append(args, hostURLArg()...)
 	args = append(args, domainArg()...)
+	args = append(args, databaseTypeArg()...)
 
 	return args
 }
@@ -204,6 +209,10 @@ func hostURLArg() []string {
 
 func domainArg() []string {
 	return []string{flag + domainFlagName, "domain"}
+}
+
+func databaseTypeArg() []string {
+	return []string{flag + databaseTypeFlagName, databaseTypeMemOption}
 }
 
 // MockStoreProvider mock store provider.
