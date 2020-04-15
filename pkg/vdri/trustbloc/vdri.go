@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package trustbloc
 
 import (
+	"bytes"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -130,14 +131,25 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 
 	var doc *docdid.Doc
 
+	var docBytes []byte
+
 	for _, e := range endpoints {
 		resp, err := v.sidetreeResolve(e.URL, did, opts...)
 		if err != nil {
 			return nil, err
 		}
 
-		// TODO add logic to compare response from each endpoint
+		respBytes, err := resp.JSONBytes()
+		if err != nil {
+			return nil, fmt.Errorf("cannot marshal resolved doc: %w", err)
+		}
+
+		if doc != nil && !bytes.Equal(docBytes, respBytes) {
+			return nil, errors.New("mismatch in document contents")
+		}
+
 		doc = resp
+		docBytes = respBytes
 	}
 
 	return doc, nil

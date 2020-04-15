@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
@@ -188,6 +189,29 @@ func TestVDRI_Read(t *testing.T) {
 		require.Nil(t, doc)
 	})
 
+	t.Run("test error from mismatch", func(t *testing.T) {
+		v := New()
+
+		v.discovery = &mockdiscovery.MockDiscoveryService{
+			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+				return []*endpoint.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
+			}}
+
+		counter := 0
+
+		v.getHTTPVDRI = func(url string) (v vdri, err error) {
+			return &mockvdri.MockVDRI{
+				ReadFunc: func(didID string, opts ...vdriapi.ResolveOpts) (*did.Doc, error) {
+					counter++
+					return generateDIDDoc("test:" + string(counter)), nil
+				}}, nil
+		}
+
+		_, err := v.Read("did:trustbloc:testnet:123")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "mismatch")
+	})
+
 	t.Run("test success", func(t *testing.T) {
 		v := New()
 
@@ -229,4 +253,44 @@ func TestOpts(t *testing.T) {
 
 		require.Equal(t, "test", v.tlsConfig.ServerName)
 	})
+}
+
+func generateDIDDoc(id string) *did.Doc {
+	t := time.Unix(0, 0)
+
+	return &did.Doc{
+		Context: nil,
+		ID:      id,
+		PublicKey: []did.PublicKey{{
+			ID:         "",
+			Type:       "",
+			Controller: "",
+			Value:      []byte{0},
+		}},
+		Service: []did.Service{{
+			ID:              "",
+			Type:            "",
+			Priority:        0,
+			RecipientKeys:   []string{""},
+			RoutingKeys:     []string{""},
+			ServiceEndpoint: "",
+			Properties:      map[string]interface{}{},
+		}},
+		Authentication: []did.VerificationMethod{{PublicKey: did.PublicKey{
+			ID:         "",
+			Type:       "",
+			Controller: "",
+			Value:      []byte{0},
+		}}},
+		Created: nil,
+		Updated: nil,
+		Proof: []did.Proof{{
+			Type:       "",
+			Created:    &t,
+			Creator:    "",
+			ProofValue: nil,
+			Domain:     "",
+			Nonce:      nil,
+		}},
+	}
 }
