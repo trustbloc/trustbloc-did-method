@@ -72,6 +72,11 @@ const (
 	databaseURLFlagUsage     = "The URL of the database. Not needed if using memstore." +
 		" For CouchDB, include the username:password@ text if required." +
 		" Alternatively, this can be set with the following environment variable: " + databaseURLEnvKey
+
+	databasePrefixFlagName  = "database-prefix"
+	databasePrefixEnvKey    = "DID_METHOD_DATABASE_PREFIX"
+	databasePrefixFlagUsage = "An optional prefix to be used when creating and retrieving underlying databases." +
+		" Alternatively, this can be set with the following environment variable: " + databasePrefixEnvKey
 )
 
 // mode in which to run the did-method service
@@ -104,6 +109,7 @@ type parameters struct {
 	mode              string
 	databaseType      string
 	databaseURL       string
+	databasePrefix    string
 }
 
 // GetStartCmd returns the Cobra start command.
@@ -131,22 +137,7 @@ func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 				return err
 			}
 
-			tlsSystemCertPoolString, err := cmdutils.GetUserSetVarFromString(cmd, tlsSystemCertPoolFlagName,
-				tlsSystemCertPoolEnvKey, true)
-			if err != nil {
-				return err
-			}
-
-			tlsSystemCertPool := false
-			if tlsSystemCertPoolString != "" {
-				tlsSystemCertPool, err = strconv.ParseBool(tlsSystemCertPoolString)
-				if err != nil {
-					return err
-				}
-			}
-
-			tlsCACerts, err := cmdutils.GetUserSetVarFromArrayString(cmd, tlsCACertsFlagName,
-				tlsCACertsEnvKey, true)
+			tlsSystemCertPool, tlsCACerts, err := getTLS(cmd)
 			if err != nil {
 				return err
 			}
@@ -169,6 +160,12 @@ func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 				return err
 			}
 
+			databasePrefix, err := cmdutils.GetUserSetVarFromString(cmd, databasePrefixFlagName,
+				databasePrefixEnvKey, true)
+			if err != nil {
+				return err
+			}
+
 			parameters := &parameters{
 				srv:               srv,
 				hostURL:           strings.TrimSpace(hostURL),
@@ -178,11 +175,36 @@ func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 				mode:              mode,
 				databaseType:      databaseType,
 				databaseURL:       databaseURL,
+				databasePrefix:    databasePrefix,
 			}
 
 			return startDidMethod(parameters)
 		},
 	}
+}
+
+func getTLS(cmd *cobra.Command) (bool, []string, error) {
+	tlsSystemCertPoolString, err := cmdutils.GetUserSetVarFromString(cmd, tlsSystemCertPoolFlagName,
+		tlsSystemCertPoolEnvKey, true)
+	if err != nil {
+		return false, nil, err
+	}
+
+	tlsSystemCertPool := false
+	if tlsSystemCertPoolString != "" {
+		tlsSystemCertPool, err = strconv.ParseBool(tlsSystemCertPoolString)
+		if err != nil {
+			return false, nil, err
+		}
+	}
+
+	tlsCACerts, err := cmdutils.GetUserSetVarFromArrayString(cmd, tlsCACertsFlagName,
+		tlsCACertsEnvKey, true)
+	if err != nil {
+		return false, nil, err
+	}
+
+	return tlsSystemCertPool, tlsCACerts, nil
 }
 
 func getMode(cmd *cobra.Command) (string, error) {
@@ -211,6 +233,7 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(modeFlagName, modeFlagShorthand, "", modeFlagUsage)
 	startCmd.Flags().StringP(databaseTypeFlagName, databaseTypeFlagShorthand, "", databaseTypeFlagUsage)
 	startCmd.Flags().StringP(databaseURLFlagName, databaseURLFlagShorthand, "", databaseURLFlagUsage)
+	startCmd.Flags().StringP(databasePrefixFlagName, "", "", databasePrefixFlagUsage)
 }
 
 func startDidMethod(parameters *parameters) error {
@@ -253,7 +276,8 @@ func createProvider(parameters *parameters) (ariesstorage.Provider, error) {
 	case strings.EqualFold(parameters.databaseType, databaseTypeMemOption):
 		provider = memstorage.NewProvider()
 	case strings.EqualFold(parameters.databaseType, databaseTypeCouchDBOption):
-		couchDBProvider, err := couchdbstorage.NewProvider(parameters.databaseURL)
+		couchDBProvider, err := couchdbstorage.NewProvider(parameters.databaseURL,
+			couchdbstorage.WithDBPrefix(parameters.databasePrefix))
 		if err != nil {
 			return nil, err
 		}
