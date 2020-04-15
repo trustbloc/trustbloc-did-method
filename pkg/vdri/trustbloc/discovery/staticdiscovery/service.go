@@ -38,7 +38,7 @@ func NewService(opts ...Option) *DiscoveryService {
 
 // GetEndpoints discover endpoints from domain
 func (ds *DiscoveryService) GetEndpoints(domain string) ([]*endpoint.Endpoint, error) {
-	configData, err := ds.getConsortium(domain, "consortium")
+	configData, err := ds.getConsortium(domain, domain)
 	if err != nil {
 		return nil, err
 	}
