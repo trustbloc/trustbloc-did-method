@@ -19,12 +19,13 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
 
 	"github.com/cucumber/godog"
-	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
 	ariescontext "github.com/hyperledger/aries-framework-go/pkg/framework/context"
 	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	"github.com/hyperledger/aries-framework-go/pkg/storage"
 
+	"github.com/trustbloc/trustbloc-did-method/pkg/did"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
@@ -55,7 +56,7 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^Resolving created DID through resolver URL "([^"]*)"$`, e.resolveCreatedDID)
 }
 
-func (e *Steps) createDIDBloc(url string) error {
+func (e *Steps) createDIDBloc(url string) error { //nolint: gocyclo
 	kms, err := createKMS(mem.NewProvider())
 	if err != nil {
 		return err
@@ -69,8 +70,9 @@ func (e *Steps) createDIDBloc(url string) error {
 	jobID := uuid.New().String()
 
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID,
-		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: keyType, Value: base58PubKey}},
-		AddServices:   []*operation.Service{{ID: serviceID, ServiceEndpoint: "http://www.example.com/"}}})
+		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: keyType, Value: base58PubKey,
+			Encoding: did.PublicKeyEncodingBase58, Usage: []string{did.KeyUsageGeneral}}},
+		AddServices: []*operation.Service{{ID: serviceID, ServiceEndpoint: "http://www.example.com/"}}})
 	if err != nil {
 		return err
 	}
@@ -101,7 +103,12 @@ func (e *Steps) createDIDBloc(url string) error {
 	}
 
 	if jobID != registerResponse.JobID {
-		return fmt.Errorf("register response jobID=%s not equal %s", registerResponse.JobID, jobID)
+		return fmt.Errorf("register response jobID %s not equal %s", registerResponse.JobID, jobID)
+	}
+
+	if registerResponse.DIDState.State != operation.RegistrationStateFinished {
+		return fmt.Errorf("register response state %s not equal %s",
+			registerResponse.DIDState.State, operation.RegistrationStateFinished)
 	}
 
 	e.createdDID = registerResponse.DIDState.Identifier
@@ -112,7 +119,7 @@ func (e *Steps) createDIDBloc(url string) error {
 func (e *Steps) resolveCreatedDID(url string) error {
 	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig))
 
-	var doc *did.Doc
+	var doc *ariesdid.Doc
 
 	for i := 1; i <= maxRetry; i++ {
 		var err error

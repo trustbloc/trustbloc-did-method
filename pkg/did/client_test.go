@@ -168,7 +168,33 @@ func TestVDRI_Build(t *testing.T) {
 				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet")
+		doc, err := v.CreateDID("testnet", WithService(&did.Service{ID: "srv1",
+			Properties: map[string]interface{}{"k1": "v1"}}))
+		require.NoError(t, err)
+		require.Equal(t, "did1", doc.ID)
+	})
+
+	t.Run("test success with jwk public key", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(bytes))
+			require.NoError(t, err)
+		}))
+		defer serv.Close()
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v := New(WithKMS(&mocklegacykms.CloseableKMS{CreateSigningKeyValue: string(pubKey)}))
+
+		v.discovery = &mockdiscovery.MockDiscoveryService{
+			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey}))
 		require.NoError(t, err)
 		require.Equal(t, "did1", doc.ID)
 	})
@@ -189,7 +215,7 @@ func TestVDRI_Build(t *testing.T) {
 
 		// test WithPublicKey
 		var createOpts []CreateDIDOption
-		createOpts = append(createOpts, WithPublicKey(&did.PublicKey{ID: "#key-2"}))
+		createOpts = append(createOpts, WithPublicKey(&PublicKey{ID: "#key-2"}))
 
 		createDIDOpts := &CreateDIDOpts{}
 		// Apply options
@@ -199,18 +225,6 @@ func TestVDRI_Build(t *testing.T) {
 
 		require.Equal(t, 1, len(createDIDOpts.publicKeys))
 		require.Equal(t, "#key-2", createDIDOpts.publicKeys[0].ID)
-
-		// test WithDID
-		createOpts = make([]CreateDIDOption, 0)
-		createOpts = append(createOpts, WithDID(&did.Doc{ID: "didID"}))
-
-		createDIDOpts = &CreateDIDOpts{}
-		// Apply options
-		for _, opt := range createOpts {
-			opt(createDIDOpts)
-		}
-
-		require.Equal(t, "didID", createDIDOpts.didDoc.ID)
 
 		// test WithService
 		createOpts = make([]CreateDIDOption, 0)
