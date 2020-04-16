@@ -7,6 +7,7 @@ package did
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -14,11 +15,11 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/btcsuite/btcutil/base58"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	log "github.com/sirupsen/logrus"
+	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
+	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
@@ -27,8 +28,6 @@ import (
 
 const (
 	sha2_256            = 18
-	pubKeyIndex1        = "#key-1"
-	defaultKeyType      = "Ed25519VerificationKey2018"
 	recoveryRevealValue = "recoveryOTP"
 	updateRevealValue   = "updateOTP"
 )
@@ -45,7 +44,6 @@ type selection interface {
 type Client struct {
 	discovery discovery
 	selection selection
-	kms       legacykms.KeyManager
 	client    *http.Client
 	tlsConfig *tls.Config
 }
@@ -117,22 +115,6 @@ func (c *Client) getEndpoints(domain string) ([]*endpoint.Endpoint, error) {
 func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, error) {
 	publicKeys := createDIDOpts.publicKeys
 
-	// create default public key if user didn't provide their public key
-	if len(publicKeys) == 0 {
-		_, base58PubKey, err := c.kms.CreateKeySet()
-		if err != nil {
-			return nil, fmt.Errorf("failed to create key set: %w", err)
-		}
-
-		publicKeys = append(publicKeys, PublicKey{
-			ID:       pubKeyIndex1,
-			Type:     defaultKeyType,
-			Encoding: PublicKeyEncodingBase58,
-			Value:    base58.Decode(base58PubKey),
-			Usage:    []string{KeyUsageGeneral},
-		})
-	}
-
 	doc := &Doc{
 		PublicKey: publicKeys,
 		Service:   createDIDOpts.services,
@@ -143,9 +125,14 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 		return nil, fmt.Errorf("failed to get document bytes : %s", err)
 	}
 
+	recoveryKey, err := c.getRecoveryKey(publicKeys)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get recovery key : %s", err)
+	}
+
 	req, err := helper.NewCreateRequest(&helper.CreateRequestInfo{
 		OpaqueDocument:          string(docBytes),
-		RecoveryKey:             "recoveryKey",
+		RecoveryKey:             recoveryKey,
 		NextRecoveryRevealValue: []byte(recoveryRevealValue),
 		NextUpdateRevealValue:   []byte(updateRevealValue),
 		MultihashCode:           sha2_256,
@@ -155,6 +142,20 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 	}
 
 	return req, nil
+}
+
+func (c *Client) getRecoveryKey(publicKeys []PublicKey) (*jws.JWK, error) {
+	for _, v := range publicKeys {
+		if v.Recovery {
+			if v.Encoding != PublicKeyEncodingJwk {
+				return nil, fmt.Errorf("public key encoding not supported: %s", v.Encoding)
+			}
+
+			return pubkey.GetPublicKeyJWK(ed25519.PublicKey(v.Value))
+		}
+	}
+
+	return nil, fmt.Errorf("recovery key not found")
 }
 
 func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc, error) {
@@ -199,13 +200,6 @@ func closeResponseBody(respBody io.Closer) {
 
 // Option is a DID client instance option
 type Option func(opts *Client)
-
-// WithKMS add kms
-func WithKMS(kms legacykms.KeyManager) Option {
-	return func(opts *Client) {
-		opts.kms = kms
-	}
-}
 
 // WithTLSConfig option is for definition of secured HTTP transport using a tls.Config instance
 func WithTLSConfig(tlsConfig *tls.Config) Option {

@@ -7,6 +7,7 @@ package operation
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -75,9 +76,9 @@ func TestRegisterDIDHandler(t *testing.T) {
 		require.Contains(t, body.String(), "invalid request")
 	})
 
-	t.Run("test error from kms", func(t *testing.T) {
+	t.Run("test empty addPublicKeys", func(t *testing.T) {
 		handler := getHandler(t, nil,
-			&mocklegacykms.CloseableKMS{CreateKeyErr: fmt.Errorf("create key error")}, nil, registerPath)
+			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"}, nil, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1"})
 		require.NoError(t, err)
@@ -91,7 +92,27 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 		require.Equal(t, "1", registerResponse.JobID)
 		require.Equal(t, RegistrationStateFailure, registerResponse.DIDState.State)
-		require.Contains(t, registerResponse.DIDState.Reason, "failed to create key set")
+		require.Contains(t, registerResponse.DIDState.Reason, "AddPublicKeys is empty")
+	})
+
+	t.Run("test wrong value for public key", func(t *testing.T) {
+		handler := getHandler(t, nil,
+			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"}, nil, registerPath)
+
+		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", AddPublicKeys: []*PublicKey{{ID: "key2",
+			Type: "type", Value: "value"}}})
+		require.NoError(t, err)
+
+		body, status, err := handleRequest(handler, registerPath, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var registerResponse RegisterResponse
+		require.NoError(t, json.Unmarshal(body.Bytes(), &registerResponse))
+
+		require.Equal(t, "1", registerResponse.JobID)
+		require.Equal(t, RegistrationStateFailure, registerResponse.DIDState.State)
+		require.Contains(t, registerResponse.DIDState.Reason, "failed to decode public key value")
 	})
 
 	t.Run("test error from create did", func(t *testing.T) {
@@ -99,7 +120,8 @@ func TestRegisterDIDHandler(t *testing.T) {
 			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"},
 			&didbloc.Client{CreateDIDErr: fmt.Errorf("error create did")}, registerPath)
 
-		req, err := json.Marshal(RegisterDIDRequest{JobID: "1"})
+		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", AddPublicKeys: []*PublicKey{{ID: "key2",
+			Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}}})
 		require.NoError(t, err)
 
 		body, status, err := handleRequest(handler, registerPath, req)
@@ -114,36 +136,14 @@ func TestRegisterDIDHandler(t *testing.T) {
 		require.Contains(t, registerResponse.DIDState.Reason, "error create did")
 	})
 
-	t.Run("test success", func(t *testing.T) {
-		handler := getHandler(t, nil,
-			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"},
-			&didbloc.Client{CreateDIDValue: &did.Doc{ID: "did1"}}, registerPath)
-
-		req, err := json.Marshal(RegisterDIDRequest{JobID: "1"})
-		require.NoError(t, err)
-
-		body, status, err := handleRequest(handler, registerPath, req)
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, status)
-
-		var registerResponse RegisterResponse
-		require.NoError(t, json.Unmarshal(body.Bytes(), &registerResponse))
-
-		require.Equal(t, "1", registerResponse.JobID)
-		require.Equal(t, RegistrationStateFinished, registerResponse.DIDState.State)
-		require.Empty(t, registerResponse.DIDState.Reason)
-		require.Equal(t, "did1", registerResponse.DIDState.Identifier)
-		require.Equal(t, 1, len(registerResponse.DIDState.Secret.Keys))
-		require.Equal(t, "did1"+pubKeyIndex1, registerResponse.DIDState.Secret.Keys[0].PublicKeyDIDURL)
-	})
-
 	t.Run("test success with provided public key", func(t *testing.T) {
 		handler := getHandler(t, nil,
 			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"},
 			&didbloc.Client{CreateDIDValue: &did.Doc{ID: "did1"}}, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", AddPublicKeys: []*PublicKey{{ID: "#key2",
-			Type: "type", Value: "value"}}, AddServices: []*Service{{ID: "serviceID"}}})
+			Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}},
+			AddServices: []*Service{{ID: "serviceID"}}})
 		require.NoError(t, err)
 
 		body, status, err := handleRequest(handler, registerPath, req)

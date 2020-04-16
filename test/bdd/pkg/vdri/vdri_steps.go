@@ -7,6 +7,7 @@ package vdri
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -14,16 +15,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
-	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
-
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/cucumber/godog"
+	"github.com/google/uuid"
 	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
 	ariescontext "github.com/hyperledger/aries-framework-go/pkg/framework/context"
 	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
 	"github.com/hyperledger/aries-framework-go/pkg/storage"
+	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
@@ -33,9 +33,9 @@ import (
 
 const (
 	maxRetry     = 10
-	pubKeyIndex1 = "#key-1"
-	keyType      = "Ed25519VerificationKey2018"
-	serviceID    = "#service"
+	pubKeyIndex1 = "key-1"
+	pubKeyIndex2 = "key-2"
+	serviceID    = "service"
 )
 
 // Steps is steps for VC BDD tests
@@ -70,8 +70,11 @@ func (e *Steps) createDIDBloc(url string) error { //nolint: gocyclo
 	jobID := uuid.New().String()
 
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID,
-		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: keyType, Value: base58PubKey,
-			Encoding: did.PublicKeyEncodingBase58, Usage: []string{did.KeyUsageGeneral}}},
+		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: did.JWSVerificationKey2020,
+			Value: base64.StdEncoding.EncodeToString(base58.Decode(base58PubKey)), Encoding: did.PublicKeyEncodingJwk,
+			Usage: []string{did.KeyUsageGeneral, did.KeyUsageOps}}, {ID: pubKeyIndex2, Type: did.JWSVerificationKey2020,
+			Value:    base64.StdEncoding.EncodeToString(base58.Decode(base58PubKey)),
+			Encoding: did.PublicKeyEncodingJwk, Recovery: true}},
 		AddServices: []*operation.Service{{ID: serviceID, ServiceEndpoint: "http://www.example.com/"}}})
 	if err != nil {
 		return err
@@ -106,9 +109,9 @@ func (e *Steps) createDIDBloc(url string) error { //nolint: gocyclo
 		return fmt.Errorf("register response jobID %s not equal %s", registerResponse.JobID, jobID)
 	}
 
-	if registerResponse.DIDState.State != operation.RegistrationStateFinished {
-		return fmt.Errorf("register response state %s not equal %s",
-			registerResponse.DIDState.State, operation.RegistrationStateFinished)
+	if registerResponse.DIDState.State == operation.RegistrationStateFailure {
+		return fmt.Errorf("register response state %s reason %s",
+			registerResponse.DIDState.State, registerResponse.DIDState.Reason)
 	}
 
 	e.createdDID = registerResponse.DIDState.Identifier
@@ -136,13 +139,17 @@ func (e *Steps) resolveCreatedDID(url string) error {
 		return fmt.Errorf("resolved did %s not equal to created did %s", doc.ID, e.createdDID)
 	}
 
-	if doc.Service[0].ID != serviceID {
-		return fmt.Errorf("resolved did service ID %s not equal to %s", doc.Service[0].ID, serviceID)
+	if doc.Service[0].ID != doc.ID+"#"+serviceID {
+		return fmt.Errorf("resolved did service ID %s not equal to %s", doc.Service[0].ID, doc.ID+"#"+serviceID)
 	}
 
-	if doc.PublicKey[0].ID != doc.ID+pubKeyIndex1 {
+	if len(doc.PublicKey) != 1 {
+		return fmt.Errorf("public key size not equal one")
+	}
+
+	if doc.PublicKey[0].ID != doc.ID+"#"+pubKeyIndex1 {
 		return fmt.Errorf("resolved did public key ID %s not equal to %s",
-			doc.PublicKey[0].ID, doc.ID+pubKeyIndex1)
+			doc.PublicKey[0].ID, doc.ID+"#"+pubKeyIndex1)
 	}
 
 	return nil

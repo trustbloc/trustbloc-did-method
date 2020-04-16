@@ -6,11 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package did
 
 import (
+	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 
-	"github.com/btcsuite/btcutil/base58"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 )
 
 const (
@@ -22,11 +23,8 @@ const (
 	jsonldRoutingKeys   = "routingKeys"
 	jsonldPriority      = "priority"
 
-	jsonldPublicKeyBase58 = "publicKeyBase58"
-	jsonldPublicKeyjwk    = "publicKeyJwk"
+	jsonldPublicKeyjwk = "publicKeyJwk"
 
-	// PublicKeyEncodingBase58 define base58 encoding type
-	PublicKeyEncodingBase58 = "Base58"
 	// PublicKeyEncodingJwk define jwk encoding type
 	PublicKeyEncodingJwk = "Jwk"
 
@@ -58,14 +56,20 @@ type PublicKey struct {
 	Type     string
 	Encoding string
 	Usage    []string
+	Recovery bool
 
 	Value []byte
 }
 
 // JSONBytes converts document to json bytes
 func (doc *Doc) JSONBytes() ([]byte, error) {
+	publicKeys, err := populateRawPublicKeys(doc.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("JSON unmarshalling of Public Key failed: %w", err)
+	}
+
 	raw := &rawDoc{
-		PublicKey: populateRawPublicKeys(doc.PublicKey),
+		PublicKey: publicKeys,
 		Service:   populateRawServices(doc.Service),
 	}
 
@@ -77,17 +81,24 @@ func (doc *Doc) JSONBytes() ([]byte, error) {
 	return byteDoc, nil
 }
 
-func populateRawPublicKeys(pks []PublicKey) []map[string]interface{} {
+func populateRawPublicKeys(pks []PublicKey) ([]map[string]interface{}, error) {
 	var rawPKs []map[string]interface{}
 
 	for i := range pks {
-		rawPKs = append(rawPKs, populateRawPublicKey(&pks[i]))
+		if !pks[i].Recovery {
+			publicKey, err := populateRawPublicKey(&pks[i])
+			if err != nil {
+				return nil, err
+			}
+
+			rawPKs = append(rawPKs, publicKey)
+		}
 	}
 
-	return rawPKs
+	return rawPKs, nil
 }
 
-func populateRawPublicKey(pk *PublicKey) map[string]interface{} {
+func populateRawPublicKey(pk *PublicKey) (map[string]interface{}, error) {
 	rawPK := make(map[string]interface{})
 	rawPK[jsonldID] = pk.ID
 	rawPK[jsonldType] = pk.Type
@@ -95,13 +106,17 @@ func populateRawPublicKey(pk *PublicKey) map[string]interface{} {
 
 	switch pk.Encoding {
 	case PublicKeyEncodingJwk:
-		// TODO convert pk.Value to JWK using sidetree-core-go helper
-		rawPK[jsonldPublicKeyjwk] = pk.Value
-	case PublicKeyEncodingBase58:
-		rawPK[jsonldPublicKeyBase58] = base58.Encode(pk.Value)
+		jwk, err := pubkey.GetPublicKeyJWK(ed25519.PublicKey(pk.Value))
+		if err != nil {
+			return nil, err
+		}
+
+		rawPK[jsonldPublicKeyjwk] = jwk
+	default:
+		return nil, fmt.Errorf("public key encoding not supported: %s", pk.Encoding)
 	}
 
-	return rawPK
+	return rawPK, nil
 }
 
 func populateRawServices(services []docdid.Service) []map[string]interface{} {

@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	mocklegacykms "github.com/hyperledger/aries-framework-go/pkg/mock/kms/legacykms"
 	"github.com/stretchr/testify/require"
 
 	mockdiscovery "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/discovery"
@@ -23,7 +22,7 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
 )
 
-func TestVDRI_Build(t *testing.T) {
+func TestClient_CreateDID(t *testing.T) {
 	t.Run("test domain is empty", func(t *testing.T) {
 		v := New()
 
@@ -71,25 +70,8 @@ func TestVDRI_Build(t *testing.T) {
 		require.Nil(t, doc)
 	})
 
-	t.Run("test error from build sidetree request", func(t *testing.T) {
-		v := New(WithKMS(&mocklegacykms.CloseableKMS{CreateKeyErr: fmt.Errorf("create key error")}))
-
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}}, nil
-			}}
-
-		doc, err := v.CreateDID("testnet")
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to build sidetree request")
-		require.Nil(t, doc)
-	})
-
 	t.Run("test error from send create sidetree request", func(t *testing.T) {
-		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
-		require.NoError(t, err)
-
-		v := New(WithKMS(&mocklegacykms.CloseableKMS{CreateSigningKeyValue: string(pubKey)}))
+		v := New()
 
 		// failed to create http request
 		v.discovery = &mockdiscovery.MockDiscoveryService{
@@ -97,7 +79,8 @@ func TestVDRI_Build(t *testing.T) {
 				return []*endpoint.Endpoint{{URL: "http://[]%20%/"}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet")
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1",
+			Encoding: PublicKeyEncodingJwk, Recovery: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to create http request")
 		require.Nil(t, doc)
@@ -108,7 +91,8 @@ func TestVDRI_Build(t *testing.T) {
 				return []*endpoint.Endpoint{{URL: "url"}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet")
+		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
+			Recovery: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to send request")
 		require.Nil(t, doc)
@@ -124,7 +108,8 @@ func TestVDRI_Build(t *testing.T) {
 				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet")
+		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
+			Recovery: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "got unexpected response")
 		require.Nil(t, doc)
@@ -143,7 +128,8 @@ func TestVDRI_Build(t *testing.T) {
 				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet")
+		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
+			Recovery: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse public DID document")
 		require.Nil(t, doc)
@@ -161,20 +147,24 @@ func TestVDRI_Build(t *testing.T) {
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		v := New(WithKMS(&mocklegacykms.CloseableKMS{CreateSigningKeyValue: string(pubKey)}))
+		v := New()
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
 				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithService(&did.Service{ID: "srv1",
-			Properties: map[string]interface{}{"k1": "v1"}}))
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: "#key2",
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey}),
+			WithService(&did.Service{ID: "srv1",
+				Properties: map[string]interface{}{"k1": "v1"}}))
 		require.NoError(t, err)
 		require.Equal(t, "did1", doc.ID)
 	})
 
-	t.Run("test success with jwk public key", func(t *testing.T) {
+	t.Run("test unsupported recovery public key encoding", func(t *testing.T) {
 		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
 			require.NoError(t, err)
@@ -186,7 +176,7 @@ func TestVDRI_Build(t *testing.T) {
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		v := New(WithKMS(&mocklegacykms.CloseableKMS{CreateSigningKeyValue: string(pubKey)}))
+		v := New()
 
 		v.discovery = &mockdiscovery.MockDiscoveryService{
 			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
@@ -194,9 +184,68 @@ func TestVDRI_Build(t *testing.T) {
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
-			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey}))
+			Type: JWSVerificationKey2020, Encoding: "wrong", Value: pubKey, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: "#key2",
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: []byte("value")}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get recovery key")
+		require.Nil(t, doc)
+	})
+
+	t.Run("test recovery public key empty", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(bytes))
+			require.NoError(t, err)
+		}))
+		defer serv.Close()
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
-		require.Equal(t, "did1", doc.ID)
+
+		v := New()
+
+		v.discovery = &mockdiscovery.MockDiscoveryService{
+			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey}),
+			WithPublicKey(&PublicKey{ID: "#key2",
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "recovery key not found")
+		require.Nil(t, doc)
+	})
+
+	t.Run("test unsupported public key encoding", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(bytes))
+			require.NoError(t, err)
+		}))
+		defer serv.Close()
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v := New()
+
+		v.discovery = &mockdiscovery.MockDiscoveryService{
+			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: "#key2",
+				Type: JWSVerificationKey2020, Encoding: "wrong", Value: []byte("wrongValue")}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "public key encoding not supported")
+		require.Nil(t, doc)
 	})
 
 	t.Run("test opts", func(t *testing.T) {
