@@ -115,34 +115,30 @@ func (c *Client) getEndpoints(domain string) ([]*endpoint.Endpoint, error) {
 
 // buildSideTreeRequest request builder for sidetree public DID creation
 func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, error) {
-	didDoc := createDIDOpts.didDoc
+	publicKeys := createDIDOpts.publicKeys
 
-	// create default did doc if user didn't provide their DID
-	if didDoc == nil {
-		publicKeys := createDIDOpts.publicKeys
-
-		// create default public key if user didn't provide their public key
-		if len(publicKeys) == 0 {
-			_, base58PubKey, err := c.kms.CreateKeySet()
-			if err != nil {
-				return nil, fmt.Errorf("failed to create key set: %w", err)
-			}
-
-			publicKeys = append(publicKeys, docdid.PublicKey{
-				ID:    pubKeyIndex1,
-				Type:  defaultKeyType,
-				Value: base58.Decode(base58PubKey),
-			})
+	// create default public key if user didn't provide their public key
+	if len(publicKeys) == 0 {
+		_, base58PubKey, err := c.kms.CreateKeySet()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create key set: %w", err)
 		}
 
-		didDoc = &docdid.Doc{
-			Context:   []string{},
-			PublicKey: publicKeys,
-			Service:   createDIDOpts.services,
-		}
+		publicKeys = append(publicKeys, PublicKey{
+			ID:       pubKeyIndex1,
+			Type:     defaultKeyType,
+			Encoding: PublicKeyEncodingBase58,
+			Value:    base58.Decode(base58PubKey),
+			Usage:    []string{KeyUsageGeneral},
+		})
 	}
 
-	docBytes, err := didDoc.JSONBytes()
+	doc := &Doc{
+		PublicKey: publicKeys,
+		Service:   createDIDOpts.services,
+	}
+
+	docBytes, err := doc.JSONBytes()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get document bytes : %s", err)
 	}
@@ -220,16 +216,15 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 
 // CreateDIDOpts create did opts
 type CreateDIDOpts struct {
-	publicKeys []docdid.PublicKey
+	publicKeys []PublicKey
 	services   []docdid.Service
-	didDoc     *docdid.Doc
 }
 
 // CreateDIDOption is a create DID option
 type CreateDIDOption func(opts *CreateDIDOpts)
 
 // WithPublicKey add DID public key
-func WithPublicKey(publicKey *docdid.PublicKey) CreateDIDOption {
+func WithPublicKey(publicKey *PublicKey) CreateDIDOption {
 	return func(opts *CreateDIDOpts) {
 		opts.publicKeys = append(opts.publicKeys, *publicKey)
 	}
@@ -239,12 +234,5 @@ func WithPublicKey(publicKey *docdid.PublicKey) CreateDIDOption {
 func WithService(service *docdid.Service) CreateDIDOption {
 	return func(opts *CreateDIDOpts) {
 		opts.services = append(opts.services, *service)
-	}
-}
-
-// WithDID add DID doc
-func WithDID(didDoc *docdid.Doc) CreateDIDOption {
-	return func(opts *CreateDIDOpts) {
-		opts.didDoc = didDoc
 	}
 }

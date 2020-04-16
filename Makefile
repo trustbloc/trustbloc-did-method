@@ -67,3 +67,4 @@ clean-build:
 	@rm -Rf ./.build
 	@rm -Rf ./coverage.txt
 	@rm -Rf ./test/bdd/fixtures/keys/tls
+	@rm -Rf ./test/bdd/docker-compose.log

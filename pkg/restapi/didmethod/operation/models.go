@@ -50,9 +50,11 @@ type Key struct {
 
 // PublicKey public key
 type PublicKey struct {
-	ID    string `json:"id,omitempty"`
-	Type  string `json:"type,omitempty"`
-	Value string `json:"value,omitempty"`
+	ID       string   `json:"id,omitempty"`
+	Type     string   `json:"type,omitempty"`
+	Value    string   `json:"value,omitempty"`
+	Usage    []string `json:"usage,omitempty"`
+	Encoding string   `json:"encoding,omitempty"`
 }
 
 // Service DID doc service
