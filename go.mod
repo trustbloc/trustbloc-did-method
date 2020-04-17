@@ -7,6 +7,7 @@ module github.com/trustbloc/trustbloc-did-method
 go 1.13
 
 require (
+	github.com/btcsuite/btcutil v1.0.1
 	github.com/gorilla/mux v1.7.4
 	github.com/hyperledger/aries-framework-go v0.1.3-0.20200414232534-822f96340163
 	github.com/sirupsen/logrus v1.4.2
