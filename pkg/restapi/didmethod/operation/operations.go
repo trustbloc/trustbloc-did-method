@@ -7,12 +7,12 @@ package operation
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
@@ -29,10 +29,6 @@ const (
 	resolveDIDEndpoint   = "/resolveDID"
 	didLDJson            = "application/did+ld+json"
 	invalidRequestErrMsg = "invalid request"
-
-	// DID public key
-	pubKeyIndex1 = "#key-1"
-	keyType      = "Ed25519VerificationKey2018"
 
 	// modes
 	registrarMode = "registrar"
@@ -91,12 +87,23 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 	keysID := make(map[string]string)
 
 	if len(data.AddPublicKeys) == 0 {
-		// TODO change kms to return private key
-		_, base58PubKey, err := o.kms.CreateKeySet()
-		if err != nil {
-			log.Errorf("failed to create key set : %s", err.Error())
+		registerResponse.DIDState = DIDState{Reason: fmt.Sprintf("AddPublicKeys is empty"),
+			State: RegistrationStateFailure}
 
-			registerResponse.DIDState = DIDState{Reason: fmt.Sprintf("failed to create key set : %s",
+		o.writeResponse(rw, registerResponse)
+
+		return
+	}
+
+	// Add public keys
+	for _, v := range data.AddPublicKeys {
+		keysID[v.ID] = v.Value
+
+		keyValue, err := base64.StdEncoding.DecodeString(v.Value)
+		if err != nil {
+			log.Errorf("failed to decode public key value : %s", err.Error())
+
+			registerResponse.DIDState = DIDState{Reason: fmt.Sprintf("failed to decode public key value : %s",
 				err.Error()), State: RegistrationStateFailure}
 
 			o.writeResponse(rw, registerResponse)
@@ -104,16 +111,8 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			return
 		}
 
-		keysID[pubKeyIndex1] = base58PubKey
-
-		opts = append(opts, didclient.WithPublicKey(&didclient.PublicKey{ID: pubKeyIndex1, Type: keyType,
-			Value: base58.Decode(base58PubKey), Encoding: didclient.PublicKeyEncodingBase58}))
-	} else {
-		for _, v := range data.AddPublicKeys {
-			keysID[v.ID] = v.Value
-			opts = append(opts, didclient.WithPublicKey(&didclient.PublicKey{ID: v.ID, Type: v.Type,
-				Value: base58.Decode(v.Value), Encoding: v.Encoding, Usage: v.Usage}))
-		}
+		opts = append(opts, didclient.WithPublicKey(&didclient.PublicKey{ID: v.ID, Type: v.Type,
+			Value: keyValue, Encoding: v.Encoding, Usage: v.Usage, Recovery: v.Recovery}))
 	}
 
 	// Add services
@@ -145,7 +144,6 @@ func createKeys(keysID map[string]string, didID string) []Key {
 	keys := make([]Key, 0)
 
 	for k, v := range keysID {
-		// TODO add PrivateKeyBase58
 		keys = append(keys, Key{PublicKeyDIDURL: didID + k, PublicKeyBase58: v})
 	}
 
