@@ -13,6 +13,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
@@ -84,7 +86,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 	var opts []didclient.CreateDIDOption
 
 	registerResponse := RegisterResponse{JobID: data.JobID}
-	keysID := make(map[string]string)
+	keysID := make(map[string][]byte)
 
 	if len(data.AddPublicKeys) == 0 {
 		registerResponse.DIDState = DIDState{Reason: fmt.Sprintf("AddPublicKeys is empty"),
@@ -97,8 +99,6 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 	// Add public keys
 	for _, v := range data.AddPublicKeys {
-		keysID[v.ID] = v.Value
-
 		keyValue, err := base64.StdEncoding.DecodeString(v.Value)
 		if err != nil {
 			log.Errorf("failed to decode public key value : %s", err.Error())
@@ -113,6 +113,10 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 		opts = append(opts, didclient.WithPublicKey(&didclient.PublicKey{ID: v.ID, Type: v.Type,
 			Value: keyValue, Encoding: v.Encoding, Usage: v.Usage, Recovery: v.Recovery}))
+
+		if !v.Recovery {
+			keysID[v.ID] = keyValue
+		}
 	}
 
 	// Add services
@@ -140,11 +144,11 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 	o.writeResponse(rw, registerResponse)
 }
 
-func createKeys(keysID map[string]string, didID string) []Key {
+func createKeys(keysID map[string][]byte, didID string) []Key {
 	keys := make([]Key, 0)
 
 	for k, v := range keysID {
-		keys = append(keys, Key{PublicKeyDIDURL: didID + k, PublicKeyBase58: v})
+		keys = append(keys, Key{PublicKeyDIDURL: didID + "#" + k, PublicKeyBase58: base58.Encode(v)})
 	}
 
 	return keys
