@@ -6,9 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package did
 
 import (
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -144,7 +147,13 @@ func TestClient_CreateDID(t *testing.T) {
 		}))
 		defer serv.Close()
 
-		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		ed25519PubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		ecPubKeyBytes, err := x509.MarshalPKIXPublicKey(ecPrivKey.Public())
 		require.NoError(t, err)
 
 		v := New()
@@ -155,13 +164,79 @@ func TestClient_CreateDID(t *testing.T) {
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
-			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey, Recovery: true}),
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey, Recovery: true}),
 			WithPublicKey(&PublicKey{ID: "#key2",
-				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey}),
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey}),
+			WithPublicKey(&PublicKey{ID: "#key3",
+				Type:     JWSVerificationKey2020,
+				Encoding: PublicKeyEncodingJwk,
+				Value:    ecPubKeyBytes,
+				KeyType:  ECKeyType,
+			}),
 			WithService(&did.Service{ID: "srv1",
 				Properties: map[string]interface{}{"k1": "v1"}}))
 		require.NoError(t, err)
 		require.Equal(t, "did1", doc.ID)
+	})
+
+	t.Run("test create DID - invalid key type", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(bytes))
+			require.NoError(t, err)
+		}))
+		defer serv.Close()
+
+		v := New()
+
+		v.discovery = &mockdiscovery.MockDiscoveryService{
+			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		doc, err := v.CreateDID("testnet",
+			WithPublicKey(&PublicKey{ID: "#key1",
+				Type:     JWSVerificationKey2020,
+				Encoding: PublicKeyEncodingJwk,
+				KeyType:  "InvalidKeyType",
+			}),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid key type: InvalidKeyType")
+		require.Nil(t, doc)
+	})
+
+	t.Run("test create DID - EC key error", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(bytes))
+			require.NoError(t, err)
+		}))
+		defer serv.Close()
+
+		v := New()
+
+		v.discovery = &mockdiscovery.MockDiscoveryService{
+			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		ed25519PubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		doc, err := v.CreateDID("testnet",
+			WithPublicKey(&PublicKey{ID: "#key1",
+				Type:     JWSVerificationKey2020,
+				Encoding: PublicKeyEncodingJwk,
+				KeyType:  ECKeyType,
+				Value:    ed25519PubKey,
+			}),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "asn1: structure error")
+		require.Nil(t, doc)
 	})
 
 	t.Run("test unsupported recovery public key encoding", func(t *testing.T) {

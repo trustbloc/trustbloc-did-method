@@ -6,11 +6,15 @@ SPDX-License-Identifier: Apache-2.0
 package did
 
 import (
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 )
 
@@ -37,6 +41,12 @@ const (
 
 	// JWSVerificationKey2020 defines key type
 	JWSVerificationKey2020 = "JwsVerificationKey2020"
+
+	// Ed25519KeyType defines ed25119 key type
+	Ed25519KeyType = "Ed25519"
+
+	// ECKeyType defines Elliptical Curve key type
+	ECKeyType = "EC"
 )
 
 type rawDoc struct {
@@ -55,6 +65,7 @@ type PublicKey struct {
 	ID       string
 	Type     string
 	Encoding string
+	KeyType  string
 	Usage    []string
 	Recovery bool
 
@@ -106,9 +117,33 @@ func populateRawPublicKey(pk *PublicKey) (map[string]interface{}, error) {
 
 	switch pk.Encoding {
 	case PublicKeyEncodingJwk:
-		jwk, err := pubkey.GetPublicKeyJWK(ed25519.PublicKey(pk.Value))
-		if err != nil {
-			return nil, err
+		var jwk *jws.JWK
+
+		var err error
+
+		switch pk.KeyType {
+		case "", Ed25519KeyType:
+			jwk, err = pubkey.GetPublicKeyJWK(ed25519.PublicKey(pk.Value))
+			if err != nil {
+				return nil, err
+			}
+		case ECKeyType:
+			pubKey, err := x509.ParsePKIXPublicKey(pk.Value)
+			if err != nil {
+				return nil, err
+			}
+
+			ecPublicKey, ok := pubKey.(*ecdsa.PublicKey)
+			if !ok {
+				return nil, errors.New("public key is not of ecdsa.PublicKey type")
+			}
+
+			jwk, err = pubkey.GetPublicKeyJWK(ecPublicKey)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("invalid key type: %s", pk.KeyType)
 		}
 
 		rawPK[jsonldPublicKeyjwk] = jwk
