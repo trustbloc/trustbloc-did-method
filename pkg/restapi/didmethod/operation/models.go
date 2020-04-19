@@ -57,6 +57,7 @@ type PublicKey struct {
 	Usage    []string `json:"usage,omitempty"`
 	Encoding string   `json:"encoding,omitempty"`
 	Recovery bool     `json:"recovery,omitempty"`
+	KeyType  string   `json:"keyType,omitempty"`
 }
 
 // Service DID doc service

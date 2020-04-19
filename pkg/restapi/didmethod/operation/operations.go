@@ -14,7 +14,6 @@ import (
 	"net/http"
 
 	"github.com/btcsuite/btcutil/base58"
-
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
@@ -112,7 +111,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 		}
 
 		opts = append(opts, didclient.WithPublicKey(&didclient.PublicKey{ID: v.ID, Type: v.Type,
-			Value: keyValue, Encoding: v.Encoding, Usage: v.Usage, Recovery: v.Recovery}))
+			Value: keyValue, Encoding: v.Encoding, Usage: v.Usage, Recovery: v.Recovery, KeyType: v.KeyType}))
 
 		if !v.Recovery {
 			keysID[v.ID] = keyValue

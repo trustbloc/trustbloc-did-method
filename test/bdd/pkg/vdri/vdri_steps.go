@@ -7,6 +7,10 @@ package vdri
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -52,17 +56,13 @@ func NewSteps(ctx *context.BDDContext) *Steps {
 
 // RegisterSteps registers agent steps
 func (e *Steps) RegisterSteps(s *godog.Suite) {
-	s.Step(`^TrustBloc DID is created through registrar "([^"]*)"$`, e.createDIDBloc)
-	s.Step(`^Resolving created DID through resolver URL "([^"]*)"$`, e.resolveCreatedDID)
+	s.Step(`^TrustBloc DID is created through registrar "([^"]*)" with key type "([^"]*)"$`, e.createDIDBloc)
+	s.Step(`^Resolve created DID through resolver URL "([^"]*)" and validate key type "([^"]*)"$`,
+		e.resolveCreatedDID)
 }
 
-func (e *Steps) createDIDBloc(url string) error { //nolint: gocyclo
-	kms, err := createKMS(mem.NewProvider())
-	if err != nil {
-		return err
-	}
-
-	_, base58PubKey, err := kms.CreateKeySet()
+func (e *Steps) createDIDBloc(url, keyType string) error { //nolint: gocyclo
+	pubKey, err := getPublicKey(keyType)
 	if err != nil {
 		return err
 	}
@@ -71,9 +71,9 @@ func (e *Steps) createDIDBloc(url string) error { //nolint: gocyclo
 
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID,
 		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: did.JWSVerificationKey2020,
-			Value: base64.StdEncoding.EncodeToString(base58.Decode(base58PubKey)), Encoding: did.PublicKeyEncodingJwk,
+			Value: base64.StdEncoding.EncodeToString(pubKey), Encoding: did.PublicKeyEncodingJwk, KeyType: keyType,
 			Usage: []string{did.KeyUsageGeneral, did.KeyUsageOps}}, {ID: pubKeyIndex2, Type: did.JWSVerificationKey2020,
-			Value:    base64.StdEncoding.EncodeToString(base58.Decode(base58PubKey)),
+			Value: base64.StdEncoding.EncodeToString(pubKey), KeyType: keyType,
 			Encoding: did.PublicKeyEncodingJwk, Recovery: true}},
 		AddServices: []*operation.Service{{ID: serviceID, ServiceEndpoint: "http://www.example.com/"}}})
 	if err != nil {
@@ -119,7 +119,7 @@ func (e *Steps) createDIDBloc(url string) error { //nolint: gocyclo
 	return nil
 }
 
-func (e *Steps) resolveCreatedDID(url string) error {
+func (e *Steps) resolveCreatedDID(url, keyType string) error {
 	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig))
 
 	var doc *ariesdid.Doc
@@ -143,13 +143,8 @@ func (e *Steps) resolveCreatedDID(url string) error {
 		return fmt.Errorf("resolved did service ID %s not equal to %s", doc.Service[0].ID, doc.ID+"#"+serviceID)
 	}
 
-	if len(doc.PublicKey) != 1 {
-		return fmt.Errorf("public key size not equal one")
-	}
-
-	if doc.PublicKey[0].ID != doc.ID+"#"+pubKeyIndex1 {
-		return fmt.Errorf("resolved did public key ID %s not equal to %s",
-			doc.PublicKey[0].ID, doc.ID+"#"+pubKeyIndex1)
+	if err := validatePublicKey(doc, keyType); err != nil {
+		return err
 	}
 
 	return nil
@@ -167,4 +162,64 @@ func createKMS(s storage.Provider) (ariesapi.CloseableKMS, error) {
 	}
 
 	return kms, nil
+}
+
+func getPublicKey(keyType string) ([]byte, error) {
+	var pubKey []byte
+
+	switch keyType {
+	case did.Ed25519KeyType:
+		kms, err := createKMS(mem.NewProvider())
+		if err != nil {
+			return nil, err
+		}
+
+		_, base58PubKey, err := kms.CreateKeySet()
+		if err != nil {
+			return nil, err
+		}
+
+		pubKey = base58.Decode(base58PubKey)
+	case did.ECKeyType:
+		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+
+		ecPubKeyBytes, err := x509.MarshalPKIXPublicKey(ecPrivKey.Public())
+		if err != nil {
+			return nil, err
+		}
+
+		pubKey = ecPubKeyBytes
+	}
+
+	return pubKey, nil
+}
+
+func validatePublicKey(doc *ariesdid.Doc, keyType string) error {
+	if len(doc.PublicKey) != 1 {
+		return fmt.Errorf("public key size not equal one")
+	}
+
+	expectedJwkKeyType := ""
+
+	switch keyType {
+	case "", did.Ed25519KeyType:
+		expectedJwkKeyType = "OKP"
+	case did.ECKeyType:
+		expectedJwkKeyType = "EC"
+	}
+
+	if expectedJwkKeyType != doc.PublicKey[0].JSONWebKey().Kty {
+		return fmt.Errorf("jwk key type : expected=%s actual=%s", expectedJwkKeyType,
+			doc.PublicKey[0].JSONWebKey().Kty)
+	}
+
+	if doc.PublicKey[0].ID != doc.ID+"#"+pubKeyIndex1 {
+		return fmt.Errorf("resolved did public key ID %s not equal to %s",
+			doc.PublicKey[0].ID, doc.ID+"#"+pubKeyIndex1)
+	}
+
+	return nil
 }
