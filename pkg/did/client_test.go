@@ -12,6 +12,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -142,7 +143,10 @@ func TestClient_CreateDID(t *testing.T) {
 		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
 			require.NoError(t, err)
-			_, err = fmt.Fprint(w, string(bytes))
+			b, err := json.Marshal(didResolution{Context: "https://www.w3.org/ns/did-resolution/v1",
+				DIDDocument: bytes})
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(b))
 			require.NoError(t, err)
 		}))
 		defer serv.Close()
@@ -164,9 +168,10 @@ func TestClient_CreateDID(t *testing.T) {
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
-			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey, Recovery: true}),
+			Type: Ed25519VerificationKey2018, Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey, Recovery: true}),
 			WithPublicKey(&PublicKey{ID: "#key2",
-				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey}),
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
+				Value: ed25519PubKey}),
 			WithPublicKey(&PublicKey{ID: "#key3",
 				Type:     JWSVerificationKey2020,
 				Encoding: PublicKeyEncodingJwk,
@@ -261,7 +266,8 @@ func TestClient_CreateDID(t *testing.T) {
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
 			Type: JWSVerificationKey2020, Encoding: "wrong", Value: pubKey, Recovery: true}),
 			WithPublicKey(&PublicKey{ID: "#key2",
-				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: []byte("value")}))
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
+				Value: []byte("value")}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get recovery key")
 		require.Nil(t, doc)
@@ -287,9 +293,9 @@ func TestClient_CreateDID(t *testing.T) {
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
-			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey}),
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey, KeyType: Ed25519KeyType}),
 			WithPublicKey(&PublicKey{ID: "#key2",
-				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey}))
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, Value: pubKey, KeyType: Ed25519KeyType}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "recovery key not found")
 		require.Nil(t, doc)

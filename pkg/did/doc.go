@@ -39,8 +39,11 @@ const (
 	// KeyUsageGeneral defines key usage as general key
 	KeyUsageGeneral = "general"
 
-	// JWSVerificationKey2020 defines key type
+	// JWSVerificationKey2020 defines key type signature
 	JWSVerificationKey2020 = "JwsVerificationKey2020"
+
+	// Ed25519VerificationKey2018 define key type signature
+	Ed25519VerificationKey2018 = "Ed25519VerificationKey2018"
 
 	// Ed25519KeyType defines ed25119 key type
 	Ed25519KeyType = "Ed25519"
@@ -122,7 +125,7 @@ func populateRawPublicKey(pk *PublicKey) (map[string]interface{}, error) {
 		var err error
 
 		switch pk.KeyType {
-		case "", Ed25519KeyType:
+		case Ed25519KeyType:
 			jwk, err = pubkey.GetPublicKeyJWK(ed25519.PublicKey(pk.Value))
 			if err != nil {
 				return nil, err
