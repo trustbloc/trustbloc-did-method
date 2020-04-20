@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -46,6 +47,13 @@ type Client struct {
 	selection selection
 	client    *http.Client
 	tlsConfig *tls.Config
+}
+
+type didResolution struct {
+	Context          interface{}     `json:"@context"`
+	DIDDocument      json.RawMessage `json:"didDocument"`
+	ResolverMetadata json.RawMessage `json:"resolverMetadata"`
+	MethodMetadata   json.RawMessage `json:"methodMetadata"`
 }
 
 // New return did bloc client
@@ -183,7 +191,18 @@ func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc,
 			endpointURL, resp.StatusCode, responseBytes)
 	}
 
-	didDoc, err := docdid.ParseDocument(responseBytes)
+	var r didResolution
+	if errUnmarshal := json.Unmarshal(responseBytes, &r); errUnmarshal != nil {
+		return nil, fmt.Errorf("unmarshal data return from sidtree %w", errUnmarshal)
+	}
+
+	didDocBytes := responseBytes
+	// check if data is did resolution
+	if len(r.DIDDocument) != 0 {
+		didDocBytes = r.DIDDocument
+	}
+
+	didDoc, err := docdid.ParseDocument(didDocBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public DID document: %s", err)
 	}

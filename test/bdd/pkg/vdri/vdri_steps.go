@@ -56,12 +56,12 @@ func NewSteps(ctx *context.BDDContext) *Steps {
 
 // RegisterSteps registers agent steps
 func (e *Steps) RegisterSteps(s *godog.Suite) {
-	s.Step(`^TrustBloc DID is created through registrar "([^"]*)" with key type "([^"]*)"$`, e.createDIDBloc)
-	s.Step(`^Resolve created DID through resolver URL "([^"]*)" and validate key type "([^"]*)"$`,
+	s.Step(`^TrustBloc DID is created through registrar "([^"]*)" with key type "([^"]*)" with signature suite "([^"]*)"$`, e.createDIDBloc) //nolint: lll
+	s.Step(`^Resolve created DID through resolver URL "([^"]*)" and validate key type "([^"]*)", signature suite "([^"]*)"$`,                //nolint: lll
 		e.resolveCreatedDID)
 }
 
-func (e *Steps) createDIDBloc(url, keyType string) error { //nolint: gocyclo
+func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nolint: gocyclo
 	pubKey, err := getPublicKey(keyType)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (e *Steps) createDIDBloc(url, keyType string) error { //nolint: gocyclo
 	jobID := uuid.New().String()
 
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID,
-		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: did.JWSVerificationKey2020,
+		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: signatureSuite,
 			Value: base64.StdEncoding.EncodeToString(pubKey), Encoding: did.PublicKeyEncodingJwk, KeyType: keyType,
 			Usage: []string{did.KeyUsageGeneral, did.KeyUsageOps}}, {ID: pubKeyIndex2, Type: did.JWSVerificationKey2020,
 			Value: base64.StdEncoding.EncodeToString(pubKey), KeyType: keyType,
@@ -119,7 +119,7 @@ func (e *Steps) createDIDBloc(url, keyType string) error { //nolint: gocyclo
 	return nil
 }
 
-func (e *Steps) resolveCreatedDID(url, keyType string) error {
+func (e *Steps) resolveCreatedDID(url, keyType, signatureSuite string) error {
 	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig))
 
 	var doc *ariesdid.Doc
@@ -143,7 +143,7 @@ func (e *Steps) resolveCreatedDID(url, keyType string) error {
 		return fmt.Errorf("resolved did service ID %s not equal to %s", doc.Service[0].ID, doc.ID+"#"+serviceID)
 	}
 
-	if err := validatePublicKey(doc, keyType); err != nil {
+	if err := validatePublicKey(doc, keyType, signatureSuite); err != nil {
 		return err
 	}
 
@@ -197,7 +197,7 @@ func getPublicKey(keyType string) ([]byte, error) {
 	return pubKey, nil
 }
 
-func validatePublicKey(doc *ariesdid.Doc, keyType string) error {
+func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error {
 	if len(doc.PublicKey) != 1 {
 		return fmt.Errorf("public key size not equal one")
 	}
@@ -205,7 +205,7 @@ func validatePublicKey(doc *ariesdid.Doc, keyType string) error {
 	expectedJwkKeyType := ""
 
 	switch keyType {
-	case "", did.Ed25519KeyType:
+	case did.Ed25519KeyType:
 		expectedJwkKeyType = "OKP"
 	case did.ECKeyType:
 		expectedJwkKeyType = "EC"
@@ -219,6 +219,11 @@ func validatePublicKey(doc *ariesdid.Doc, keyType string) error {
 	if doc.PublicKey[0].ID != doc.ID+"#"+pubKeyIndex1 {
 		return fmt.Errorf("resolved did public key ID %s not equal to %s",
 			doc.PublicKey[0].ID, doc.ID+"#"+pubKeyIndex1)
+	}
+
+	if doc.PublicKey[0].Type != signatureSuite {
+		return fmt.Errorf("resolved did public key type %s not equal to %s",
+			doc.PublicKey[0].Type, signatureSuite)
 	}
 
 	return nil
