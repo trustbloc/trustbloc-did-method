@@ -291,6 +291,12 @@ github.com/trustbloc/sidetree-core-go v0.1.3-0.20200415231404-4172c0d0a620 h1:HR
 github.com/trustbloc/sidetree-core-go v0.1.3-0.20200415231404-4172c0d0a620/go.mod h1:4Z1Zrxs/ut+fGmTdliYAc6sVueXb07EFJHKC/5VOvQA=
 github.com/trustbloc/sidetree-core-go v0.1.3-0.20200417183451-e93b6f4e7bdc h1:8fhnvQwWShSbd8/ZZcXYaeMAaSBMNwfSdFeU7k7voPg=
 github.com/trustbloc/sidetree-core-go v0.1.3-0.20200417183451-e93b6f4e7bdc/go.mod h1:4Z1Zrxs/ut+fGmTdliYAc6sVueXb07EFJHKC/5VOvQA=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200420151629-9fdb35cc0a5c h1:Yy2rwMwjDWWQBLM1JAC/zbIfnLdfH92xit5LaX2dLWI=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200420151629-9fdb35cc0a5c/go.mod h1:4Z1Zrxs/ut+fGmTdliYAc6sVueXb07EFJHKC/5VOvQA=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200420162112-6a328cd3597a h1:XsLzTGv7BYr20rdsZ3gRKELulrwP6vroapj1GaJXyDA=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200420162112-6a328cd3597a/go.mod h1:4Z1Zrxs/ut+fGmTdliYAc6sVueXb07EFJHKC/5VOvQA=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200420172101-c406dfdf4db2 h1:a71TwYN8gqN0e0V22xFJEa5eikvb8wbOjtmb2//Qt/M=
+github.com/trustbloc/sidetree-core-go v0.1.3-0.20200420172101-c406dfdf4db2/go.mod h1:4Z1Zrxs/ut+fGmTdliYAc6sVueXb07EFJHKC/5VOvQA=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/urfave/cli v0.0.0-20171014202726-7bc6a0acffa5/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f h1:J9EGpcZtP0E/raorCMxlFGSTBrsSlaDGf3jU/qvAE2c=

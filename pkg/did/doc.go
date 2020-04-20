@@ -27,7 +27,7 @@ const (
 	jsonldRoutingKeys   = "routingKeys"
 	jsonldPriority      = "priority"
 
-	jsonldPublicKeyjwk = "publicKeyJwk"
+	jsonldPublicKeyjwk = "jwk"
 
 	// PublicKeyEncodingJwk define jwk encoding type
 	PublicKeyEncodingJwk = "Jwk"
