@@ -15,5 +15,5 @@ Feature: Using DID method REST API
     Examples:
       | keyType  |  signatureSuite             |
       | Ed25519  |  JwsVerificationKey2020     |
-      | EC       |  JwsVerificationKey2020     |
+      | P256     |  JwsVerificationKey2020     |
       | Ed25519  |  Ed25519VerificationKey2018 |
