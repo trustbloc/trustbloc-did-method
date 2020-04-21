@@ -177,7 +177,7 @@ func TestClient_CreateDID(t *testing.T) {
 				Type:     JWSVerificationKey2020,
 				Encoding: PublicKeyEncodingJwk,
 				Value:    ecPubKeyBytes,
-				KeyType:  ECKeyType,
+				KeyType:  P256KeyType,
 				Usage:    []string{KeyUsageGeneral},
 			}),
 			WithService(&did.Service{ID: "srv1",
@@ -237,7 +237,7 @@ func TestClient_CreateDID(t *testing.T) {
 			WithPublicKey(&PublicKey{ID: "#key1",
 				Type:     JWSVerificationKey2020,
 				Encoding: PublicKeyEncodingJwk,
-				KeyType:  ECKeyType,
+				KeyType:  P256KeyType,
 				Value:    ed25519PubKey,
 			}),
 		)

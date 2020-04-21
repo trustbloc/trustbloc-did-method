@@ -180,7 +180,7 @@ func getPublicKey(keyType string) ([]byte, error) {
 		}
 
 		pubKey = base58.Decode(base58PubKey)
-	case did.ECKeyType:
+	case did.P256KeyType:
 		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err
@@ -207,7 +207,7 @@ func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error 
 	switch keyType {
 	case did.Ed25519KeyType:
 		expectedJwkKeyType = "OKP"
-	case did.ECKeyType:
+	case did.P256KeyType:
 		expectedJwkKeyType = "EC"
 	}
 
