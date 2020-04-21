@@ -40,6 +40,8 @@ const (
 	pubKeyIndex1 = "key-1"
 	pubKeyIndex2 = "key-2"
 	serviceID    = "service"
+	// P256KeyType EC P-256 key type
+	P256KeyType = "P256"
 )
 
 // Steps is steps for VC BDD tests
@@ -61,7 +63,7 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 		e.resolveCreatedDID)
 }
 
-func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nolint: gocyclo
+func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nolint: gocyclo,funlen
 	pubKey, err := getPublicKey(keyType)
 	if err != nil {
 		return err
@@ -69,9 +71,14 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 
 	jobID := uuid.New().String()
 
+	kt := keyType
+	if keyType == P256KeyType {
+		kt = did.ECKeyType
+	}
+
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID,
 		AddPublicKeys: []*operation.PublicKey{{ID: pubKeyIndex1, Type: signatureSuite,
-			Value: base64.StdEncoding.EncodeToString(pubKey), Encoding: did.PublicKeyEncodingJwk, KeyType: keyType,
+			Value: base64.StdEncoding.EncodeToString(pubKey), Encoding: did.PublicKeyEncodingJwk, KeyType: kt,
 			Usage: []string{did.KeyUsageGeneral, did.KeyUsageOps}}, {ID: pubKeyIndex2, Type: did.JWSVerificationKey2020,
 			Value: base64.StdEncoding.EncodeToString(pubKey), KeyType: keyType,
 			Encoding: did.PublicKeyEncodingJwk, Recovery: true}},
@@ -180,7 +187,7 @@ func getPublicKey(keyType string) ([]byte, error) {
 		}
 
 		pubKey = base58.Decode(base58PubKey)
-	case did.P256KeyType:
+	case P256KeyType:
 		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err
@@ -207,7 +214,7 @@ func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error 
 	switch keyType {
 	case did.Ed25519KeyType:
 		expectedJwkKeyType = "OKP"
-	case did.P256KeyType:
+	case P256KeyType:
 		expectedJwkKeyType = "EC"
 	}
 

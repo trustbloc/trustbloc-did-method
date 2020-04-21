@@ -48,8 +48,8 @@ const (
 	// Ed25519KeyType defines ed25119 key type
 	Ed25519KeyType = "Ed25519"
 
-	// P256KeyType EC P-256 key type
-	P256KeyType = "P256"
+	// ECKeyType defines Elliptical Curve key type
+	ECKeyType = "EC"
 )
 
 type rawDoc struct {
@@ -130,7 +130,7 @@ func populateRawPublicKey(pk *PublicKey) (map[string]interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-		case P256KeyType:
+		case ECKeyType:
 			pubKey, err := x509.ParsePKIXPublicKey(pk.Value)
 			if err != nil {
 				return nil, err
