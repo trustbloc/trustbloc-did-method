@@ -218,9 +218,15 @@ func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error 
 		expectedJwkKeyType = "EC"
 	}
 
-	if expectedJwkKeyType != doc.PublicKey[0].JSONWebKey().Kty {
+	if signatureSuite == did.JWSVerificationKey2020 &&
+		expectedJwkKeyType != doc.PublicKey[0].JSONWebKey().Kty {
 		return fmt.Errorf("jwk key type : expected=%s actual=%s", expectedJwkKeyType,
 			doc.PublicKey[0].JSONWebKey().Kty)
+	}
+
+	if signatureSuite == did.Ed25519VerificationKey2018 &&
+		doc.PublicKey[0].JSONWebKey() != nil {
+		return fmt.Errorf("jwk is not nil for %s", signatureSuite)
 	}
 
 	if doc.PublicKey[0].ID != doc.ID+"#"+pubKeyIndex1 {
