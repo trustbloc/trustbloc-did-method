@@ -153,7 +153,7 @@ func (c *Client) getRecoveryKey(publicKeys []PublicKey) (*jws.JWK, error) {
 }
 
 func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc, error) {
-	httpReq, err := http.NewRequest(http.MethodPost, endpointURL, bytes.NewReader(req))
+	httpReq, err := http.NewRequest(http.MethodPost, endpointURL+"/operations", bytes.NewReader(req))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http request: %w", err)
 	}
