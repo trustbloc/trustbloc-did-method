@@ -4,7 +4,7 @@ Copyright SecureKey Technologies Inc. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package config
+package models
 
 import (
 	"encoding/json"
@@ -38,7 +38,8 @@ type Consortium struct {
 
 // ConsortiumPolicy holds consortium policy configuration
 type ConsortiumPolicy struct {
-	Cache CacheControl `json:"cache"`
+	Cache      CacheControl `json:"cache"`
+	NumQueries int          `json:"num-queries"`
 }
 
 // CacheControl holds cache settings for this file,

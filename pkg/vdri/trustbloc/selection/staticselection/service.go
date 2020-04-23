@@ -6,21 +6,69 @@ SPDX-License-Identifier: Apache-2.0
 package staticselection
 
 import (
-	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
+	"fmt"
+	"math/rand"
+
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
+
+type config interface {
+	GetConsortium(url, domain string) (*models.ConsortiumFileData, error)
+	GetStakeholder(url, domain string) (*models.StakeholderFileData, error)
+}
 
 // SelectionService implements a static selection service
 type SelectionService struct {
+	config config
 }
 
 // NewService return static selection service
-func NewService() *SelectionService {
-	return &SelectionService{}
+func NewService(config config) *SelectionService {
+	return &SelectionService{config: config}
 }
 
-// SelectEndpoints select endpoints
-func (ds *SelectionService) SelectEndpoints(endpoints []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
-	// TODO add logic to select endpoints
-	// For now we just return all endpoints !!! need to be removed after adding selection logic
-	return endpoints, nil
+// SelectEndpoints select a random endpoint for each of N random stakeholders in a consortium
+// Where N is the num-queries parameter in the consortium's policy configuration
+func (ds *SelectionService) SelectEndpoints(consortiumDomain string, endpoints []*models.Endpoint) ([]*models.Endpoint, error) { // nolint: lll
+	consortiumData, err := ds.config.GetConsortium(consortiumDomain, consortiumDomain)
+	if err != nil {
+		return nil, fmt.Errorf("getting consortium: %w", err)
+	}
+
+	var out []*models.Endpoint
+
+	// map from each domain to its endpoints
+	domains := map[string][]*models.Endpoint{}
+
+	for _, ep := range endpoints {
+		domains[ep.Domain] = append(domains[ep.Domain], ep)
+	}
+
+	// list of domains
+	var d []string
+
+	for domain := range domains {
+		d = append(d, domain)
+	}
+
+	consortium := consortiumData.Config
+
+	n := 0
+	if consortium != nil {
+		n = consortium.Policy.NumQueries
+	}
+
+	// if ds.numStakeholders is 0, then we use all stakeholders
+	if n == 0 {
+		n = len(d)
+	}
+
+	perm := rand.Perm(len(d))
+
+	for i := 0; i < n && i < len(d); i++ {
+		list := domains[d[perm[i]]]
+		out = append(out, list[rand.Intn(len(list))])
+	}
+
+	return out, nil
 }

@@ -22,8 +22,10 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/selection/staticselection"
 )
 
@@ -33,20 +35,15 @@ const (
 	updateRevealValue   = "updateOTP"
 )
 
-type discovery interface {
-	GetEndpoints(domain string) ([]*endpoint.Endpoint, error)
-}
-
-type selection interface {
-	SelectEndpoints(endpoints []*endpoint.Endpoint) ([]*endpoint.Endpoint, error)
+type endpointService interface {
+	GetEndpoints(domain string) ([]*models.Endpoint, error)
 }
 
 // Client for did bloc
 type Client struct {
-	discovery discovery
-	selection selection
-	client    *http.Client
-	tlsConfig *tls.Config
+	endpointService endpointService
+	client          *http.Client
+	tlsConfig       *tls.Config
 }
 
 type didResolution struct {
@@ -58,7 +55,7 @@ type didResolution struct {
 
 // New return did bloc client
 func New(opts ...Option) *Client {
-	c := &Client{client: &http.Client{}, selection: staticselection.NewService()}
+	c := &Client{client: &http.Client{}}
 
 	// Apply options
 	for _, opt := range opts {
@@ -66,7 +63,10 @@ func New(opts ...Option) *Client {
 	}
 
 	c.client.Transport = &http.Transport{TLSClientConfig: c.tlsConfig}
-	c.discovery = staticdiscovery.NewService(staticdiscovery.WithTLSConfig(c.tlsConfig))
+	configService := httpconfig.NewService(httpconfig.WithTLSConfig(c.tlsConfig))
+	c.endpointService = endpoint.NewService(
+		staticdiscovery.NewService(configService),
+		staticselection.NewService(configService))
 
 	return c
 }
@@ -83,9 +83,13 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 		opt(createDIDOpts)
 	}
 
-	endpoints, err := c.getEndpoints(domain)
+	endpoints, err := c.endpointService.GetEndpoints(domain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get endpoints: %w", err)
+	}
+
+	if len(endpoints) == 0 {
+		return nil, errors.New("list of endpoints is empty")
 	}
 
 	req, err := c.buildSideTreeRequest(createDIDOpts)
@@ -99,24 +103,6 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 	}
 
 	return resDoc, nil
-}
-
-func (c *Client) getEndpoints(domain string) ([]*endpoint.Endpoint, error) {
-	endpoints, err := c.discovery.GetEndpoints(domain)
-	if err != nil {
-		return nil, fmt.Errorf("failed to discover endpoints: %w", err)
-	}
-
-	selectedEndpoints, err := c.selection.SelectEndpoints(endpoints)
-	if err != nil {
-		return nil, fmt.Errorf("failed to select endpoints: %w", err)
-	}
-
-	if len(selectedEndpoints) == 0 {
-		return nil, errors.New("list of endpoints is empty")
-	}
-
-	return selectedEndpoints, nil
 }
 
 // buildSideTreeRequest request builder for sidetree public DID creation

@@ -16,17 +16,15 @@ import (
 	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
 	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
 
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/selection/staticselection"
 )
 
-type discovery interface {
-	GetEndpoints(domain string) ([]*endpoint.Endpoint, error)
-}
-
-type selection interface {
-	SelectEndpoints(endpoints []*endpoint.Endpoint) ([]*endpoint.Endpoint, error)
+type endpointService interface {
+	GetEndpoints(domain string) ([]*models.Endpoint, error)
 }
 
 type vdri interface {
@@ -36,22 +34,24 @@ type vdri interface {
 
 // VDRI bloc
 type VDRI struct {
-	resolverURL string
-	discovery   discovery
-	selection   selection
-	getHTTPVDRI func(url string) (vdri, error) // needed for unit test
-	tlsConfig   *tls.Config
+	resolverURL     string
+	endpointService endpointService
+	getHTTPVDRI     func(url string) (vdri, error) // needed for unit test
+	tlsConfig       *tls.Config
 }
 
 // New creates new bloc vdri
 func New(opts ...Option) *VDRI {
-	v := &VDRI{selection: staticselection.NewService()}
+	v := &VDRI{}
 
 	for _, opt := range opts {
 		opt(v)
 	}
 
-	v.discovery = staticdiscovery.NewService(staticdiscovery.WithTLSConfig(v.tlsConfig))
+	configService := httpconfig.NewService(httpconfig.WithTLSConfig(v.tlsConfig))
+	v.endpointService = endpoint.NewService(
+		staticdiscovery.NewService(configService),
+		staticselection.NewService(configService))
 
 	v.getHTTPVDRI = func(url string) (vdri, error) {
 		return httpbinding.New(url,
@@ -81,24 +81,6 @@ func (v *VDRI) Build(pubKey *vdriapi.PubKey, opts ...vdriapi.DocOpts) (*docdid.D
 	return nil, fmt.Errorf("build method not supported for did bloc")
 }
 
-func (v *VDRI) getEndpoints(domain string) ([]*endpoint.Endpoint, error) {
-	endpoints, err := v.discovery.GetEndpoints(domain)
-	if err != nil {
-		return nil, fmt.Errorf("failed to discover endpoints: %w", err)
-	}
-
-	selectedEndpoints, err := v.selection.SelectEndpoints(endpoints)
-	if err != nil {
-		return nil, fmt.Errorf("failed to select endpoints: %w", err)
-	}
-
-	if len(selectedEndpoints) == 0 {
-		return nil, errors.New("list of endpoints is empty")
-	}
-
-	return selectedEndpoints, nil
-}
-
 func (v *VDRI) sidetreeResolve(url, did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error) {
 	resolver, err := v.getHTTPVDRI(url)
 	if err != nil {
@@ -124,9 +106,13 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 		return nil, fmt.Errorf("wrong did %s", did)
 	}
 
-	endpoints, err := v.getEndpoints(didParts[2])
+	endpoints, err := v.endpointService.GetEndpoints(didParts[2])
 	if err != nil {
 		return nil, fmt.Errorf("failed to get endpoints: %w", err)
+	}
+
+	if len(endpoints) == 0 {
+		return nil, errors.New("list of endpoints is empty")
 	}
 
 	var doc *docdid.Doc
