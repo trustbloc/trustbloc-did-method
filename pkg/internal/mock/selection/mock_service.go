@@ -5,17 +5,19 @@ SPDX-License-Identifier: Apache-2.0
 
 package discovery
 
-import "github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
+import (
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
+)
 
 // MockSelectionService implements a mock selection service
 type MockSelectionService struct {
-	SelectEndpointsFunc func(endpoints []*endpoint.Endpoint) ([]*endpoint.Endpoint, error)
+	SelectEndpointsFunc func(domain string, endpoints []*models.Endpoint) ([]*models.Endpoint, error)
 }
 
 // SelectEndpoints select endpoints
-func (m *MockSelectionService) SelectEndpoints(endpoints []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
+func (m *MockSelectionService) SelectEndpoints(domain string, endpoints []*models.Endpoint) ([]*models.Endpoint, error) { // nolint: lll
 	if m.SelectEndpointsFunc != nil {
-		return m.SelectEndpointsFunc(endpoints)
+		return m.SelectEndpointsFunc(domain, endpoints)
 	}
 
 	return nil, nil

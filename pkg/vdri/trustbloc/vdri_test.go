@@ -16,9 +16,8 @@ import (
 	mockvdri "github.com/hyperledger/aries-framework-go/pkg/mock/vdri"
 	"github.com/stretchr/testify/require"
 
-	mockdiscovery "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/discovery"
-	mockselection "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/selection"
-	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
+	mockendpoint "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/endpoint"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 func TestVDRI_Accept(t *testing.T) {
@@ -115,8 +114,8 @@ func TestVDRI_Read(t *testing.T) {
 	t.Run("test error from get endpoints", func(t *testing.T) {
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return nil, fmt.Errorf("discover error")
 			}}
 
@@ -125,12 +124,8 @@ func TestVDRI_Read(t *testing.T) {
 		require.Contains(t, err.Error(), "discover error")
 		require.Nil(t, doc)
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return nil, nil
-			}}
-		v.selection = &mockselection.MockSelectionService{
-			SelectEndpointsFunc: func(endpoint []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return nil, fmt.Errorf("select error")
 			}}
 
@@ -139,8 +134,8 @@ func TestVDRI_Read(t *testing.T) {
 		require.Contains(t, err.Error(), "select error")
 		require.Nil(t, doc)
 
-		v.selection = &mockselection.MockSelectionService{
-			SelectEndpointsFunc: func(endpoint []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return nil, nil
 			}}
 
@@ -153,9 +148,9 @@ func TestVDRI_Read(t *testing.T) {
 	t.Run("test error from get http vdri", func(t *testing.T) {
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
@@ -171,9 +166,9 @@ func TestVDRI_Read(t *testing.T) {
 	t.Run("test error from http vdri read", func(t *testing.T) {
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
@@ -192,9 +187,9 @@ func TestVDRI_Read(t *testing.T) {
 	t.Run("test error from mismatch", func(t *testing.T) {
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
 			}}
 
 		counter := 0
@@ -215,9 +210,9 @@ func TestVDRI_Read(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
 			}}
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {

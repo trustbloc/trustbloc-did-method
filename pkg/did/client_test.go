@@ -22,8 +22,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mockdiscovery "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/discovery"
+	mockendpoint "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/endpoint"
 	mockselection "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/selection"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 func TestClient_CreateDID(t *testing.T) {
@@ -39,34 +41,27 @@ func TestClient_CreateDID(t *testing.T) {
 	t.Run("test error from get endpoints", func(t *testing.T) {
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return nil, fmt.Errorf("discover error")
-			}}
+		v.endpointService = endpoint.NewService(
+			discoveryMock(nil, fmt.Errorf("discover error")),
+			selectionMock(nil, nil))
 
 		doc, err := v.CreateDID("testnet")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "discover error")
 		require.Nil(t, doc)
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return nil, nil
-			}}
-		v.selection = &mockselection.MockSelectionService{
-			SelectEndpointsFunc: func(endpoint []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
-				return nil, fmt.Errorf("select error")
-			}}
+		v.endpointService = endpoint.NewService(
+			discoveryMock(nil, nil),
+			selectionMock(nil, fmt.Errorf("select error")))
 
 		doc, err = v.CreateDID("testnet")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "select error")
 		require.Nil(t, doc)
 
-		v.selection = &mockselection.MockSelectionService{
-			SelectEndpointsFunc: func(endpoint []*endpoint.Endpoint) ([]*endpoint.Endpoint, error) {
-				return nil, nil
-			}}
+		v.endpointService = endpoint.NewService(
+			discoveryMock(nil, nil),
+			selectionMock(nil, nil))
 
 		doc, err = v.CreateDID("testnet")
 		require.Error(t, err)
@@ -78,9 +73,9 @@ func TestClient_CreateDID(t *testing.T) {
 		v := New()
 
 		// failed to create http request
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "http://[]%20%/"}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "http://[]%20%/"}}, nil
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1",
@@ -90,9 +85,9 @@ func TestClient_CreateDID(t *testing.T) {
 		require.Nil(t, doc)
 
 		// test failed to send request
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: "url"}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
 		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
@@ -107,9 +102,9 @@ func TestClient_CreateDID(t *testing.T) {
 		}))
 		defer serv.Close()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
 		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
@@ -127,9 +122,9 @@ func TestClient_CreateDID(t *testing.T) {
 		}))
 		defer serv.Close()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
 		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
@@ -162,9 +157,9 @@ func TestClient_CreateDID(t *testing.T) {
 
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
@@ -197,9 +192,9 @@ func TestClient_CreateDID(t *testing.T) {
 
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
 		doc, err := v.CreateDID("testnet",
@@ -225,9 +220,9 @@ func TestClient_CreateDID(t *testing.T) {
 
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
 		ed25519PubKey, _, err := ed25519.GenerateKey(rand.Reader)
@@ -260,9 +255,9 @@ func TestClient_CreateDID(t *testing.T) {
 
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
@@ -289,9 +284,9 @@ func TestClient_CreateDID(t *testing.T) {
 
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
@@ -317,9 +312,9 @@ func TestClient_CreateDID(t *testing.T) {
 
 		v := New()
 
-		v.discovery = &mockdiscovery.MockDiscoveryService{
-			GetEndpointsFunc: func(domain string) (endpoints []*endpoint.Endpoint, err error) {
-				return []*endpoint.Endpoint{{URL: serv.URL}}, nil
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
@@ -371,4 +366,20 @@ func TestClient_CreateDID(t *testing.T) {
 		require.Equal(t, 1, len(createDIDOpts.services))
 		require.Equal(t, "serviceID", createDIDOpts.services[0].ID)
 	})
+}
+
+func discoveryMock(endpoints []*models.Endpoint, err error) *mockdiscovery.MockDiscoveryService {
+	return &mockdiscovery.MockDiscoveryService{
+		GetEndpointsFunc: func(string) ([]*models.Endpoint, error) {
+			return endpoints, err
+		},
+	}
+}
+
+func selectionMock(endpoints []*models.Endpoint, err error) *mockselection.MockSelectionService {
+	return &mockselection.MockSelectionService{
+		SelectEndpointsFunc: func(string, []*models.Endpoint) ([]*models.Endpoint, error) {
+			return endpoints, err
+		},
+	}
 }

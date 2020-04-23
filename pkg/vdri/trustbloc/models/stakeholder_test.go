@@ -4,12 +4,15 @@ Copyright SecureKey Technologies Inc. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package config
+package models_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	mockmodels "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/models"
+	. "github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 // nolint: gochecknoglobals
@@ -40,7 +43,7 @@ var exampleStakeholders = []string{`{
 
 func Test_ParseStakeholder(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		jws := dummyJWSWrap(exampleStakeholders[0])
+		jws := mockmodels.DummyJWSWrap(exampleStakeholders[0])
 
 		cData, err := ParseStakeholder([]byte(jws))
 		require.NoError(t, err)
@@ -57,7 +60,7 @@ func Test_ParseStakeholder(t *testing.T) {
 	})
 
 	t.Run("failure: malformed stakeholder within JWS", func(t *testing.T) {
-		jws := dummyJWSWrap(`{"bad":"data"`)
+		jws := mockmodels.DummyJWSWrap(`{"bad":"data"`)
 
 		_, err := ParseStakeholder([]byte(jws))
 		require.Error(t, err)

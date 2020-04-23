@@ -4,13 +4,15 @@ Copyright SecureKey Technologies Inc. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package config
+package models_test
 
 import (
-	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	mockmodels "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/models"
+	. "github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 // nolint: gochecknoglobals
@@ -34,14 +36,9 @@ var payload = `
 }
 `
 
-func dummyJWSWrap(data string) string {
-	dataB64 := base64.RawURLEncoding.EncodeToString([]byte(data))
-	return `{"payload":"` + dataB64 + `","signatures":[{"header":{"kid":""}, "signature":""}]}`
-}
-
 func Test_ParseConsortium(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		jws := dummyJWSWrap(payload)
+		jws := mockmodels.DummyJWSWrap(payload)
 
 		cData, err := ParseConsortium([]byte(jws))
 		require.NoError(t, err)
@@ -67,7 +64,7 @@ func Test_ParseConsortium(t *testing.T) {
 	})
 
 	t.Run("failure: malformed payload", func(t *testing.T) {
-		jws := dummyJWSWrap(`@@bad data@@`)
+		jws := mockmodels.DummyJWSWrap(`@@bad data@@`)
 
 		_, err := ParseConsortium([]byte(jws))
 		require.Error(t, err)
