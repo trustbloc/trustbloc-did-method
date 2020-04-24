@@ -147,7 +147,7 @@ func createKeys(keysID map[string][]byte, didID string) []Key {
 	keys := make([]Key, 0)
 
 	for k, v := range keysID {
-		keys = append(keys, Key{PublicKeyDIDURL: didID + "#" + k, PublicKeyBase58: base58.Encode(v)})
+		keys = append(keys, Key{ID: didID + "#" + k, PublicKeyBase58: base58.Encode(v)})
 	}
 
 	return keys

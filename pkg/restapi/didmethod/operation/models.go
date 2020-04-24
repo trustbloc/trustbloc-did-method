@@ -50,7 +50,7 @@ type Secret struct {
 type Key struct {
 	PublicKeyBase58  string `json:"publicKeyBase58,omitempty"`
 	PrivateKeyBase58 string `json:"privateKeyBase58,omitempty"`
-	PublicKeyDIDURL  string `json:"publicKeyDIDURL,omitempty"`
+	ID               string `json:"id,omitempty"`
 }
 
 // PublicKey public key
