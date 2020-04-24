@@ -9,7 +9,7 @@ go 1.13
 require (
 	github.com/btcsuite/btcutil v1.0.1
 	github.com/gorilla/mux v1.7.4
-	github.com/hyperledger/aries-framework-go v0.1.3-0.20200414232534-822f96340163
+	github.com/hyperledger/aries-framework-go v0.1.3-0.20200424133213-f121c4e6d938
 	github.com/sirupsen/logrus v1.4.2
 	github.com/square/go-jose v2.4.1+incompatible
 	github.com/stretchr/testify v1.5.1

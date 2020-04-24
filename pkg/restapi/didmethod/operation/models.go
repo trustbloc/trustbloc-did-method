@@ -14,10 +14,15 @@ const (
 
 // RegisterDIDRequest input data for register DID
 type RegisterDIDRequest struct {
-	JobID         string            `json:"jobId,omitempty"`
-	Options       map[string]string `json:"options,omitempty"`
-	AddPublicKeys []*PublicKey      `json:"addPublicKeys,omitempty"`
-	AddServices   []*Service        `json:"addServices,omitempty"`
+	JobID       string            `json:"jobId,omitempty"`
+	Options     map[string]string `json:"options,omitempty"`
+	DIDDocument DIDDocument       `json:"didDocument,omitempty"`
+}
+
+// DIDDocument did doc
+type DIDDocument struct {
+	PublicKey []*PublicKey `json:"publicKey,omitempty"`
+	Service   []*Service   `json:"service,omitempty"`
 }
 
 // RegisterResponse register response
