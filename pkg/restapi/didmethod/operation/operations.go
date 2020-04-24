@@ -87,7 +87,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 	registerResponse := RegisterResponse{JobID: data.JobID}
 	keysID := make(map[string][]byte)
 
-	if len(data.AddPublicKeys) == 0 {
+	if len(data.DIDDocument.PublicKey) == 0 {
 		registerResponse.DIDState = DIDState{Reason: fmt.Sprintf("AddPublicKeys is empty"),
 			State: RegistrationStateFailure}
 
@@ -97,7 +97,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 	}
 
 	// Add public keys
-	for _, v := range data.AddPublicKeys {
+	for _, v := range data.DIDDocument.PublicKey {
 		keyValue, err := base64.StdEncoding.DecodeString(v.Value)
 		if err != nil {
 			log.Errorf("failed to decode public key value : %s", err.Error())
@@ -119,7 +119,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 	}
 
 	// Add services
-	for _, service := range data.AddServices {
+	for _, service := range data.DIDDocument.Service {
 		opts = append(opts, didclient.WithService(&did.Service{ID: service.ID, Type: service.Type,
 			Priority: service.Priority, RecipientKeys: service.RecipientKeys, RoutingKeys: service.RoutingKeys,
 			ServiceEndpoint: service.ServiceEndpoint}))
