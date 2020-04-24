@@ -161,7 +161,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 		require.Empty(t, registerResponse.DIDState.Reason)
 		require.Equal(t, "did1", registerResponse.DIDState.Identifier)
 		require.Equal(t, 1, len(registerResponse.DIDState.Secret.Keys))
-		require.Equal(t, "did1#key2", registerResponse.DIDState.Secret.Keys[0].PublicKeyDIDURL)
+		require.Equal(t, "did1#key2", registerResponse.DIDState.Secret.Keys[0].ID)
 	})
 }
 
