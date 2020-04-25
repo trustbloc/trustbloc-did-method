@@ -72,6 +72,9 @@ func TestClient_CreateDID(t *testing.T) {
 	t.Run("test error from send create sidetree request", func(t *testing.T) {
 		v := New()
 
+		ed25519PubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
 		// failed to create http request
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
@@ -79,7 +82,7 @@ func TestClient_CreateDID(t *testing.T) {
 			}}
 
 		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1",
-			Encoding: PublicKeyEncodingJwk, Recovery: true}))
+			Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey, KeyType: Ed25519KeyType, Recovery: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to create http request")
 		require.Nil(t, doc)
@@ -91,7 +94,7 @@ func TestClient_CreateDID(t *testing.T) {
 			}}
 
 		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
-			Recovery: true}))
+			Recovery: true, Value: ed25519PubKey, KeyType: Ed25519KeyType}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to send request")
 		require.Nil(t, doc)
@@ -108,7 +111,7 @@ func TestClient_CreateDID(t *testing.T) {
 			}}
 
 		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
-			Recovery: true}))
+			Recovery: true, Value: ed25519PubKey, KeyType: Ed25519KeyType}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "got unexpected response")
 		require.Nil(t, doc)
@@ -128,7 +131,7 @@ func TestClient_CreateDID(t *testing.T) {
 			}}
 
 		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
-			Recovery: true}))
+			Recovery: true, Value: ed25519PubKey, KeyType: Ed25519KeyType}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse public DID document")
 		require.Nil(t, doc)

@@ -120,7 +120,7 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 	var docBytes []byte
 
 	for _, e := range endpoints {
-		resp, err := v.sidetreeResolve(e.URL, did, opts...)
+		resp, err := v.sidetreeResolve(e.URL+"/identifiers", did, opts...)
 		if err != nil {
 			return nil, err
 		}
