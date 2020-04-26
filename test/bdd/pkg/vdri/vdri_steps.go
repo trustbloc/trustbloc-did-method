@@ -10,7 +10,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -71,14 +70,9 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 
 	jobID := uuid.New().String()
 
-	kt := keyType
-	if keyType == P256KeyType {
-		kt = did.ECKeyType
-	}
-
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID, DIDDocument: operation.DIDDocument{
 		PublicKey: []*operation.PublicKey{{ID: pubKeyIndex1, Type: signatureSuite,
-			Value: base64.StdEncoding.EncodeToString(pubKey), Encoding: did.PublicKeyEncodingJwk, KeyType: kt,
+			Value: base64.StdEncoding.EncodeToString(pubKey), Encoding: did.PublicKeyEncodingJwk, KeyType: keyType,
 			Usage: []string{did.KeyUsageGeneral}}, {ID: pubKeyIndex2, Type: did.JWSVerificationKey2020,
 			Value: base64.StdEncoding.EncodeToString(pubKey), KeyType: keyType,
 			Encoding: did.PublicKeyEncodingJwk, Recovery: true}},
@@ -193,10 +187,7 @@ func getPublicKey(keyType string) ([]byte, error) {
 			return nil, err
 		}
 
-		ecPubKeyBytes, err := x509.MarshalPKIXPublicKey(ecPrivKey.Public())
-		if err != nil {
-			return nil, err
-		}
+		ecPubKeyBytes := elliptic.Marshal(ecPrivKey.PublicKey.Curve, ecPrivKey.PublicKey.X, ecPrivKey.PublicKey.Y)
 
 		pubKey = ecPubKeyBytes
 	}
