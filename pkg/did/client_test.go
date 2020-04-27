@@ -11,7 +11,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -155,8 +154,7 @@ func TestClient_CreateDID(t *testing.T) {
 		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
 
-		ecPubKeyBytes, err := x509.MarshalPKIXPublicKey(ecPrivKey.Public())
-		require.NoError(t, err)
+		ecPubKeyBytes := elliptic.Marshal(ecPrivKey.PublicKey.Curve, ecPrivKey.PublicKey.X, ecPrivKey.PublicKey.Y)
 
 		v := New()
 
@@ -175,7 +173,7 @@ func TestClient_CreateDID(t *testing.T) {
 				Type:     JWSVerificationKey2020,
 				Encoding: PublicKeyEncodingJwk,
 				Value:    ecPubKeyBytes,
-				KeyType:  ECKeyType,
+				KeyType:  P256KeyType,
 				Usage:    []string{KeyUsageGeneral},
 			}),
 			WithService(&did.Service{ID: "srv1",
@@ -235,12 +233,12 @@ func TestClient_CreateDID(t *testing.T) {
 			WithPublicKey(&PublicKey{ID: "#key1",
 				Type:     JWSVerificationKey2020,
 				Encoding: PublicKeyEncodingJwk,
-				KeyType:  ECKeyType,
+				KeyType:  P256KeyType,
 				Value:    ed25519PubKey,
 			}),
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "asn1: structure error")
+		require.Contains(t, err.Error(), "invalid EC key")
 		require.Nil(t, doc)
 	})
 
