@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/verifyingconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
@@ -50,9 +51,10 @@ func New(opts ...Option) *VDRI {
 	}
 
 	configService := httpconfig.NewService(httpconfig.WithTLSConfig(v.tlsConfig))
+	verifyingService := verifyingconfig.NewService(configService)
 	v.endpointService = endpoint.NewService(
-		staticdiscovery.NewService(configService),
-		staticselection.NewService(configService))
+		staticdiscovery.NewService(verifyingService),
+		staticselection.NewService(verifyingService))
 
 	v.getHTTPVDRI = func(url string) (vdri, error) {
 		return httpbinding.New(url,

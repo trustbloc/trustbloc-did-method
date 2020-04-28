@@ -27,27 +27,25 @@ import (
 
 func TestEndpointService_GetEndpoints(t *testing.T) {
 	t.Run("success: get endpoints using static services", func(t *testing.T) {
-		shData1, err := mockmodels.DummyStakeholderJSON("bar.baz", []string{
+		shFile1, err := mockmodels.DummyStakeholderJSON("bar.baz", []string{
 			"https://bar.baz/webapi/123456", "https://bar.baz/webapi/654321"})
 		require.NoError(t, err)
 
-		shFile1 := mockmodels.DummyJWSWrap(shData1)
 		stakeholderServ1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, shFile1)
 		}))
 		defer stakeholderServ1.Close()
 
-		shData2, err := mockmodels.DummyStakeholderJSON("baz.qux", []string{
+		shFile2, err := mockmodels.DummyStakeholderJSON("baz.qux", []string{
 			"https://baz.qux/iyoubhlkn/", "https://baz.foo/ukjhjtfyw/"})
 		require.NoError(t, err)
 
-		shFile2 := mockmodels.DummyJWSWrap(shData2)
 		stakeholderServ2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, shFile2)
 		}))
 		defer stakeholderServ2.Close()
 
-		consortiumData, err := mockmodels.DummyConsortiumJSON("foo.bar", []models.StakeholderListElement{
+		consortiumFile, err := mockmodels.DummyConsortiumJSON("foo.bar", []models.StakeholderListElement{
 			{
 				Domain: stakeholderServ1.URL,
 			},
@@ -56,8 +54,6 @@ func TestEndpointService_GetEndpoints(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-
-		consortiumFile := mockmodels.DummyJWSWrap(consortiumData)
 
 		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, consortiumFile)
