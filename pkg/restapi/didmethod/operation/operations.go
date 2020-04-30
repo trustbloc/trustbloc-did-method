@@ -15,7 +15,6 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
 	log "github.com/sirupsen/logrus"
 
@@ -49,15 +48,15 @@ type Operation struct {
 	blocVDRI      vdri.VDRI
 	didBlocClient didBlocClient
 	blocDomain    string
-	kms           ariesapi.CloseableKMS
 }
 
 // Config defines configuration for trustbloc did method operations
 type Config struct {
-	TLSConfig  *tls.Config
-	BlocDomain string
-	KMS        ariesapi.CloseableKMS
-	Mode       string
+	TLSConfig          *tls.Config
+	BlocDomain         string
+	Mode               string
+	SidetreeReadToken  string
+	SidetreeWriteToken string
 }
 
 type didBlocClient interface {
@@ -66,9 +65,11 @@ type didBlocClient interface {
 
 // New returns did method operation instance
 func New(config *Config) *Operation {
-	svc := &Operation{blocVDRI: trustbloc.New(trustbloc.WithTLSConfig(config.TLSConfig)),
-		didBlocClient: didclient.New(didclient.WithTLSConfig(config.TLSConfig)),
-		blocDomain:    config.BlocDomain, kms: config.KMS}
+	svc := &Operation{blocVDRI: trustbloc.New(trustbloc.WithTLSConfig(config.TLSConfig),
+		trustbloc.WithAuthToken(config.SidetreeReadToken)),
+		didBlocClient: didclient.New(didclient.WithTLSConfig(config.TLSConfig),
+			didclient.WithAuthToken(config.SidetreeWriteToken)),
+		blocDomain: config.BlocDomain}
 
 	return svc
 }

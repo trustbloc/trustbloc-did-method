@@ -13,12 +13,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/context"
-	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
-	ariesstorage "github.com/hyperledger/aries-framework-go/pkg/storage"
-	couchdbstorage "github.com/hyperledger/aries-framework-go/pkg/storage/couchdb"
-	memstorage "github.com/hyperledger/aries-framework-go/pkg/storage/mem"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
@@ -57,26 +51,15 @@ const (
 		"['registrar', 'resolver', 'combined'] (default: combined)."
 	modeEnvKey = "DID_METHOD_MODE"
 
-	databaseTypeFlagName      = "database-type"
-	databaseTypeEnvKey        = "DID_METHOD_DATABASE_TYPE"
-	databaseTypeFlagShorthand = "t"
-	databaseTypeFlagUsage     = "The type of database to use internally in the did driver. Supported options: mem, couchdb." + //nolint: lll
-		" Alternatively, this can be set with the following environment variable: " + databaseTypeEnvKey
+	sidetreeReadTokenFlagName  = "sidetree-read-token"
+	sidetreeReadTokenEnvKey    = "SIDETREE_READ_TOKEN"
+	sidetreeReadTokenFlagUsage = "The sidetree read token " +
+		" Alternatively, this can be set with the following environment variable: " + sidetreeReadTokenEnvKey
 
-	databaseTypeMemOption     = "mem"
-	databaseTypeCouchDBOption = "couchdb"
-
-	databaseURLFlagName      = "database-url"
-	databaseURLEnvKey        = "DID_METHOD_DATABASE_URL"
-	databaseURLFlagShorthand = "l"
-	databaseURLFlagUsage     = "The URL of the database. Not needed if using memstore." +
-		" For CouchDB, include the username:password@ text if required." +
-		" Alternatively, this can be set with the following environment variable: " + databaseURLEnvKey
-
-	databasePrefixFlagName  = "database-prefix"
-	databasePrefixEnvKey    = "DID_METHOD_DATABASE_PREFIX"
-	databasePrefixFlagUsage = "An optional prefix to be used when creating and retrieving underlying databases." +
-		" Alternatively, this can be set with the following environment variable: " + databasePrefixEnvKey
+	sidetreeWriteTokenFlagName  = "sidetree-write-token"
+	sidetreeWriteTokenEnvKey    = "SIDETREE_WRITE_TOKEN" //nolint: gosec
+	sidetreeWriteTokenFlagUsage = "The sidetree write token " +
+		" Alternatively, this can be set with the following environment variable: " + sidetreeWriteTokenEnvKey
 )
 
 // mode in which to run the did-method service
@@ -101,15 +84,14 @@ func (s *HTTPServer) ListenAndServe(host string, router http.Handler) error {
 }
 
 type parameters struct {
-	srv               server
-	hostURL           string
-	tlsSystemCertPool bool
-	tlsCACerts        []string
-	blocDomain        string
-	mode              string
-	databaseType      string
-	databaseURL       string
-	databasePrefix    string
+	srv                server
+	hostURL            string
+	tlsSystemCertPool  bool
+	tlsCACerts         []string
+	blocDomain         string
+	mode               string
+	sidetreeReadToken  string
+	sidetreeWriteToken string
 }
 
 // GetStartCmd returns the Cobra start command.
@@ -148,34 +130,27 @@ func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 				return err
 			}
 
-			databaseType, err := cmdutils.GetUserSetVarFromString(cmd, databaseTypeFlagName,
-				databaseTypeEnvKey, false)
+			sidetreeReadToken, err := cmdutils.GetUserSetVarFromString(cmd, sidetreeReadTokenFlagName,
+				sidetreeReadTokenEnvKey, true)
 			if err != nil {
 				return err
 			}
 
-			databaseURL, err := cmdutils.GetUserSetVarFromString(cmd, databaseURLFlagName,
-				databaseURLEnvKey, true)
-			if err != nil {
-				return err
-			}
-
-			databasePrefix, err := cmdutils.GetUserSetVarFromString(cmd, databasePrefixFlagName,
-				databasePrefixEnvKey, true)
+			sidetreeWriteToken, err := cmdutils.GetUserSetVarFromString(cmd, sidetreeWriteTokenFlagName,
+				sidetreeWriteTokenEnvKey, true)
 			if err != nil {
 				return err
 			}
 
 			parameters := &parameters{
-				srv:               srv,
-				hostURL:           strings.TrimSpace(hostURL),
-				tlsSystemCertPool: tlsSystemCertPool,
-				tlsCACerts:        tlsCACerts,
-				blocDomain:        blocDomain,
-				mode:              mode,
-				databaseType:      databaseType,
-				databaseURL:       databaseURL,
-				databasePrefix:    databasePrefix,
+				srv:                srv,
+				hostURL:            strings.TrimSpace(hostURL),
+				tlsSystemCertPool:  tlsSystemCertPool,
+				tlsCACerts:         tlsCACerts,
+				blocDomain:         blocDomain,
+				mode:               mode,
+				sidetreeReadToken:  sidetreeReadToken,
+				sidetreeWriteToken: sidetreeWriteToken,
 			}
 
 			return startDidMethod(parameters)
@@ -231,9 +206,8 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringArrayP(tlsCACertsFlagName, tlsCACertsFlagShorthand, []string{}, tlsCACertsFlagUsage)
 	startCmd.Flags().StringP(domainFlagName, domainFlagShorthand, "", domainFlagUsage)
 	startCmd.Flags().StringP(modeFlagName, modeFlagShorthand, "", modeFlagUsage)
-	startCmd.Flags().StringP(databaseTypeFlagName, databaseTypeFlagShorthand, "", databaseTypeFlagUsage)
-	startCmd.Flags().StringP(databaseURLFlagName, databaseURLFlagShorthand, "", databaseURLFlagUsage)
-	startCmd.Flags().StringP(databasePrefixFlagName, "", "", databasePrefixFlagUsage)
+	startCmd.Flags().StringP(sidetreeReadTokenFlagName, "", "", sidetreeReadTokenFlagUsage)
+	startCmd.Flags().StringP(sidetreeWriteTokenFlagName, "", "", sidetreeWriteTokenFlagUsage)
 }
 
 func startDidMethod(parameters *parameters) error {
@@ -242,19 +216,9 @@ func startDidMethod(parameters *parameters) error {
 		return err
 	}
 
-	storeProvider, err := createProvider(parameters)
-	if err != nil {
-		return err
-	}
-
-	// Create KMS
-	kms, err := createKMS(storeProvider)
-	if err != nil {
-		return err
-	}
-
-	didMethodService, err := didmethod.New(&operation.Config{TLSConfig: &tls.Config{RootCAs: rootCAs}, KMS: kms,
-		BlocDomain: parameters.blocDomain, Mode: parameters.mode})
+	didMethodService, err := didmethod.New(&operation.Config{TLSConfig: &tls.Config{RootCAs: rootCAs},
+		BlocDomain: parameters.blocDomain, Mode: parameters.mode, SidetreeReadToken: parameters.sidetreeReadToken,
+		SidetreeWriteToken: parameters.sidetreeWriteToken})
 	if err != nil {
 		return err
 	}
@@ -267,42 +231,6 @@ func startDidMethod(parameters *parameters) error {
 	}
 
 	return parameters.srv.ListenAndServe(parameters.hostURL, router)
-}
-
-func createProvider(parameters *parameters) (ariesstorage.Provider, error) {
-	var provider ariesstorage.Provider
-
-	switch {
-	case strings.EqualFold(parameters.databaseType, databaseTypeMemOption):
-		provider = memstorage.NewProvider()
-	case strings.EqualFold(parameters.databaseType, databaseTypeCouchDBOption):
-		couchDBProvider, err := couchdbstorage.NewProvider(parameters.databaseURL,
-			couchdbstorage.WithDBPrefix(parameters.databasePrefix))
-		if err != nil {
-			return nil, err
-		}
-
-		provider = couchDBProvider
-	default:
-		return nil, fmt.Errorf("database type not set to a valid type." +
-			" run start --help to see the available options")
-	}
-
-	return provider, nil
-}
-
-func createKMS(s ariesstorage.Provider) (ariesapi.CloseableKMS, error) {
-	kmsProvider, err := context.New(context.WithStorageProvider(s))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new kms provider: %w", err)
-	}
-
-	kms, err := legacykms.New(kmsProvider)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new kms: %w", err)
-	}
-
-	return kms, nil
 }
 
 func supportedMode(mode string) bool {

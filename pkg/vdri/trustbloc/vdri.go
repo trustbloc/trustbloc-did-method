@@ -38,6 +38,7 @@ type VDRI struct {
 	endpointService endpointService
 	getHTTPVDRI     func(url string) (vdri, error) // needed for unit test
 	tlsConfig       *tls.Config
+	authToken       string
 }
 
 // New creates new bloc vdri
@@ -55,7 +56,7 @@ func New(opts ...Option) *VDRI {
 
 	v.getHTTPVDRI = func(url string) (vdri, error) {
 		return httpbinding.New(url,
-			httpbinding.WithTLSConfig(v.tlsConfig))
+			httpbinding.WithTLSConfig(v.tlsConfig), httpbinding.WithResolveAuthToken(v.authToken))
 	}
 
 	return v
@@ -155,5 +156,12 @@ func WithResolverURL(resolverURL string) Option {
 func WithTLSConfig(tlsConfig *tls.Config) Option {
 	return func(opts *VDRI) {
 		opts.tlsConfig = tlsConfig
+	}
+}
+
+// WithAuthToken add auth token
+func WithAuthToken(authToken string) Option {
+	return func(opts *VDRI) {
+		opts.authToken = authToken
 	}
 }
