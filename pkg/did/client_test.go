@@ -163,20 +163,20 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{
 			Type: Ed25519VerificationKey2018, Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey, Recovery: true}),
-			WithPublicKey(&PublicKey{ID: "#key2",
+			WithPublicKey(&PublicKey{ID: "key2",
 				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
 				Value: ed25519PubKey,
 				Usage: []string{KeyUsageGeneral}}),
-			WithPublicKey(&PublicKey{ID: "#key3",
+			WithPublicKey(&PublicKey{ID: "key3",
 				Type:     JWSVerificationKey2020,
 				Encoding: PublicKeyEncodingJwk,
 				Value:    ecPubKeyBytes,
 				KeyType:  P256KeyType,
 				Usage:    []string{KeyUsageGeneral},
 			}),
-			WithService(&did.Service{ID: "srv1",
+			WithService(&did.Service{ID: "srv1", Type: "type", ServiceEndpoint: "http://example.com",
 				Properties: map[string]interface{}{"k1": "v1"}}))
 		require.NoError(t, err)
 		require.Equal(t, "did1", doc.ID)

@@ -76,7 +76,7 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 			Usage: []string{did.KeyUsageGeneral}}, {ID: pubKeyIndex2, Type: did.JWSVerificationKey2020,
 			Value: base64.StdEncoding.EncodeToString(pubKey), KeyType: keyType,
 			Encoding: did.PublicKeyEncodingJwk, Recovery: true}},
-		Service: []*operation.Service{{ID: serviceID, ServiceEndpoint: "http://www.example.com/"}}}})
+		Service: []*operation.Service{{ID: serviceID, Type: "type", ServiceEndpoint: "http://www.example.com/"}}}})
 	if err != nil {
 		return err
 	}

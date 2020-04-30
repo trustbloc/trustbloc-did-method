@@ -18,13 +18,10 @@ import (
 )
 
 const (
-	jsonldID            = "id"
-	jsonldType          = "type"
-	jsonldUsage         = "usage"
-	jsonldServicePoint  = "serviceEndpoint"
-	jsonldRecipientKeys = "recipientKeys"
-	jsonldRoutingKeys   = "routingKeys"
-	jsonldPriority      = "priority"
+	jsonldID           = "id"
+	jsonldType         = "type"
+	jsonldUsage        = "usage"
+	jsonldServicePoint = "serviceEndpoint"
 
 	jsonldPublicKeyjwk = "jwk"
 
@@ -154,16 +151,9 @@ func populateRawServices(services []docdid.Service) []map[string]interface{} {
 	for _, service := range services {
 		rawService := make(map[string]interface{})
 
-		for k, v := range service.Properties {
-			rawService[k] = v
-		}
-
 		rawService[jsonldID] = service.ID
 		rawService[jsonldType] = service.Type
 		rawService[jsonldServicePoint] = service.ServiceEndpoint
-		rawService[jsonldRecipientKeys] = service.RecipientKeys
-		rawService[jsonldRoutingKeys] = service.RoutingKeys
-		rawService[jsonldPriority] = service.Priority
 
 		rawServices = append(rawServices, rawService)
 	}
