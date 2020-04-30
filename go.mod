@@ -13,6 +13,6 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/square/go-jose v2.4.1+incompatible
 	github.com/stretchr/testify v1.5.1
-	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200424141236-d4a225751954
+	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200429221156-29aa142ef836
 	gopkg.in/square/go-jose.v2 v2.4.1 // indirect
 )
