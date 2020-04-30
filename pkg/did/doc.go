@@ -35,6 +35,12 @@ const (
 	KeyUsageOps = "ops"
 	// KeyUsageAuth defines key usage as authentication key
 	KeyUsageAuth = "auth"
+	// KeyUsageAssertion defines key usage as assertion key
+	KeyUsageAssertion = "assertion"
+	// KeyUsageDelegation defines key usage as delegation key
+	KeyUsageDelegation = "delegation"
+	// KeyUsageInvocation defines key usage as invocation key
+	KeyUsageInvocation = "invocation"
 	// KeyUsageGeneral defines key usage as general key
 	KeyUsageGeneral = "general"
 
