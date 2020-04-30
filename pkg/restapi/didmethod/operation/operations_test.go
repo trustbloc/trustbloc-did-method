@@ -16,13 +16,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
-	mocklegacykms "github.com/hyperledger/aries-framework-go/pkg/mock/kms/legacykms"
 	mockvdri "github.com/hyperledger/aries-framework-go/pkg/mock/vdri"
 	"github.com/stretchr/testify/require"
 
-	didbloc "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/didbloc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/didbloc"
 )
 
 func TestNew(t *testing.T) {
@@ -68,7 +66,7 @@ func TestNew(t *testing.T) {
 
 func TestRegisterDIDHandler(t *testing.T) {
 	t.Run("test error bad request", func(t *testing.T) {
-		handler := getHandler(t, nil, nil, nil, registerPath)
+		handler := getHandler(t, nil, nil, registerPath)
 
 		body, status, err := handleRequest(handler, registerPath, nil)
 		require.NoError(t, err)
@@ -77,8 +75,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test empty addPublicKeys", func(t *testing.T) {
-		handler := getHandler(t, nil,
-			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"}, nil, registerPath)
+		handler := getHandler(t, nil, nil, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1"})
 		require.NoError(t, err)
@@ -96,8 +93,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test wrong value for public key", func(t *testing.T) {
-		handler := getHandler(t, nil,
-			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"}, nil, registerPath)
+		handler := getHandler(t, nil, nil, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
 			PublicKey: []*PublicKey{{ID: "key2",
@@ -118,7 +114,6 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 	t.Run("test error from create did", func(t *testing.T) {
 		handler := getHandler(t, nil,
-			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"},
 			&didbloc.Client{CreateDIDErr: fmt.Errorf("error create did")}, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
@@ -140,7 +135,6 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 	t.Run("test success with provided public key", func(t *testing.T) {
 		handler := getHandler(t, nil,
-			&mocklegacykms.CloseableKMS{CreateSigningKeyValue: "key"},
 			&didbloc.Client{CreateDIDValue: &did.Doc{ID: "did1"}}, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
@@ -167,7 +161,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 func TestResolveDIDHandler(t *testing.T) {
 	t.Run("test did param missing", func(t *testing.T) {
-		handler := getHandler(t, nil, nil, nil, resolveDIDEndpoint)
+		handler := getHandler(t, nil, nil, resolveDIDEndpoint)
 
 		body, status, err := handleRequest(handler, resolveDIDEndpoint, nil)
 		require.NoError(t, err)
@@ -179,7 +173,7 @@ func TestResolveDIDHandler(t *testing.T) {
 		handler := getHandler(t, &mockvdri.MockVDRI{
 			ReadFunc: func(didID string, opts ...vdri.ResolveOpts) (doc *did.Doc, err error) {
 				return nil, fmt.Errorf("read error")
-			}}, nil, nil, resolveDIDEndpoint)
+			}}, nil, resolveDIDEndpoint)
 
 		body, status, err := handleRequest(handler, resolveDIDEndpoint+"?did=123", nil)
 		require.NoError(t, err)
@@ -191,7 +185,7 @@ func TestResolveDIDHandler(t *testing.T) {
 		handler := getHandler(t, &mockvdri.MockVDRI{
 			ReadFunc: func(didID string, opts ...vdri.ResolveOpts) (doc *did.Doc, err error) {
 				return &did.Doc{ID: "didID", Context: []string{"context"}}, nil
-			}}, nil, nil, resolveDIDEndpoint)
+			}}, nil, resolveDIDEndpoint)
 
 		body, status, err := handleRequest(handler, resolveDIDEndpoint+"?did=123", nil)
 		require.NoError(t, err)
@@ -218,17 +212,13 @@ func handleRequest(handler Handler, path string, body []byte) (*bytes.Buffer, in
 	return rr.Body, rr.Code, nil
 }
 
-func getHandler(t *testing.T, blocVDRI vdri.VDRI, kms ariesapi.CloseableKMS,
+func getHandler(t *testing.T, blocVDRI vdri.VDRI,
 	didBlocClient didBlocClient, lookup string) Handler {
 	svc := New(&Config{})
 	require.NotNil(t, svc)
 
 	if blocVDRI != nil {
 		svc.blocVDRI = blocVDRI
-	}
-
-	if kms != nil {
-		svc.kms = kms
 	}
 
 	if didBlocClient != nil {

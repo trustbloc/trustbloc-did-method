@@ -44,6 +44,7 @@ type Client struct {
 	endpointService endpointService
 	client          *http.Client
 	tlsConfig       *tls.Config
+	authToken       string
 }
 
 type didResolution struct {
@@ -160,6 +161,10 @@ func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc,
 
 	httpReq.Header.Set("Content-Type", "application/json")
 
+	if c.authToken != "" {
+		httpReq.Header.Add("Authorization", c.authToken)
+	}
+
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
@@ -210,6 +215,13 @@ type Option func(opts *Client)
 func WithTLSConfig(tlsConfig *tls.Config) Option {
 	return func(opts *Client) {
 		opts.tlsConfig = tlsConfig
+	}
+}
+
+// WithAuthToken add auth token
+func WithAuthToken(authToken string) Option {
+	return func(opts *Client) {
+		opts.authToken = "Bearer " + authToken
 	}
 }
 

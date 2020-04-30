@@ -6,12 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 package startcmd
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"testing"
 
-	"github.com/hyperledger/aries-framework-go/pkg/storage"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
@@ -29,20 +27,6 @@ func TestListenAndServe(t *testing.T) {
 	err := h.ListenAndServe("7", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "listen tcp: address 7: missing port in address")
-}
-
-func TestStartCmdWithBlankArg(t *testing.T) {
-	t.Run("test blank database type arg", func(t *testing.T) {
-		startCmd := GetStartCmd(&mockServer{})
-
-		args := []string{"--" + hostURLFlagName, "test", "--" + domainFlagName,
-			"domain", "--" + databaseTypeFlagName, ""}
-		startCmd.SetArgs(args)
-
-		err := startCmd.Execute()
-		require.Error(t, err)
-		require.Equal(t, "database-type value is empty", err.Error())
-	})
 }
 
 func TestStartCmdContents(t *testing.T) {
@@ -84,9 +68,6 @@ func TestStartCmdValidArgsEnvVar(t *testing.T) {
 	err = os.Setenv(domainEnvKey, "domain")
 	require.NoError(t, err)
 
-	err = os.Setenv(databaseTypeEnvKey, databaseTypeMemOption)
-	require.NoError(t, err)
-
 	err = startCmd.Execute()
 	require.NoError(t, err)
 }
@@ -112,9 +93,6 @@ func TestDomainFlagVar(t *testing.T) {
 		require.NoError(t, err)
 
 		err = os.Setenv(modeEnvKey, string(resolver))
-		require.NoError(t, err)
-
-		err = os.Setenv(databaseTypeEnvKey, databaseTypeMemOption)
 		require.NoError(t, err)
 
 		err = startCmd.Execute()
@@ -164,41 +142,10 @@ func checkFlagPropertiesCorrect(t *testing.T, cmd *cobra.Command, flagName, flag
 	require.Nil(t, flagAnnotations)
 }
 
-func TestCreateKMS(t *testing.T) {
-	t.Run("test error from create new kms", func(t *testing.T) {
-		v, err := createKMS(&MockStoreProvider{
-			ErrOpenStoreHandle: fmt.Errorf("error open store")})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to create new kms")
-		require.Nil(t, v)
-	})
-
-	t.Run("test success", func(t *testing.T) {
-		v, err := createKMS(&MockStoreProvider{})
-		require.NoError(t, err)
-		require.NotNil(t, v)
-	})
-}
-
-func TestCreateProvider(t *testing.T) {
-	t.Run("test error from create new couchdb", func(t *testing.T) {
-		err := startDidMethod(&parameters{databaseType: databaseTypeCouchDBOption})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "hostURL for new CouchDB provider can't be blank")
-	})
-
-	t.Run("test invalid database type", func(t *testing.T) {
-		err := startDidMethod(&parameters{databaseType: "data1"})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "database type not set to a valid type")
-	})
-}
-
 func getValidArgs() []string {
 	var args []string
 	args = append(args, hostURLArg()...)
 	args = append(args, domainArg()...)
-	args = append(args, databaseTypeArg()...)
 
 	return args
 }
@@ -209,28 +156,4 @@ func hostURLArg() []string {
 
 func domainArg() []string {
 	return []string{flag + domainFlagName, "domain"}
-}
-
-func databaseTypeArg() []string {
-	return []string{flag + databaseTypeFlagName, databaseTypeMemOption}
-}
-
-// MockStoreProvider mock store provider.
-type MockStoreProvider struct {
-	ErrOpenStoreHandle error
-}
-
-// OpenStore opens and returns a store for given name space.
-func (s *MockStoreProvider) OpenStore(name string) (storage.Store, error) {
-	return nil, s.ErrOpenStoreHandle
-}
-
-// Close closes all stores created under this store provider
-func (s *MockStoreProvider) Close() error {
-	return nil
-}
-
-// CloseStore closes store for given name space
-func (s *MockStoreProvider) CloseStore(name string) error {
-	return nil
 }

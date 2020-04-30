@@ -330,7 +330,7 @@ func TestClient_CreateDID(t *testing.T) {
 	t.Run("test opts", func(t *testing.T) {
 		// test WithTLSConfig
 		var opts []Option
-		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}))
+		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}), WithAuthToken("tk1"))
 
 		c := &Client{}
 
@@ -340,6 +340,7 @@ func TestClient_CreateDID(t *testing.T) {
 		}
 
 		require.Equal(t, "test", c.tlsConfig.ServerName)
+		require.Equal(t, "Bearer tk1", c.authToken)
 
 		// test WithPublicKey
 		var createOpts []CreateDIDOption

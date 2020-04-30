@@ -237,7 +237,7 @@ func TestOpts(t *testing.T) {
 	t.Run("test opts", func(t *testing.T) {
 		// test WithTLSConfig
 		var opts []Option
-		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}))
+		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}), WithAuthToken("tk1"))
 
 		v := &VDRI{}
 
@@ -247,6 +247,7 @@ func TestOpts(t *testing.T) {
 		}
 
 		require.Equal(t, "test", v.tlsConfig.ServerName)
+		require.Equal(t, "tk1", v.authToken)
 	})
 }
 
