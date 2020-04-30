@@ -21,6 +21,7 @@ import (
 	didclient "github.com/trustbloc/trustbloc-did-method/pkg/did"
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 const (
@@ -172,7 +173,7 @@ func (o *Operation) resolveDIDHandler(rw http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	bytes, err := didDoc.JSONBytes()
+	bytes, err := models.MakeDIDResolutionResult(didDoc)
 	if err != nil {
 		o.writeErrorResponse(rw, http.StatusInternalServerError,
 			fmt.Sprintf("failed to marshal did doc: %s", err.Error()))
