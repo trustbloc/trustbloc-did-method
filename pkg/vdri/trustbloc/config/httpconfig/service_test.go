@@ -18,9 +18,9 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
-func TestDiscoveryService_getConsortiumData(t *testing.T) {
+func TestConfigService_GetConsortium(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		consortiumData, err := mockmodels.DummyConsortiumJSON("foo.bar", []models.StakeholderListElement{
+		consortium := mockmodels.DummyConsortium("foo.bar", []models.StakeholderListElement{
 			{
 				Domain: "bar.baz",
 			},
@@ -28,9 +28,9 @@ func TestDiscoveryService_getConsortiumData(t *testing.T) {
 				Domain: "baz.qux",
 			},
 		})
-		require.NoError(t, err)
 
-		consortiumFile := mockmodels.DummyJWSWrap(consortiumData)
+		consortiumFile, err := mockmodels.WrapConsortium(consortium)
+		require.NoError(t, err)
 
 		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, consortiumFile)
@@ -79,15 +79,15 @@ func TestDiscoveryService_getConsortiumData(t *testing.T) {
 	})
 }
 
-func TestDiscoveryService_getStakeholderData(t *testing.T) {
+func TestConfigService_GetStakeholder(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		stakeholderData, err := mockmodels.DummyStakeholderJSON("foo.bar", []string{
+		stakeholder := mockmodels.DummyStakeholder("foo.bar", []string{
 			"endpoint.website/go/here/",
 			"endpoint.website/here/too/",
 		})
-		require.NoError(t, err)
 
-		stakeholderFile := mockmodels.DummyJWSWrap(stakeholderData)
+		stakeholderFile, err := mockmodels.WrapStakeholder(stakeholder)
+		require.NoError(t, err)
 
 		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, stakeholderFile)

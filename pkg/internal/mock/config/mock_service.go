@@ -26,7 +26,7 @@ func (m *MockConfigService) GetConsortium(url, domain string) (*models.Consortiu
 
 // GetStakeholder get the stakeholder config file for a given domain from the given url
 func (m *MockConfigService) GetStakeholder(url, domain string) (*models.StakeholderFileData, error) {
-	if m.GetConsortiumFunc != nil {
+	if m.GetStakeholderFunc != nil {
 		return m.GetStakeholderFunc(url, domain)
 	}
 

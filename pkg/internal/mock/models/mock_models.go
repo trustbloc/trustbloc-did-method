@@ -37,23 +37,48 @@ func DummyConsortiumJSON(consortiumDomain string, stakeholders []models.Stakehol
 		return "", err
 	}
 
-	return string(out), nil
+	return DummyJWSWrap(string(out)), nil
 }
 
-// DummyStakeholderJSON creates a dummy stakeholder JSON config
-func DummyStakeholderJSON(stakeholderDomain string, endpoints []string) (string, error) {
-	sc := models.Stakeholder{
+// WrapConsortium marshals a consortium to JSON and wraps it in a dummy JWS
+func WrapConsortium(consortium *models.Consortium) (string, error) {
+	out, err := json.Marshal(consortium)
+	if err != nil {
+		return "", err
+	}
+
+	return DummyJWSWrap(string(out)), nil
+}
+
+// WrapStakeholder marshals a stakeholder to JSON and wraps it in a dummy JWS
+func WrapStakeholder(stakeholder *models.Stakeholder) (string, error) {
+	out, err := json.Marshal(stakeholder)
+	if err != nil {
+		return "", err
+	}
+
+	return DummyJWSWrap(string(out)), nil
+}
+
+// DummyStakeholder creates a dummy stakeholder JSON config
+func DummyStakeholder(stakeholderDomain string, endpoints []string) *models.Stakeholder {
+	return &models.Stakeholder{
 		Domain:    stakeholderDomain,
 		DID:       "",
 		Policy:    models.StakeholderSettings{Cache: models.CacheControl{MaxAge: 0}},
 		Endpoints: endpoints,
 		Previous:  "",
 	}
+}
+
+// DummyStakeholderJSON creates a dummy stakeholder JSON config
+func DummyStakeholderJSON(stakeholderDomain string, endpoints []string) (string, error) {
+	sc := DummyStakeholder(stakeholderDomain, endpoints)
 
 	out, err := json.Marshal(sc)
 	if err != nil {
 		return "", err
 	}
 
-	return string(out), nil
+	return DummyJWSWrap(string(out)), nil
 }
