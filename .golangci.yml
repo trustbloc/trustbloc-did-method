@@ -77,6 +77,21 @@ issues:
       linters:
         - dupl
         - funlen
+    - path: jsoncanonicalizer
+      linters:
+        - golint
+        - funlen
+        - gomnd
+        - gosec
+        - errcheck
+        - gocyclo
+        - gocognit
+        - whitespace
+        - dupl
+        - funlen
+        - gocritic
+        - gochecknoglobals
+        - wsl
 
   exclude:
     # Allow package logger variables (for now)
