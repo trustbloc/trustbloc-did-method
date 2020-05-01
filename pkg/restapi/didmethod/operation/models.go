@@ -48,9 +48,10 @@ type Secret struct {
 
 // Key include public key and private key
 type Key struct {
-	PublicKeyBase58  string `json:"publicKeyBase58,omitempty"`
-	PrivateKeyBase58 string `json:"privateKeyBase58,omitempty"`
-	ID               string `json:"id,omitempty"`
+	PublicKeyBase58  string   `json:"publicKeyBase58,omitempty"`
+	PrivateKeyBase58 string   `json:"privateKeyBase58,omitempty"`
+	ID               string   `json:"id,omitempty"`
+	Purpose          []string `json:"purpose,omitempty"`
 }
 
 // PublicKey public key
