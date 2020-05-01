@@ -15,7 +15,9 @@ import (
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
 	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/canonicalizer"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/verifyingconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
@@ -128,12 +130,15 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 			return nil, err
 		}
 
-		respBytes, err := resp.JSONBytes()
+		respBytes, err := canonicalizer.MarshalCanonical(resp)
 		if err != nil {
 			return nil, fmt.Errorf("cannot marshal resolved doc: %w", err)
 		}
 
 		if doc != nil && !bytes.Equal(docBytes, respBytes) {
+			log.Errorf("mismatch in document contents for did %s. Doc 1: %s, Doc 2: %s",
+				did, string(docBytes), string(respBytes))
+
 			return nil, errors.New("mismatch in document contents")
 		}
 
