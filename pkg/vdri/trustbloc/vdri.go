@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/canonicalizer"
+	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/jsoncanonicalizer"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/verifyingconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
@@ -100,7 +100,7 @@ func (v *VDRI) sidetreeResolve(url, did string, opts ...vdriapi.ResolveOpts) (*d
 	return doc, nil
 }
 
-func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error) {
+func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error) { //nolint: gocyclo
 	if v.resolverURL != "" {
 		return v.sidetreeResolve(v.resolverURL, did, opts...)
 	}
@@ -130,9 +130,14 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 			return nil, err
 		}
 
-		respBytes, err := canonicalizer.MarshalCanonical(resp)
+		respBytesRaw, err := resp.JSONBytes()
 		if err != nil {
 			return nil, fmt.Errorf("cannot marshal resolved doc: %w", err)
+		}
+
+		respBytes, err := jsoncanonicalizer.Transform(respBytesRaw)
+		if err != nil {
+			return nil, fmt.Errorf("cannot canonicalize resolved doc: %w", err)
 		}
 
 		if doc != nil && !bytes.Equal(docBytes, respBytes) {
