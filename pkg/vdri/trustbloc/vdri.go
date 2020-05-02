@@ -141,10 +141,8 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 		}
 
 		if doc != nil && !bytes.Equal(docBytes, respBytes) {
-			log.Errorf("mismatch in document contents for did %s. Doc 1: %s, Doc 2: %s",
+			log.Infof("mismatch in document contents for did %s. Doc 1: %s, Doc 2: %s",
 				did, string(docBytes), string(respBytes))
-
-			return nil, errors.New("mismatch in document contents")
 		}
 
 		doc = resp
