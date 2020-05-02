@@ -184,29 +184,6 @@ func TestVDRI_Read(t *testing.T) {
 		require.Nil(t, doc)
 	})
 
-	t.Run("test error from mismatch", func(t *testing.T) {
-		v := New()
-
-		v.endpointService = &mockendpoint.MockEndpointService{
-			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
-				return []*models.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
-			}}
-
-		counter := 0
-
-		v.getHTTPVDRI = func(url string) (v vdri, err error) {
-			return &mockvdri.MockVDRI{
-				ReadFunc: func(didID string, opts ...vdriapi.ResolveOpts) (*did.Doc, error) {
-					counter++
-					return generateDIDDoc("test:" + string(counter)), nil
-				}}, nil
-		}
-
-		_, err := v.Read("did:trustbloc:testnet:123")
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "mismatch")
-	})
-
 	t.Run("test success", func(t *testing.T) {
 		v := New()
 
