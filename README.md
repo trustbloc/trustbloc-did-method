@@ -10,6 +10,8 @@
 
 This repo defines the trustbloc DID method, which is described [in the spec](/docs/spec/trustbloc-did-method.md).
 
+The TrustBloc DID Method REST server docker image serves requests from the HTTP drivers of the [DIF universal resolver](https://github.com/decentralized-identity/universal-resolver) and [universal registrar](https://github.com/decentralized-identity/universal-registrar/).
+
 ## Build
 To build from source see [here](/docs/build.md).
 

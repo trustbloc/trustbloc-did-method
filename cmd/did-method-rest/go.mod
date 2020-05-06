@@ -10,8 +10,8 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.5.1
-	github.com/trustbloc/edge-core v0.1.3-0.20200414220734-842cc197e692
-	github.com/trustbloc/trustbloc-did-method v0.0.0-00010101000000-000000000000
+	github.com/trustbloc/edge-core v0.1.3
+	github.com/trustbloc/trustbloc-did-method v0.0.0
 )
 
 go 1.13
