@@ -23,6 +23,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf16"
@@ -41,7 +42,7 @@ var binaryEscapes = []byte{'\\', '"', '\b', '\f', '\n', '\r', '\t'}
 // JSON literals
 var literals = []string{"true", "false", "null"}
 
-func Transform(jsonData []byte) (result []byte, e error) {
+func Transform(jsonData []byte, sortArrays bool) (result []byte, e error) {
 
 	// JSON data MUST be UTF-8 encoded
 	var jsonDataLength int = len(jsonData)
@@ -255,20 +256,37 @@ func Transform(jsonData []byte) (result []byte, e error) {
 	}
 
 	parseArray = func() string {
-		var arrayData strings.Builder
-		arrayData.WriteByte('[')
+		var elements []string
+
 		var next bool = false
 		for globalError == nil && testNextNonWhiteSpaceChar() != ']' {
 			if next {
 				scanFor(',')
+			} else {
+				next = true
+			}
+			elements = append(elements, parseElement())
+		}
+		scan()
+
+		if sortArrays {
+			// sort the elements so we enforce an order
+			sort.Strings(elements)
+		}
+
+		var arrayData strings.Builder
+
+		arrayData.WriteByte('[')
+		next = false
+		for _, element := range elements {
+			if next {
 				arrayData.WriteByte(',')
 			} else {
 				next = true
 			}
-			arrayData.WriteString(parseElement())
+			arrayData.WriteString(element)
 		}
-		scan()
-		arrayData.WriteByte(']')
+
 		return arrayData.String()
 	}
 
