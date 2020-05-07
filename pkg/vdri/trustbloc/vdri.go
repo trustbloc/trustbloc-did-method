@@ -135,7 +135,7 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 			return nil, fmt.Errorf("cannot marshal resolved doc: %w", err)
 		}
 
-		respBytes, err := jsoncanonicalizer.Transform(respBytesRaw)
+		respBytes, err := jsoncanonicalizer.Transform(respBytesRaw, true)
 		if err != nil {
 			return nil, fmt.Errorf("cannot canonicalize resolved doc: %w", err)
 		}
