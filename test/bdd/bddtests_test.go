@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 func runBDDTests(tags, format string) int {
 	return godog.RunWithOptions("godogs", func(s *godog.Suite) {
 		var composition []*dockerutil.Composition
-		var composeFiles = []string{"./fixtures/did-method-rest", "./fixtures/universalresolver",
+		var composeFiles = []string{"./fixtures/did-method-rest",
 			"./fixtures/sidetree-mock", "./fixtures/discovery-server", "./fixtures/stakeholder-server",
 			"./fixtures/universal-registrar"}
 		s.BeforeSuite(func() {
