@@ -121,7 +121,8 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 }
 
 func (e *Steps) resolveCreatedDID(url, keyType, signatureSuite string) error {
-	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig))
+	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
+		trustbloc.WithAuthToken("rw_token"))
 
 	var doc *ariesdid.Doc
 
