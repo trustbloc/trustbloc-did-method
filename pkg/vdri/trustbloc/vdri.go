@@ -8,16 +8,17 @@ package trustbloc
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	"github.com/hyperledger/aries-framework-go/pkg/doc/signature/jsonld"
 	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
 	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/jsoncanonicalizer"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/verifyingconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
@@ -130,12 +131,7 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 			return nil, err
 		}
 
-		respBytesRaw, err := resp.JSONBytes()
-		if err != nil {
-			return nil, fmt.Errorf("cannot marshal resolved doc: %w", err)
-		}
-
-		respBytes, err := jsoncanonicalizer.Transform(respBytesRaw)
+		respBytes, err := canonicalizeDoc(resp)
 		if err != nil {
 			return nil, fmt.Errorf("cannot canonicalize resolved doc: %w", err)
 		}
@@ -150,6 +146,25 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 	}
 
 	return doc, nil
+}
+
+// canonicalizeDoc canonicalizes a DID doc using json-ld canonicalization
+func canonicalizeDoc(doc *docdid.Doc) ([]byte, error) {
+	marshaled, err := doc.JSONBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	docMap := map[string]interface{}{}
+
+	err = json.Unmarshal(marshaled, &docMap)
+	if err != nil {
+		return nil, err
+	}
+
+	proc := jsonld.Default()
+
+	return proc.GetCanonicalDocument(docMap)
 }
 
 // Option configures the bloc vdri

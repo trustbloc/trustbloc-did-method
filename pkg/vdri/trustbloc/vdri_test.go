@@ -234,6 +234,200 @@ func TestVDRI_Close(t *testing.T) {
 	require.NoError(t, v.Close())
 }
 
+func Test_canonicalizeDoc(t *testing.T) {
+	var docs = [][2]string{
+		{`{
+  "@context": ["https://w3id.org/did/v1"],
+  "publicKey": [{
+    "id": "did:example:123456789abcdefghi#keys-3",
+    "publicKeyBase58": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV",
+    "type": "Secp256k1VerificationKey2018",
+    "controller": "did:example:123456789abcdefghi"
+  }],
+  "id": "did:example:123456789abcdefghi",
+  "authentication": [
+    {
+      "id": "did:example:123456789abcdefghi#keys-2",
+      "type": "Ed25519VerificationKey2018",
+      "controller": "did:example:123456789abcdefghi",
+      "publicKeyBase58": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
+    },
+    "did:example:123456789abcdefghi#keys-3"
+  ],
+  "service": [{
+    "id": "did:example:123456789abcdefghi#oidc",
+    "type": "OpenIdConnectVersion1.0Service",
+    "serviceEndpoint": "https://openid.example.com/"
+  }, {
+    "id": "did:example:123456789abcdefghi#messaging",
+    "type": "MessagingService",
+    "serviceEndpoint": "https://example.com/messages/8377464"
+  }, {
+    "id": "did:example:123456789abcdefghi#vcStore",
+    "type": "CredentialRepositoryService",
+    "serviceEndpoint": "https://repository.example.com/service/8377464"
+  }, {
+    "id": "did:example:123456789abcdefghi#xdi",
+    "serviceEndpoint": "https://xdi.example.com/8377464",
+    "type": "XdiService"
+  }, {
+    "type": "HubService",
+    "id": "did:example:123456789abcdefghi#hub",
+    "serviceEndpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/"
+  }, {
+    "id": "did:example:123456789abcdefghi#inbox",
+    "description": "My public social inbox",
+    "type": "SocialWebInboxService",
+    "serviceEndpoint": "https://social.example.com/83hfh37dj",
+    "spamCost": {
+      "amount": "0.50",
+      "currency": "USD"
+    }
+  }]
+}`,
+			`{
+  "@context": ["https://w3id.org/did/v1"],
+  "publicKey": [{
+    "id": "did:example:123456789abcdefghi#keys-3",
+    "publicKeyBase58": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV",
+    "type": "Secp256k1VerificationKey2018",
+    "controller": "did:example:123456789abcdefghi"
+  }],
+  "id": "did:example:123456789abcdefghi",
+  "authentication": [
+    {
+      "id": "did:example:123456789abcdefghi#keys-2",
+      "type": "Ed25519VerificationKey2018",
+      "controller": "did:example:123456789abcdefghi",
+      "publicKeyBase58": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
+    },
+    "did:example:123456789abcdefghi#keys-3"
+  ],
+  "service": [{
+    "id": "did:example:123456789abcdefghi#messaging",
+    "type": "MessagingService",
+    "serviceEndpoint": "https://example.com/messages/8377464"
+  }, {
+    "id": "did:example:123456789abcdefghi#oidc",
+    "type": "OpenIdConnectVersion1.0Service",
+    "serviceEndpoint": "https://openid.example.com/"
+  }, {
+    "id": "did:example:123456789abcdefghi#vcStore",
+    "type": "CredentialRepositoryService",
+    "serviceEndpoint": "https://repository.example.com/service/8377464"
+  }, {
+    "id": "did:example:123456789abcdefghi#xdi",
+    "serviceEndpoint": "https://xdi.example.com/8377464",
+    "type": "XdiService"
+  }, {
+    "type": "HubService",
+    "id": "did:example:123456789abcdefghi#hub",
+    "serviceEndpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/"
+  }, {
+    "id": "did:example:123456789abcdefghi#inbox",
+    "description": "My public social inbox",
+    "type": "SocialWebInboxService",
+    "serviceEndpoint": "https://social.example.com/83hfh37dj",
+    "spamCost": {
+      "amount": "0.50",
+      "currency": "USD"
+    }
+  }]
+}`},
+		{`{
+  "@context": ["https://w3id.org/did/v1"],
+  "publicKey": [{
+    "id": "did:example:123456789abcdefghi#keys-3",
+    "publicKeyBase58": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV",
+    "type": "Secp256k1VerificationKey2018",
+    "controller": "did:example:123456789abcdefghi"
+  }],
+  "id": "did:example:123456789abcdefghi",
+  "authentication": [
+    {
+      "id": "did:example:123456789abcdefghi#keys-2",
+      "controller": "did:example:123456789abcdefghi",
+      "publicKeyJwk":{
+        "kty":"OKP",
+        "crv":"Ed25519",
+        "x":"60-uLNeLPAT-gaV_7_9_g330m0aLRlqk-LEnQvz2lv0"
+      },
+      "type":"JwsVerificationKey2020"
+    },
+    "did:example:123456789abcdefghi#keys-3"
+  ],
+  "service": [{
+    "id": "did:example:123456789abcdefghi#oidc",
+    "type": "OpenIdConnectVersion1.0Service",
+    "serviceEndpoint": "https://openid.example.com/"
+  }, {
+    "id": "did:example:123456789abcdefghi#messaging",
+    "type": "MessagingService",
+    "serviceEndpoint": "https://example.com/messages/8377464"
+  }]
+}`,
+			`{
+  "service": [ {
+    "type": "MessagingService",
+    "serviceEndpoint": "https://example.com/messages/8377464",
+    "id": "did:example:123456789abcdefghi#messaging"
+  }, {
+    "id": "did:example:123456789abcdefghi#oidc",
+    "serviceEndpoint": "https://openid.example.com/",
+    "type": "OpenIdConnectVersion1.0Service"
+  }],
+  "id": "did:example:123456789abcdefghi",
+  "authentication": [
+    {
+      "id": "did:example:123456789abcdefghi#keys-2",
+      "type":"JwsVerificationKey2020",
+      "controller": "did:example:123456789abcdefghi",
+      "publicKeyJwk":{
+        "crv":"Ed25519",
+        "x":"60-uLNeLPAT-gaV_7_9_g330m0aLRlqk-LEnQvz2lv0",
+        "kty":"OKP"
+      }
+    },
+    "did:example:123456789abcdefghi#keys-3"
+  ],
+  "@context": ["https://w3id.org/did/v1"],
+  "publicKey": [{
+    "id": "did:example:123456789abcdefghi#keys-3",
+    "publicKeyBase58": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV",
+    "type": "Secp256k1VerificationKey2018",
+    "controller": "did:example:123456789abcdefghi"
+  }]
+}`},
+	}
+
+	_ = `{
+		"controller":"did:trustbloc:testnet.trustbloc.local:EiDDTwzrFVAmnsPG8D10MNJ-Ga5OH_KsNX8uLGmirWXP-g",
+		"id":"did:trustbloc:testnet.trustbloc.local:EiDDTwzrFVAmnsPG8D10MNJ-Ga5OH_KsNX8uLGmirWXP-g#key-1",
+		"publicKeyJwk":{
+			"kty":"OKP",
+			"crv":"Ed25519",
+			"x":"60-uLNeLPAT-gaV_7_9_g330m0aLRlqk-LEnQvz2lv0"
+		},
+		"type":"JwsVerificationKey2020"
+	}`
+
+	t.Run("test canonicalization of equal docs", func(t *testing.T) {
+		for _, pair := range docs {
+			doc1, err := did.ParseDocument([]byte(pair[0]))
+			require.NoError(t, err)
+			doc2, err := did.ParseDocument([]byte(pair[1]))
+			require.NoError(t, err)
+
+			doc1Canonicalized, err := canonicalizeDoc(doc1)
+			require.NoError(t, err)
+			doc2Canonicalized, err := canonicalizeDoc(doc2)
+			require.NoError(t, err)
+
+			require.Equal(t, doc1Canonicalized, doc2Canonicalized)
+		}
+	})
+}
+
 func TestOpts(t *testing.T) {
 	t.Run("test opts", func(t *testing.T) {
 		// test WithTLSConfig

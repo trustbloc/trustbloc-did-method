@@ -7,6 +7,8 @@
   "members": [
     {
       "domain": "stakeholder.one:8088"
+    }, {
+      "domain": "stakeholder.one:8088"
     }
   ],
   "previous": ""
