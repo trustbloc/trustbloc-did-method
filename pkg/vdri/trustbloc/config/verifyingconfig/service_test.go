@@ -40,7 +40,7 @@ func TestConfigService_GetConsortium(t *testing.T) {
 
 		var err error
 
-		consortiumFile, err = mockmodels.DummyConsortiumJSON("foo.bar", []models.StakeholderListElement{
+		consortiumFile, err = mockmodels.DummyConsortiumJSON("foo.bar", []*models.StakeholderListElement{
 			{
 				Domain: s1Serv.URL,
 			},
@@ -79,7 +79,7 @@ func TestConfigService_GetConsortium(t *testing.T) {
 		}))
 		defer s2Serv.Close()
 
-		consortiumFile, err = mockmodels.DummyConsortiumJSON("foo.bar", []models.StakeholderListElement{
+		consortiumFile, err = mockmodels.DummyConsortiumJSON("foo.bar", []*models.StakeholderListElement{
 			{
 				Domain: s1Serv.URL,
 			},
@@ -117,7 +117,7 @@ func TestConfigService_GetConsortium(t *testing.T) {
 
 		var err error
 
-		consortium := mockmodels.DummyConsortium("foo.bar", []models.StakeholderListElement{
+		consortium := mockmodels.DummyConsortium("foo.bar", []*models.StakeholderListElement{
 			{
 				Domain: s1Serv.URL,
 			},

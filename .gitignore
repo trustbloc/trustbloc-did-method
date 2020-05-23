@@ -28,5 +28,4 @@ coverage.txt
 .build
 *.log
 test/bdd/fixtures/keys/tls
-test/bdd/fixtures/discovery-server/config
-test/bdd/fixtures/stakeholder-server/config
+test/bdd/fixtures/wellknown/jws

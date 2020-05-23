@@ -21,7 +21,7 @@ services:
     ports:
       - "443:443"
     volumes:
-      - ./config:/web/.well-known/did-trustbloc
+      - ../wellknown/jws:/web/.well-known/did-trustbloc
       - ../keys/tls:/etc/tls
     networks:
       - did-method-rest_bdd_net

@@ -355,9 +355,10 @@ func TestClient_CreateDID(t *testing.T) {
 		require.Equal(t, 1, len(createDIDOpts.publicKeys))
 		require.Equal(t, "#key-2", createDIDOpts.publicKeys[0].ID)
 
-		// test WithService
+		// test WithService and  WithSidetreeEndpoint
 		createOpts = make([]CreateDIDOption, 0)
-		createOpts = append(createOpts, WithService(&did.Service{ID: "serviceID"}))
+		createOpts = append(createOpts, WithService(&did.Service{ID: "serviceID"}),
+			WithSidetreeEndpoint("sidetree"))
 
 		createDIDOpts = &CreateDIDOpts{}
 		// Apply options
@@ -367,6 +368,7 @@ func TestClient_CreateDID(t *testing.T) {
 
 		require.Equal(t, 1, len(createDIDOpts.services))
 		require.Equal(t, "serviceID", createDIDOpts.services[0].ID)
+		require.Equal(t, "sidetree", createDIDOpts.sidetreeEndpoint)
 	})
 }
 

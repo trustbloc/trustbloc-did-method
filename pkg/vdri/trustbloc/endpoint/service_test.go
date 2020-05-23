@@ -45,7 +45,7 @@ func TestEndpointService_GetEndpoints(t *testing.T) {
 		}))
 		defer stakeholderServ2.Close()
 
-		consortiumFile, err := mockmodels.DummyConsortiumJSON("foo.bar", []models.StakeholderListElement{
+		consortiumFile, err := mockmodels.DummyConsortiumJSON("foo.bar", []*models.StakeholderListElement{
 			{
 				Domain: stakeholderServ1.URL,
 			},
@@ -73,7 +73,7 @@ func TestEndpointService_GetEndpoints(t *testing.T) {
 			GetConsortiumFunc: func(s string, s2 string) (*models.ConsortiumFileData, error) {
 				return &models.ConsortiumFileData{
 					Config: &models.Consortium{
-						Members: []models.StakeholderListElement{{Domain: "foo"}},
+						Members: []*models.StakeholderListElement{{Domain: "foo"}},
 					},
 				}, nil
 			},

@@ -1,0 +1,34 @@
+{
+  "consortium_data": {
+    "domain": "testnet.trustbloc.local",
+    "policy": {
+      "cache": {
+        "max_age": 2419200
+      },
+      "num_queries": 2,
+      "history_hash": "SHA256",
+      "sidetree": {
+        "hash_algorithm": "SHA256",
+        "key_algorithm": "NotARealAlg2018",
+        "max_encoded_hash_length": 100,
+        "max_operation_size": 8192
+      }
+    }
+  },
+  "members_data": [
+    {
+      "domain": "stakeholder.one:8088",
+      "policy": {"cache": {"max_age": 604800}},
+      "endpoints": [
+        "https://sidetree-mock:48326/sidetree/0.0.1"
+      ],
+      "privateKeyJwk": {
+        "kty": "OKP",
+        "kid": "key1",
+        "d": "CSLczqR1ly2lpyBcWne9gFKnsjaKJw0dKfoSQu7lNvg",
+        "crv": "Ed25519",
+        "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
+      }
+    }
+  ]
+}
