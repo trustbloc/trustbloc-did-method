@@ -9,6 +9,8 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/square/go-jose"
 )
@@ -60,6 +62,15 @@ type StakeholderListElement struct {
 type ConsortiumFileData struct {
 	Config *Consortium
 	JWS    *jose.JSONWebSignature
+}
+
+// CacheLifetime returns the cache lifetime of the consortium file before it needs to be checked for an update
+func (c ConsortiumFileData) CacheLifetime() (time.Duration, error) {
+	if c.Config == nil {
+		return 0, fmt.Errorf("missing config object")
+	}
+
+	return time.Duration(c.Config.Policy.Cache.MaxAge) * time.Second, nil
 }
 
 // ParseConsortium parses the contents of a consortium file into a ConsortiumFileData object

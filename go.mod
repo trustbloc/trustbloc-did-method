@@ -9,6 +9,7 @@ replace github.com/piprate/json-gold => github.com/trustbloc/json-gold v0.3.1-0.
 go 1.13
 
 require (
+	github.com/bluele/gcache v0.0.0-20190518031135-bc40bd653833
 	github.com/btcsuite/btcutil v1.0.1
 	github.com/gorilla/mux v1.7.4
 	github.com/hyperledger/aries-framework-go v0.1.4-0.20200521101441-dcc599e23d09
