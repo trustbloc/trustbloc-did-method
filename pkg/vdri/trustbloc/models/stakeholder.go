@@ -9,6 +9,8 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/square/go-jose"
 )
@@ -47,6 +49,15 @@ type StakeholderSettings struct {
 type StakeholderFileData struct {
 	Config *Stakeholder
 	JWS    *jose.JSONWebSignature
+}
+
+// CacheLifetime returns the cache lifetime of the stakeholder file before it needs to be checked for an update
+func (s StakeholderFileData) CacheLifetime() (time.Duration, error) {
+	if s.Config == nil {
+		return 0, fmt.Errorf("missing config object")
+	}
+
+	return time.Duration(s.Config.Policy.Cache.MaxAge) * time.Second, nil
 }
 
 // ParseStakeholder parses a stakeholder config within a JWS

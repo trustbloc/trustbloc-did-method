@@ -8,6 +8,7 @@ package models_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -69,5 +70,31 @@ func Test_ParseConsortium(t *testing.T) {
 		_, err := ParseConsortium([]byte(jws))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid character")
+	})
+}
+
+func TestConsortiumFileData_CacheLifetime(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		cfd := ConsortiumFileData{
+			Config: &Consortium{
+				Policy: ConsortiumPolicy{Cache: CacheControl{MaxAge: 12345}},
+			},
+		}
+
+		d, err := cfd.CacheLifetime()
+		require.NoError(t, err)
+
+		require.Equal(t, time.Duration(12345)*time.Second, d)
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		cfd := ConsortiumFileData{
+			Config: nil,
+		}
+
+		_, err := cfd.CacheLifetime()
+		require.Error(t, err)
+
+		require.Contains(t, err.Error(), "missing config")
 	})
 }

@@ -8,6 +8,7 @@ package models_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -65,5 +66,31 @@ func Test_ParseStakeholder(t *testing.T) {
 		_, err := ParseStakeholder([]byte(jws))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "unexpected end")
+	})
+}
+
+func TestStakeholderFileData_CacheLifetime(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		cfd := StakeholderFileData{
+			Config: &Stakeholder{
+				Policy: StakeholderSettings{Cache: CacheControl{MaxAge: 12345}},
+			},
+		}
+
+		d, err := cfd.CacheLifetime()
+		require.NoError(t, err)
+
+		require.Equal(t, time.Duration(12345)*time.Second, d)
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		cfd := StakeholderFileData{
+			Config: nil,
+		}
+
+		_, err := cfd.CacheLifetime()
+		require.Error(t, err)
+
+		require.Contains(t, err.Error(), "missing config")
 	})
 }

@@ -20,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/memorycacheconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/verifyingconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
@@ -55,9 +56,10 @@ func New(opts ...Option) *VDRI {
 
 	configService := httpconfig.NewService(httpconfig.WithTLSConfig(v.tlsConfig))
 	verifyingService := verifyingconfig.NewService(configService)
+	cachingService := memorycacheconfig.NewService(verifyingService)
 	v.endpointService = endpoint.NewService(
-		staticdiscovery.NewService(verifyingService),
-		staticselection.NewService(verifyingService))
+		staticdiscovery.NewService(cachingService),
+		staticselection.NewService(cachingService))
 
 	v.getHTTPVDRI = func(url string) (vdri, error) {
 		return httpbinding.New(url,
