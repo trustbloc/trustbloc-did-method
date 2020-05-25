@@ -18,7 +18,7 @@ import (
 
 func TestConfigService_GetConsortium(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		consortiumData := mockmodels.DummyConsortium("foo.bar", []models.StakeholderListElement{
+		consortiumData := mockmodels.DummyConsortium("foo.bar", []*models.StakeholderListElement{
 			{
 				Domain: "bar.baz",
 			},
@@ -38,7 +38,7 @@ func TestConfigService_GetConsortium(t *testing.T) {
 	})
 
 	t.Run("success - demonstrate caching", func(t *testing.T) {
-		consortiumData := mockmodels.DummyConsortium("foo.bar", []models.StakeholderListElement{
+		consortiumData := mockmodels.DummyConsortium("foo.bar", []*models.StakeholderListElement{
 			{
 				Domain: "bar.baz",
 			},
@@ -73,7 +73,7 @@ func TestConfigService_GetConsortium(t *testing.T) {
 	})
 
 	t.Run("success - re-call wrapped service when cache times out", func(t *testing.T) {
-		consortiumData := mockmodels.DummyConsortium("foo.bar", []models.StakeholderListElement{
+		consortiumData := mockmodels.DummyConsortium("foo.bar", []*models.StakeholderListElement{
 			{
 				Domain: "bar.baz",
 			},

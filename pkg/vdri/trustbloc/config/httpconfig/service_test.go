@@ -20,7 +20,7 @@ import (
 
 func TestConfigService_GetConsortium(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		consortium := mockmodels.DummyConsortium("foo.bar", []models.StakeholderListElement{
+		consortium := mockmodels.DummyConsortium("foo.bar", []*models.StakeholderListElement{
 			{
 				Domain: "bar.baz",
 			},

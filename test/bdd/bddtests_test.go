@@ -7,9 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package bdd
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"testing"
@@ -46,6 +48,7 @@ func TestMain(m *testing.M) {
 	os.Exit(status)
 }
 
+// nolint: gocognit,gocyclo
 func runBDDTests(tags, format string) int {
 	return godog.RunWithOptions("godogs", func(s *godog.Suite) {
 		var composition []*dockerutil.Composition
@@ -75,8 +78,16 @@ func runBDDTests(tags, format string) int {
 					}
 				}
 				fmt.Printf("*** testSleep=%d", testSleep)
-				println()
 				time.Sleep(time.Second * time.Duration(testSleep))
+
+				// create config files
+				_, err := execCMD("../../.build/bin/cli", "create-config",
+					"--sidetree-url", "https://localhost:48326/sidetree/0.0.1", "--tls-cacerts",
+					"../../test/bdd/fixtures/keys/tls/ec-cacert.pem", "--sidetree-write-token", "rw_token", "--config-file",
+					"./fixtures/wellknown/config.json", "--output-directory", "../../test/bdd/fixtures/wellknown/jws")
+				if err != nil {
+					panic(err.Error())
+				}
 			}
 		})
 		s.AfterSuite(func() {
@@ -100,6 +111,29 @@ func runBDDTests(tags, format string) int {
 		Strict:        true,
 		StopOnFailure: true,
 	})
+}
+
+func execCMD(command string, args ...string) (string, error) {
+	cmd := exec.Command(command, args...) // nolint: gosec
+
+	var out bytes.Buffer
+
+	var er bytes.Buffer
+
+	cmd.Stdout = &out
+	cmd.Stderr = &er
+
+	err := cmd.Start()
+	if err != nil {
+		return "", fmt.Errorf(er.String())
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return "", fmt.Errorf(er.String())
+	}
+
+	return out.String(), nil
 }
 
 func getCmdArg(argName string) string {

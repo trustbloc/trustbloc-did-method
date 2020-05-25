@@ -19,7 +19,7 @@ func DummyJWSWrap(data string) string {
 }
 
 // DummyConsortium creates a default consortium object
-func DummyConsortium(consortiumDomain string, stakeholders []models.StakeholderListElement) *models.Consortium {
+func DummyConsortium(consortiumDomain string, stakeholders []*models.StakeholderListElement) *models.Consortium {
 	cc := &models.Consortium{
 		Domain:   consortiumDomain,
 		Policy:   models.ConsortiumPolicy{Cache: models.CacheControl{MaxAge: 0}},
@@ -31,7 +31,7 @@ func DummyConsortium(consortiumDomain string, stakeholders []models.StakeholderL
 }
 
 // DummyConsortiumJSON creates a dummy consortium JSON config
-func DummyConsortiumJSON(consortiumDomain string, stakeholders []models.StakeholderListElement) (string, error) {
+func DummyConsortiumJSON(consortiumDomain string, stakeholders []*models.StakeholderListElement) (string, error) {
 	out, err := json.Marshal(DummyConsortium(consortiumDomain, stakeholders))
 	if err != nil {
 		return "", err

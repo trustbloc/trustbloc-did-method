@@ -1,0 +1,50 @@
+{
+  "consortium_data": {
+    "domain": "consortium.net",
+    "policy": {
+      "cache": {
+        "max_age": 2419200
+      },
+      "num_queries": 2,
+      "history_hash": "SHA256",
+      "sidetree": {
+        "hash_algorithm": "SHA256",
+        "key_algorithm": "NotARealAlg2018",
+        "max_encoded_hash_length": 100,
+        "max_operation_size": 8192
+      }
+    }
+  },
+  "members_data": [
+    {
+      "domain": "stakeholder.one",
+      "policy": {"cache": {"max_age": 604800}},
+      "endpoints": [
+        "http://endpoints.stakeholder.one/peer1/",
+        "http://endpoints.stakeholder.one/peer2/"
+      ],
+      "privateKeyJwk": {
+        "kty": "OKP",
+        "kid": "key1",
+        "d": "CSLczqR1ly2lpyBcWne9gFKnsjaKJw0dKfoSQu7lNvg",
+        "crv": "Ed25519",
+        "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
+      }
+    },
+    {
+      "domain": "stakeholder.two",
+      "policy": {"cache": {"max_age": 604800}},
+      "endpoints": [
+        "http://endpoints.stakeholder.two/peer1/",
+        "http://endpoints.stakeholder.two/peer2/"
+      ],
+      "privateKeyJwk": {
+        "kty": "OKP",
+        "kid": "key1",
+        "d": "-YawjZSeB9Rkdol9SHeOcT9hIvo_VuH6zM-pgtk3b10",
+        "crv": "Ed25519",
+        "x": "8rfXFZNHZs9GYzGbQLYDasGUAm1brAgTLI0jrD4KheU"
+      }
+    }
+  ]
+}

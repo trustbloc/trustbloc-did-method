@@ -30,7 +30,8 @@ unit-test:
 	@scripts/check_unit.sh
 
 .PHONY: bdd-test
-bdd-test: generate-test-config did-method-rest-docker generate-test-keys
+bdd-test: clean did-method-cli did-method-rest-docker generate-test-keys
+	@mkdir -p ./test/bdd/fixtures/wellknown/jws
 	@scripts/check_integration.sh
 
 .PHONY: did-method-rest
@@ -38,6 +39,12 @@ did-method-rest:
 	@echo "Building did-method-rest"
 	@mkdir -p ./.build/bin
 	@cd cmd/did-method-rest && go build -o ../../.build/bin/did-method main.go
+
+.PHONY: did-method-cli
+did-method-cli:
+	@echo "Building did-method-cli"
+	@mkdir -p ./.build/bin
+	@cd cmd/did-method-cli && go build -o ../../.build/bin/cli main.go
 
 
 .PHONY: did-method-rest-docker
@@ -47,12 +54,8 @@ did-method-rest-docker:
 	--build-arg GO_VER=$(GO_VER) \
 	--build-arg ALPINE_VER=$(ALPINE_VER) .
 
-.PHONY: generate-test-config
-generate-test-config:
-	@scripts/generate_test_config.sh
-
 .PHONY: generate-test-keys
-generate-test-keys: clean
+generate-test-keys:
 	@mkdir -p -p test/bdd/fixtures/keys/tls
 	@docker run -i --rm \
 		-v $(abspath .):/opt/workspace/trustbloc-did-method \

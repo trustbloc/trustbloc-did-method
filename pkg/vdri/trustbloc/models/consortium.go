@@ -33,7 +33,7 @@ type Consortium struct {
 	// Policy contains the consortium policy configuration
 	Policy ConsortiumPolicy `json:"policy"`
 	// Members is a list containing references to the stakeholders on this consortium
-	Members []StakeholderListElement `json:"members"`
+	Members []*StakeholderListElement `json:"members"`
 	// Previous contains a hashlink to the previous version of this file. Optional.
 	Previous string `json:"previous,omitempty"`
 }
@@ -56,6 +56,16 @@ type StakeholderListElement struct {
 	Domain string `json:"domain,omitempty"`
 	// DID is the DID of the stakeholder
 	DID string `json:"did,omitempty"`
+	// PublicKey is the verification key DID URL and public key
+	PublicKey PublicKey `json:"public_key,omitempty"`
+}
+
+// PublicKey is the verification key DID URL and public key
+type PublicKey struct {
+	// ID  verification public key DID URL
+	ID string `json:"id,omitempty"`
+	// JWK verification public key in JWK format}
+	JWK json.RawMessage `json:"jwk,omitempty"`
 }
 
 // ConsortiumFileData holds the data within a consortium config file

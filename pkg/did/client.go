@@ -74,23 +74,29 @@ func New(opts ...Option) *Client {
 
 // CreateDID create did doc
 func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc, error) {
-	if domain == "" {
-		return nil, errors.New("domain is empty")
-	}
-
 	createDIDOpts := &CreateDIDOpts{}
 	// Apply options
 	for _, opt := range opts {
 		opt(createDIDOpts)
 	}
 
-	endpoints, err := c.endpointService.GetEndpoints(domain)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get endpoints: %w", err)
+	if domain == "" && createDIDOpts.sidetreeEndpoint == "" {
+		return nil, errors.New("domain is empty and sidetree endpoint is empty")
 	}
 
-	if len(endpoints) == 0 {
-		return nil, errors.New("list of endpoints is empty")
+	sidetreeEndpoint := createDIDOpts.sidetreeEndpoint
+
+	if domain != "" {
+		endpoints, err := c.endpointService.GetEndpoints(domain)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get endpoints: %w", err)
+		}
+
+		if len(endpoints) == 0 {
+			return nil, errors.New("list of endpoints is empty")
+		}
+
+		sidetreeEndpoint = endpoints[0].URL
 	}
 
 	req, err := c.buildSideTreeRequest(createDIDOpts)
@@ -98,7 +104,7 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 		return nil, fmt.Errorf("failed to build sidetree request: %w", err)
 	}
 
-	resDoc, err := c.sendCreateRequest(req, endpoints[0].URL)
+	resDoc, err := c.sendCreateRequest(req, sidetreeEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send create sidetree request: %w", err)
 	}
@@ -227,8 +233,9 @@ func WithAuthToken(authToken string) Option {
 
 // CreateDIDOpts create did opts
 type CreateDIDOpts struct {
-	publicKeys []PublicKey
-	services   []docdid.Service
+	publicKeys       []PublicKey
+	services         []docdid.Service
+	sidetreeEndpoint string
 }
 
 // CreateDIDOption is a create DID option
@@ -245,5 +252,12 @@ func WithPublicKey(publicKey *PublicKey) CreateDIDOption {
 func WithService(service *docdid.Service) CreateDIDOption {
 	return func(opts *CreateDIDOpts) {
 		opts.services = append(opts.services, *service)
+	}
+}
+
+// WithSidetreeEndpoint go directly to sidetree
+func WithSidetreeEndpoint(sidetreeEndpoint string) CreateDIDOption {
+	return func(opts *CreateDIDOpts) {
+		opts.sidetreeEndpoint = sidetreeEndpoint
 	}
 }
