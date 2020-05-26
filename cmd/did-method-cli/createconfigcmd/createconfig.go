@@ -8,7 +8,6 @@ package createconfigcmd
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,8 +17,8 @@ import (
 	"strings"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	"github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	"github.com/spf13/cobra"
+	gojose "github.com/square/go-jose/v3"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
@@ -79,10 +78,11 @@ type memberData struct {
 	Policy models.StakeholderSettings `json:"policy"`
 	// Endpoints is a list of sidetree endpoints owned by this stakeholder organization
 	Endpoints []string `json:"endpoints"`
-	// PrivateKeyJwk is privatekey jwk
-	PrivateKeyJwk json.RawMessage `json:"privateKeyJwk,omitempty"`
+	// PrivateKeyJwk is privatekey jwk file
+	PrivateKeyJwkPath string `json:"privateKeyJwkPath,omitempty"`
 
-	jsonWebKey jose.JWK
+	jsonWebKey gojose.JSONWebKey
+	sigKey     gojose.SigningKey
 }
 
 type didClient interface {
@@ -156,8 +156,10 @@ func createCreateConfigCmd() *cobra.Command {
 }
 
 func writeConfig(outputDirectory string, filesData map[string][]byte) error {
-	if err := os.MkdirAll(outputDirectory, 0700); err != nil {
-		return err
+	if outputDirectory != "" {
+		if err := os.MkdirAll(outputDirectory, 0700); err != nil {
+			return err
+		}
 	}
 
 	for k, v := range filesData {
@@ -189,9 +191,16 @@ func getConfig(cmd *cobra.Command) (*config, error) {
 	}
 
 	for _, member := range config.MembersData {
-		if err := member.jsonWebKey.UnmarshalJSON(member.PrivateKeyJwk); err != nil {
-			return nil, err
+		jwkData, err := ioutil.ReadFile(member.PrivateKeyJwkPath) //nolint: gosec
+		if err != nil {
+			return nil, fmt.Errorf("failed to read jwk file '%s' : %w", member.PrivateKeyJwkPath, err)
 		}
+
+		if err := member.jsonWebKey.UnmarshalJSON(jwkData); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal to jwk: %w", err)
+		}
+		// TODO add support for ECDSA using P-256 and SHA-256
+		member.sigKey = gojose.SigningKey{Key: member.jsonWebKey.Key, Algorithm: gojose.EdDSA}
 	}
 
 	return &config, nil
@@ -233,6 +242,7 @@ func createFlags(startCmd *cobra.Command) {
 
 func createConfig(parameters *parameters) (map[string][]byte, error) {
 	filesData := make(map[string][]byte)
+	sigKeys := make([]gojose.SigningKey, 0)
 
 	consortium := models.Consortium{Domain: parameters.config.ConsortiumData.Domain,
 		Policy: parameters.config.ConsortiumData.Policy}
@@ -260,12 +270,14 @@ func createConfig(parameters *parameters) (map[string][]byte, error) {
 			return nil, err
 		}
 
-		jwsBytes, err := signConfig(stakeholderBytes)
+		jws, err := signConfig(stakeholderBytes, []gojose.SigningKey{member.sigKey})
 		if err != nil {
 			return nil, err
 		}
 
-		filesData[member.Domain] = jwsBytes
+		sigKeys = append(sigKeys, member.sigKey)
+
+		filesData[member.Domain] = []byte(jws)
 	}
 
 	consortiumBytes, err := json.Marshal(consortium)
@@ -273,27 +285,31 @@ func createConfig(parameters *parameters) (map[string][]byte, error) {
 		return nil, err
 	}
 
-	jwsBytes, err := signConfig(consortiumBytes)
+	jws, err := signConfig(consortiumBytes, sigKeys)
 	if err != nil {
 		return nil, err
 	}
 
-	filesData[consortium.Domain] = jwsBytes
+	filesData[consortium.Domain] = []byte(jws)
 
 	return filesData, nil
 }
 
-func signConfig(configBytes []byte) ([]byte, error) {
-	// TODO add logic for jws
-	// for now return dummy jws
-	// remove this code after adding logic for jws
-	m := make(map[string]interface{})
-	m["payload"] = base64.RawURLEncoding.EncodeToString(configBytes)
+func signConfig(configBytes []byte, keys []gojose.SigningKey) (string, error) {
+	signer, err := gojose.NewMultiSigner(keys, nil)
+	if err != nil {
+		return "", err
+	}
 
-	return json.Marshal(m)
+	jws, err := signer.Sign(configBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return jws.FullSerialize(), nil
 }
 
-func createDID(didClient didClient, sidetreeURL string, jwk *jose.JWK) (*docdid.Doc, error) {
+func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey) (*docdid.Doc, error) {
 	pubKey, err := jwk.Public().MarshalJSON()
 	if err != nil {
 		return nil, err

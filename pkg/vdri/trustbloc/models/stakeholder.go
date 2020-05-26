@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/square/go-jose"
+	"github.com/square/go-jose/v3"
 )
 
 /*
