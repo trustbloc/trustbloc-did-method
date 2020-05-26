@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package createconfigcmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -19,43 +20,6 @@ import (
 )
 
 const flag = "--"
-
-// nolint: gochecknoglobals
-var configDataWithWrongJWK = `{
-  "consortium_data": {
-    "domain": "consortium.net",
-    "policy": {
-      "cache": {
-        "max_age": 2419200
-      },
-      "num_queries": 2,
-      "history_hash": "SHA256",
-      "sidetree": {
-        "hash_algorithm": "SHA256",
-        "key_algorithm": "NotARealAlg2018",
-        "max_encoded_hash_length": 100,
-        "max_operation_size": 8192
-      }
-    }
-  },
-  "members_data": [
-    {
-      "domain": "stakeholder.one",
-      "policy": {"cache": {"max_age": 604800}},
-      "endpoints": [
-        "http://endpoints.stakeholder.one/peer1/",
-        "http://endpoints.stakeholder.one/peer2/"
-      ],
-      "privateKeyJwk": {
-        "kty": "OKP",
-        "kid": "key1",
-        "d": 1,
-        "crv": "Ed25519",
-        "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
-      }
-    }
-  ]
-}`
 
 // nolint: gochecknoglobals
 var configData = `{
@@ -83,16 +47,19 @@ var configData = `{
         "http://endpoints.stakeholder.one/peer1/",
         "http://endpoints.stakeholder.one/peer2/"
       ],
-      "privateKeyJwk": {
+      "privateKeyJwkPath": "%s"
+    }
+  ]
+}`
+
+// nolint: gochecknoglobals
+var jwkData = `{
         "kty": "OKP",
         "kid": "key1",
         "d": "-YawjZSeB9Rkdol9SHeOcT9hIvo_VuH6zM-pgtk3b10",
         "crv": "Ed25519",
         "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
-      }
-    }
-  ]
-}`
+      }`
 
 func TestCreateConfigCmdWithMissingArg(t *testing.T) {
 	t.Run("test missing arg sidetree url", func(t *testing.T) {
@@ -133,13 +100,13 @@ func TestCreateConfigCmd(t *testing.T) {
 		require.Contains(t, err.Error(), "failed to read config file")
 	})
 
-	t.Run("test wrong private key jwk", func(t *testing.T) {
+	t.Run("test wrong path for private key jwk", func(t *testing.T) {
 		cmd := GetCreateConfigCmd()
 
 		file, err := ioutil.TempFile("", "*.json")
 		require.NoError(t, err)
 
-		_, err = file.WriteString(configDataWithWrongJWK)
+		_, err = file.WriteString(fmt.Sprintf(configData, "notexist.json"))
 		require.NoError(t, err)
 
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()
@@ -152,16 +119,54 @@ func TestCreateConfigCmd(t *testing.T) {
 
 		err = cmd.Execute()
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "unable to read JWK")
+		require.Contains(t, err.Error(), "failed to read jwk file")
+	})
+
+	t.Run("test wrong private key jwk", func(t *testing.T) {
+		cmd := GetCreateConfigCmd()
+
+		jwkFile, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		defer func() { require.NoError(t, os.Remove(jwkFile.Name())) }()
+
+		_, err = jwkFile.WriteString("wrongjwk")
+		require.NoError(t, err)
+
+		file, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = file.WriteString(fmt.Sprintf(configData, jwkFile.Name()))
+		require.NoError(t, err)
+
+		defer func() { require.NoError(t, os.Remove(file.Name())) }()
+
+		var args []string
+		args = append(args, sidetreeURLArg()...)
+		args = append(args, configFileArg(file.Name())...)
+
+		cmd.SetArgs(args)
+
+		err = cmd.Execute()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to unmarshal to jwk")
 	})
 
 	t.Run("test error from create did", func(t *testing.T) {
 		cmd := GetCreateConfigCmd()
 
+		jwkFile, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		defer func() { require.NoError(t, os.Remove(jwkFile.Name())) }()
+
+		_, err = jwkFile.WriteString(jwkData)
+		require.NoError(t, err)
+
 		file, err := ioutil.TempFile("", "*.json")
 		require.NoError(t, err)
 
-		_, err = file.WriteString(configData)
+		_, err = file.WriteString(fmt.Sprintf(configData, jwkFile.Name()))
 		require.NoError(t, err)
 
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()
@@ -180,10 +185,18 @@ func TestCreateConfigCmd(t *testing.T) {
 	t.Run("test create config and write them to file", func(t *testing.T) {
 		os.Clearenv()
 
+		jwkFile, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		defer func() { require.NoError(t, os.Remove(jwkFile.Name())) }()
+
+		_, err = jwkFile.WriteString(jwkData)
+		require.NoError(t, err)
+
 		file, err := ioutil.TempFile("", "*.json")
 		require.NoError(t, err)
 
-		_, err = file.WriteString(configData)
+		_, err = file.WriteString(fmt.Sprintf(configData, jwkFile.Name()))
 		require.NoError(t, err)
 
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()
