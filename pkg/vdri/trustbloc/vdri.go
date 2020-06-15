@@ -21,6 +21,7 @@ import (
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/memorycacheconfig"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/signatureconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/verifyingconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
@@ -55,7 +56,7 @@ func New(opts ...Option) *VDRI {
 	}
 
 	configService := httpconfig.NewService(httpconfig.WithTLSConfig(v.tlsConfig))
-	verifyingService := verifyingconfig.NewService(configService)
+	verifyingService := signatureconfig.NewService(verifyingconfig.NewService(configService))
 	cachingService := memorycacheconfig.NewService(verifyingService)
 	v.endpointService = endpoint.NewService(
 		staticdiscovery.NewService(cachingService),
