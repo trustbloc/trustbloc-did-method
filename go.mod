@@ -14,7 +14,9 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/hyperledger/aries-framework-go v0.1.4-0.20200521101441-dcc599e23d09
 	github.com/sirupsen/logrus v1.4.2
+	github.com/square/go-jose v2.5.1+incompatible
 	github.com/square/go-jose/v3 v3.0.0-20191119004800-96c717272387
 	github.com/stretchr/testify v1.5.1
 	github.com/trustbloc/sidetree-core-go v0.1.3
+	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )
