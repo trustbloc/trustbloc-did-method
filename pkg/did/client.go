@@ -18,6 +18,7 @@ import (
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	log "github.com/sirupsen/logrus"
+	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
@@ -30,9 +31,7 @@ import (
 )
 
 const (
-	sha2_256            = 18
-	recoveryRevealValue = "recoveryOTP"
-	updateRevealValue   = "updateOTP"
+	sha2_256 = 18
 )
 
 type endpointService interface {
@@ -131,12 +130,26 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 		return nil, fmt.Errorf("failed to get recovery key : %s", err)
 	}
 
+	updateKey, err := c.getUpdateKey(publicKeys)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get update key : %s", err)
+	}
+
+	recoveryCommitment, err := commitment.Calculate(recoveryKey, sha2_256)
+	if err != nil {
+		return nil, err
+	}
+
+	updateCommitment, err := commitment.Calculate(updateKey, sha2_256)
+	if err != nil {
+		return nil, err
+	}
+
 	req, err := helper.NewCreateRequest(&helper.CreateRequestInfo{
-		OpaqueDocument:          string(docBytes),
-		RecoveryKey:             recoveryKey,
-		NextRecoveryRevealValue: []byte(recoveryRevealValue),
-		NextUpdateRevealValue:   []byte(updateRevealValue),
-		MultihashCode:           sha2_256,
+		OpaqueDocument:     string(docBytes),
+		RecoveryCommitment: recoveryCommitment,
+		UpdateCommitment:   updateCommitment,
+		MultihashCode:      sha2_256,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sidetree request: %w", err)
@@ -149,7 +162,7 @@ func (c *Client) getRecoveryKey(publicKeys []PublicKey) (*jws.JWK, error) {
 	for _, v := range publicKeys {
 		if v.Recovery {
 			if v.Encoding != PublicKeyEncodingJwk {
-				return nil, fmt.Errorf("public key encoding not supported: %s", v.Encoding)
+				return nil, fmt.Errorf("recovery public key encoding not supported: %s", v.Encoding)
 			}
 
 			return pubkey.GetPublicKeyJWK(ed25519.PublicKey(v.Value))
@@ -157,6 +170,20 @@ func (c *Client) getRecoveryKey(publicKeys []PublicKey) (*jws.JWK, error) {
 	}
 
 	return nil, fmt.Errorf("recovery key not found")
+}
+
+func (c *Client) getUpdateKey(publicKeys []PublicKey) (*jws.JWK, error) {
+	for _, v := range publicKeys {
+		if v.Update {
+			if v.Encoding != PublicKeyEncodingJwk {
+				return nil, fmt.Errorf("update public key encoding not supported: %s", v.Encoding)
+			}
+
+			return pubkey.GetPublicKeyJWK(ed25519.PublicKey(v.Value))
+		}
+	}
+
+	return nil, fmt.Errorf("update key not found")
 }
 
 func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc, error) {

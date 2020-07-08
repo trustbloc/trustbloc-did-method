@@ -35,10 +35,11 @@ import (
 )
 
 const (
-	maxRetry     = 10
-	pubKeyIndex1 = "key-1"
-	pubKeyIndex2 = "key-2"
-	serviceID    = "service"
+	maxRetry      = 10
+	pubKeyIndex1  = "key-1"
+	recoveryKeyID = "recovery"
+	updateKeyID   = "update"
+	serviceID     = "service"
 	// P256KeyType EC P-256 key type
 	P256KeyType = "P256"
 )
@@ -71,12 +72,15 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 	jobID := uuid.New().String()
 
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID, DIDDocument: operation.DIDDocument{
-		PublicKey: []*operation.PublicKey{{ID: pubKeyIndex1, Type: signatureSuite,
-			Value: base64.StdEncoding.EncodeToString(pubKey), Encoding: did.PublicKeyEncodingJwk, KeyType: keyType,
-			Usage: []string{did.KeyUsageGeneral}}, {ID: pubKeyIndex2, Type: did.JWSVerificationKey2020,
-			Value: base64.StdEncoding.EncodeToString(pubKey), KeyType: keyType,
-			Encoding: did.PublicKeyEncodingJwk, Recovery: true}},
-		Service: []*operation.Service{{ID: serviceID, Type: "type", ServiceEndpoint: "http://www.example.com/"}}}})
+		PublicKey: []*operation.PublicKey{
+			{ID: pubKeyIndex1, Type: signatureSuite, Value: base64.StdEncoding.EncodeToString(pubKey),
+				Encoding: did.PublicKeyEncodingJwk, KeyType: keyType, Purpose: []string{did.KeyPurposeGeneral}},
+			{ID: recoveryKeyID, Type: did.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
+				KeyType: keyType, Encoding: did.PublicKeyEncodingJwk, Recovery: true},
+			{ID: updateKeyID, Type: did.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
+				KeyType: keyType, Encoding: did.PublicKeyEncodingJwk, Update: true},
+		},
+		Service: []*operation.Service{{ID: serviceID, Type: "type", Endpoint: "http://www.example.com/"}}}})
 	if err != nil {
 		return err
 	}

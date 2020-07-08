@@ -285,6 +285,8 @@ github.com/trustbloc/edge-core v0.1.3 h1:AE9XMBIVR5p67PE7ywkY4X6ILXT0gAXeIBGfOwM
 github.com/trustbloc/edge-core v0.1.3/go.mod h1:mmgEfSIoNjshnVdxEtPwh2CLs0EaBaaejgI2KNsOEOE=
 github.com/trustbloc/sidetree-core-go v0.1.3 h1:p3Rgk0w8unimzc6QsISB3dwOS+4J/W8zWTM6siqMnoA=
 github.com/trustbloc/sidetree-core-go v0.1.3/go.mod h1:xCuMVdRtXiCghr58Dcd1RW9t0lCDXPPjkSiACzKGaZc=
+github.com/trustbloc/sidetree-core-go v0.1.4-0.20200702215916-b02022f5ec37 h1:eXOLEJDXvu8ek0GkthyVNWGyE6/CnlsMeNOPSaX3IkM=
+github.com/trustbloc/sidetree-core-go v0.1.4-0.20200702215916-b02022f5ec37/go.mod h1:xCuMVdRtXiCghr58Dcd1RW9t0lCDXPPjkSiACzKGaZc=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/urfave/cli v0.0.0-20171014202726-7bc6a0acffa5/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f h1:J9EGpcZtP0E/raorCMxlFGSTBrsSlaDGf3jU/qvAE2c=
