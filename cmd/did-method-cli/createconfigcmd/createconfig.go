@@ -315,11 +315,14 @@ func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey) 
 		return nil, err
 	}
 
+
+	// TODO: Verify usage of this code - recovery, update and general purpose key should NOT be the same
 	return didClient.CreateDID("", did.WithSidetreeEndpoint(sidetreeURL), did.WithPublicKey(&did.PublicKey{
 		Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, Value: pubKey, Recovery: true}),
+		did.WithPublicKey(&did.PublicKey{
+			Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, Value: pubKey, Update: true}),
 		did.WithPublicKey(&did.PublicKey{ID: jwk.KeyID,
 			Type: did.JWSVerificationKey2020, Encoding: did.PublicKeyEncodingJwk, KeyType: did.Ed25519KeyType,
-			Value: pubKey,
-			Usage: []string{did.KeyUsageGeneral}}))
-
+			Value:   pubKey,
+			Purpose: []string{did.KeyPurposeGeneral}}))
 }

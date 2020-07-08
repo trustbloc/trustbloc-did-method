@@ -60,18 +60,19 @@ type PublicKey struct {
 	Type string `json:"type,omitempty"`
 	// Value is always Base64
 	Value    string   `json:"value,omitempty"`
-	Usage    []string `json:"usage,omitempty"`
+	Purpose  []string `json:"purpose,omitempty"`
 	Encoding string   `json:"encoding,omitempty"`
 	Recovery bool     `json:"recovery,omitempty"`
+	Update   bool     `json:"update,omitempty"`
 	KeyType  string   `json:"keyType,omitempty"`
 }
 
 // Service DID doc service
 type Service struct {
-	ID              string   `json:"id,omitempty"`
-	Type            string   `json:"type,omitempty"`
-	Priority        uint     `json:"priority,omitempty"`
-	RecipientKeys   []string `json:"recipientKeys,omitempty"`
-	RoutingKeys     []string `json:"routingKeys,omitempty"`
-	ServiceEndpoint string   `json:"serviceEndpoint,omitempty"`
+	ID            string   `json:"id,omitempty"`
+	Type          string   `json:"type,omitempty"`
+	Priority      uint     `json:"priority,omitempty"`
+	RecipientKeys []string `json:"recipientKeys,omitempty"`
+	RoutingKeys   []string `json:"routingKeys,omitempty"`
+	Endpoint      string   `json:"endpoint,omitempty"`
 }

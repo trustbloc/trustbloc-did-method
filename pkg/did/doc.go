@@ -20,8 +20,8 @@ import (
 const (
 	jsonldID            = "id"
 	jsonldType          = "type"
-	jsonldUsage         = "usage"
-	jsonldServicePoint  = "serviceEndpoint"
+	jsonldUsage         = "purpose"
+	jsonldServicePoint  = "endpoint"
 	jsonldRecipientKeys = "recipientKeys"
 	jsonldRoutingKeys   = "routingKeys"
 	jsonldPriority      = "priority"
@@ -31,18 +31,18 @@ const (
 	// PublicKeyEncodingJwk define jwk encoding type
 	PublicKeyEncodingJwk = "Jwk"
 
-	// KeyUsageOps defines key usage as operations key
-	KeyUsageOps = "ops"
-	// KeyUsageAuth defines key usage as authentication key
-	KeyUsageAuth = "auth"
-	// KeyUsageAssertion defines key usage as assertion key
-	KeyUsageAssertion = "assertion"
-	// KeyUsageDelegation defines key usage as delegation key
-	KeyUsageDelegation = "delegation"
-	// KeyUsageInvocation defines key usage as invocation key
-	KeyUsageInvocation = "invocation"
-	// KeyUsageGeneral defines key usage as general key
-	KeyUsageGeneral = "general"
+	// KeyPurposeOps defines key purpose as operations key
+	KeyPurposeOps = "ops"
+	// KeyPurposeAuth defines key purpose as authentication key
+	KeyPurposeAuth = "auth"
+	// KeyPurposeAssertion defines key purpose as assertion key
+	KeyPurposeAssertion = "assertion"
+	// KeyPurposeDelegation defines key purpose as delegation key
+	KeyPurposeDelegation = "delegation"
+	// KeyPurposeInvocation defines key purpose as invocation key
+	KeyPurposeInvocation = "invocation"
+	// KeyPurposeGeneral defines key purpose as general key
+	KeyPurposeGeneral = "general"
 
 	// JWSVerificationKey2020 defines key type signature
 	JWSVerificationKey2020 = "JwsVerificationKey2020"
@@ -74,8 +74,9 @@ type PublicKey struct {
 	Type     string
 	Encoding string
 	KeyType  string
-	Usage    []string
+	Purpose  []string
 	Recovery bool
+	Update   bool
 
 	Value []byte
 }
@@ -104,7 +105,7 @@ func populateRawPublicKeys(pks []PublicKey) ([]map[string]interface{}, error) {
 	var rawPKs []map[string]interface{}
 
 	for i := range pks {
-		if !pks[i].Recovery {
+		if !pks[i].Recovery && !pks[i].Update {
 			publicKey, err := populateRawPublicKey(&pks[i])
 			if err != nil {
 				return nil, err
@@ -121,7 +122,7 @@ func populateRawPublicKey(pk *PublicKey) (map[string]interface{}, error) {
 	rawPK := make(map[string]interface{})
 	rawPK[jsonldID] = pk.ID
 	rawPK[jsonldType] = pk.Type
-	rawPK[jsonldUsage] = pk.Usage
+	rawPK[jsonldUsage] = pk.Purpose
 
 	switch pk.Encoding {
 	case PublicKeyEncodingJwk:

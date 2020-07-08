@@ -27,6 +27,11 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
+const (
+	recoveryKeyID = "recovery"
+	updateKeyID   = "update"
+)
+
 func TestClient_CreateDID(t *testing.T) {
 	t.Run("test domain is empty", func(t *testing.T) {
 		v := New()
@@ -71,7 +76,10 @@ func TestClient_CreateDID(t *testing.T) {
 	t.Run("test error from send create sidetree request", func(t *testing.T) {
 		v := New()
 
-		ed25519PubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		ed25519RecoveryPubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		ed25519UpdatePubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
 		// failed to create http request
@@ -80,8 +88,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "http://[]%20%/"}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1",
-			Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey, KeyType: Ed25519KeyType, Recovery: true}))
+		doc, err := v.CreateDID("testnet",
+			WithPublicKey(&PublicKey{ID: recoveryKeyID, Encoding: PublicKeyEncodingJwk, Value: ed25519RecoveryPubKey,
+				KeyType: Ed25519KeyType, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: updateKeyID, Encoding: PublicKeyEncodingJwk, Value: ed25519UpdatePubKey,
+				KeyType: Ed25519KeyType, Update: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to create http request")
 		require.Nil(t, doc)
@@ -92,8 +103,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
-			Recovery: true, Value: ed25519PubKey, KeyType: Ed25519KeyType}))
+		doc, err = v.CreateDID("testnet",
+			WithPublicKey(&PublicKey{ID: recoveryKeyID, Encoding: PublicKeyEncodingJwk, Value: ed25519RecoveryPubKey,
+				KeyType: Ed25519KeyType, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: updateKeyID, Encoding: PublicKeyEncodingJwk, Value: ed25519UpdatePubKey,
+				KeyType: Ed25519KeyType, Update: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to send request")
 		require.Nil(t, doc)
@@ -109,8 +123,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
-			Recovery: true, Value: ed25519PubKey, KeyType: Ed25519KeyType}))
+		doc, err = v.CreateDID("testnet",
+			WithPublicKey(&PublicKey{ID: recoveryKeyID, Encoding: PublicKeyEncodingJwk, Value: ed25519RecoveryPubKey,
+				KeyType: Ed25519KeyType, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: updateKeyID, Encoding: PublicKeyEncodingJwk, Value: ed25519UpdatePubKey,
+				KeyType: Ed25519KeyType, Update: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "got unexpected response")
 		require.Nil(t, doc)
@@ -129,8 +146,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "key1", Encoding: PublicKeyEncodingJwk,
-			Recovery: true, Value: ed25519PubKey, KeyType: Ed25519KeyType}))
+		doc, err = v.CreateDID("testnet",
+			WithPublicKey(&PublicKey{ID: recoveryKeyID, Encoding: PublicKeyEncodingJwk,
+				Value: ed25519RecoveryPubKey, KeyType: Ed25519KeyType, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: updateKeyID, Encoding: PublicKeyEncodingJwk,
+				Value: ed25519UpdatePubKey, KeyType: Ed25519KeyType, Update: true}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse public DID document")
 		require.Nil(t, doc)
@@ -148,7 +168,10 @@ func TestClient_CreateDID(t *testing.T) {
 		}))
 		defer serv.Close()
 
-		ed25519PubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		ed25519RecoveryPubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		ed25519UpdatePubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
 		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -163,21 +186,24 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{
-			Type: Ed25519VerificationKey2018, Encoding: PublicKeyEncodingJwk, Value: ed25519PubKey, Recovery: true}),
-			WithPublicKey(&PublicKey{ID: "key2",
+		doc, err := v.CreateDID("testnet",
+			WithPublicKey(&PublicKey{ID: recoveryKeyID, Type: Ed25519VerificationKey2018, Encoding: PublicKeyEncodingJwk,
+				Value: ed25519RecoveryPubKey, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: updateKeyID, Type: Ed25519VerificationKey2018, Encoding: PublicKeyEncodingJwk,
+				Value: ed25519UpdatePubKey, Update: true}),
+			WithPublicKey(&PublicKey{ID: "key1",
 				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
-				Value: ed25519PubKey,
-				Usage: []string{KeyUsageGeneral}}),
-			WithPublicKey(&PublicKey{ID: "key3",
+				Value:   ed25519RecoveryPubKey,
+				Purpose: []string{KeyPurposeGeneral}}),
+			WithPublicKey(&PublicKey{ID: "key2",
 				Type:     JWSVerificationKey2020,
 				Encoding: PublicKeyEncodingJwk,
 				Value:    ecPubKeyBytes,
 				KeyType:  P256KeyType,
-				Usage:    []string{KeyUsageGeneral},
+				Purpose:  []string{KeyPurposeGeneral},
 			}),
 			WithService(&did.Service{ID: "srv1", Type: "type", ServiceEndpoint: "http://example.com",
-				Properties: map[string]interface{}{"k1": "v1"}}))
+				Properties: map[string]interface{}{"priority": "1"}}))
 		require.NoError(t, err)
 		require.Equal(t, "did1", doc.ID)
 	})
