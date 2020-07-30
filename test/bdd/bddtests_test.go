@@ -53,8 +53,10 @@ func runBDDTests(tags, format string) int {
 	return godog.RunWithOptions("godogs", func(s *godog.Suite) {
 		var composition []*dockerutil.Composition
 		var composeFiles = []string{"./fixtures/did-method-rest", "./fixtures/universalresolver",
-			"./fixtures/sidetree-mock", "./fixtures/discovery-server", "./fixtures/stakeholder-server",
+			"./fixtures/sidetree-mock",
 			"./fixtures/universal-registrar"}
+		var discoveryServers = []string{"./fixtures/discovery-server", "./fixtures/stakeholder-server"}
+
 		s.BeforeSuite(func() {
 			if os.Getenv("DISABLE_COMPOSITION") != "true" {
 				// Need a unique name, but docker does not allow '-' in names
@@ -77,17 +79,25 @@ func runBDDTests(tags, format string) int {
 						panic(fmt.Sprintf("Invalid value found in 'TEST_SLEEP': %s", e))
 					}
 				}
-				fmt.Printf("*** testSleep=%d", testSleep)
+				fmt.Printf("*** testSleep=%d \n", testSleep)
 				time.Sleep(time.Second * time.Duration(testSleep))
 
 				// create config files
-				_, err := execCMD("../../.build/bin/cli", "create-config",
-					"--sidetree-url", "https://localhost:48326/sidetree/0.0.1", "--tls-cacerts",
-					"../../test/bdd/fixtures/keys/tls/ec-cacert.pem", "--sidetree-write-token", "rw_token", "--config-file",
-					"./fixtures/wellknown/config.json", "--output-directory", "../../test/bdd/fixtures/wellknown/jws")
+				_, err := execCMD("./generate_config.sh")
 				if err != nil {
 					panic(err.Error())
 				}
+
+				for _, v := range discoveryServers {
+					newComposition, err := dockerutil.NewComposition(composeProjectName, "docker-compose.yml", v)
+					if err != nil {
+						panic(fmt.Sprintf("Error composing system in BDD context: %s", err))
+					}
+					composition = append(composition, newComposition)
+				}
+
+				fmt.Printf("*** testSleep=%d", testSleep)
+				time.Sleep(time.Second * time.Duration(testSleep))
 			}
 		})
 		s.AfterSuite(func() {
@@ -100,6 +110,11 @@ func runBDDTests(tags, format string) int {
 						panic(err)
 					}
 				}
+			}
+
+			err := os.RemoveAll("./fixtures/wellknown/jws")
+			if err != nil {
+				panic(err)
 			}
 		})
 		FeatureContext(s)
@@ -152,7 +167,7 @@ func generateUUID() string {
 }
 
 func FeatureContext(s *godog.Suite) {
-	bddContext, err := bddctx.NewBDDContext("fixtures/keys/tls/ec-cacert.pem")
+	bddContext, err := bddctx.NewBDDContext("fixtures/keys/tls/ec-cacert.pem", "fixtures/keys/tls/ec-pubCert.pem")
 	if err != nil {
 		panic(err.Error())
 	}

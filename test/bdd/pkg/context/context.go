@@ -17,8 +17,8 @@ type BDDContext struct {
 }
 
 // NewBDDContext create new BDDContext
-func NewBDDContext(caCertPath string) (*BDDContext, error) {
-	rootCAs, err := tlsutils.GetCertPool(false, []string{caCertPath})
+func NewBDDContext(caCertPaths ...string) (*BDDContext, error) {
+	rootCAs, err := tlsutils.GetCertPool(false, caCertPaths)
 	if err != nil {
 		return nil, err
 	}

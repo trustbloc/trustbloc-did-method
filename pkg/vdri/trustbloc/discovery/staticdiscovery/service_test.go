@@ -62,7 +62,7 @@ func TestDiscoveryService_GetEndpoints(t *testing.T) {
 
 	t.Run("failure: stakeholder server failure", func(t *testing.T) {
 		stakeholderServ := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer stakeholderServ.Close()
 

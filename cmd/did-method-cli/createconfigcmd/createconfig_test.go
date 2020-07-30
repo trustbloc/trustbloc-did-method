@@ -206,7 +206,7 @@ func TestCreateConfigCmd(t *testing.T) {
 		c, err := getConfig(&cobra.Command{})
 		require.NoError(t, err)
 
-		filesData, err := createConfig(&parameters{config: c,
+		filesData, _, err := createConfig(&parameters{config: c,
 			didClient: &mockDIDClient{&docdid.Doc{ID: "did:test:123"}}})
 		require.NoError(t, err)
 

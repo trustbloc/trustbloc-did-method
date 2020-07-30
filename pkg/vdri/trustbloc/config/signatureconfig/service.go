@@ -45,18 +45,13 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 	}
 
 	n := consortium.Policy.NumQueries
-
-	// if ds.numStakeholders is 0, then we use all stakeholders
-	if n == 0 {
+	if n == 0 || n > len(consortium.Members) {
 		n = len(consortium.Members)
 	}
 
 	perm := rand.Perm(len(consortium.Members))
-
-	sig := consortiumData.JWS
-
-	// number of stakeholders that have verified
 	verifiedCount := 0
+	verificationErrors := ""
 
 	for i := 0; i < len(consortium.Members); i++ {
 		keyData := consortium.Members[perm[i]].PublicKey.JWK
@@ -64,13 +59,19 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 
 		err := key.UnmarshalJSON(keyData)
 		if err != nil {
-			log.Warnf("bad key for stakeholder: %s", consortium.Members[perm[i]].Domain)
+			msg := "bad key for stakeholder: " + consortium.Members[perm[i]].Domain
+			log.Warn(msg)
+			verificationErrors += msg + ", "
+
 			continue
 		}
 
-		_, _, _, err = sig.VerifyMulti(key)
+		_, _, _, err = consortiumData.JWS.VerifyMulti(key)
 		if err != nil {
-			log.Warnf("key fails to verify for stakeholder: %s", consortium.Members[perm[i]].Domain)
+			msg := "key fails to verify for stakeholder: " + consortium.Members[perm[i]].Domain
+			log.Warn(msg)
+			verificationErrors += msg + ", "
+
 			continue
 		}
 
@@ -82,7 +83,9 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 	}
 
 	if verifiedCount < n {
-		return nil, fmt.Errorf("insufficient stakeholder endorsement of consortium config file")
+		return nil, fmt.Errorf(
+			"insufficient stakeholder endorsement of consortium config file. errors are: [%s]",
+			verificationErrors)
 	}
 
 	return consortiumData, nil

@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	"github.com/square/go-jose/v3"
 	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 )
@@ -99,6 +100,16 @@ func (doc *Doc) JSONBytes() ([]byte, error) {
 	}
 
 	return byteDoc, nil
+}
+
+// GetValueFromJWK Populate the PublicKey contents from a JSON Web Key
+func (pk *PublicKey) GetValueFromJWK(jwk *jose.JSONWebKey) error {
+	if edKey, ok := jwk.Key.(ed25519.PublicKey); ok {
+		pk.Value = edKey
+		return nil
+	}
+
+	return fmt.Errorf("unsupported PublicKey source key type")
 }
 
 func populateRawPublicKeys(pks []PublicKey) ([]map[string]interface{}, error) {

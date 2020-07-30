@@ -23,6 +23,7 @@ import (
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/didconfiguration"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
@@ -145,25 +146,69 @@ func createCreateConfigCmd() *cobra.Command {
 				config: config,
 			}
 
-			filesData, err := createConfig(parameters)
+			filesData, didConfData, err := createConfig(parameters)
 			if err != nil {
 				return err
 			}
 
-			return writeConfig(outputDirectory, filesData)
+			err = os.RemoveAll(outputDirectory)
+			if err != nil {
+				return fmt.Errorf("remove outputDirectory: %w", err)
+			}
+
+			err = writeConfig(outputDirectory, filesData)
+			if err != nil {
+				return err
+			}
+
+			return writeDIDConfiguration(outputDirectory, didConfData)
 		},
 	}
 }
 
 func writeConfig(outputDirectory string, filesData map[string][]byte) error {
 	if outputDirectory != "" {
+		if err := os.MkdirAll(outputDirectory, 0755); err != nil {
+			return err
+		}
+	}
+
+	if err := os.MkdirAll(path.Join(outputDirectory, "did-trustbloc"), 0755); err != nil {
+		return err
+	}
+
+	for k, v := range filesData {
+		err := ioutil.WriteFile(path.Join(outputDirectory, "did-trustbloc", k+".json"), v, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to write file %w", err)
+		}
+	}
+
+	return nil
+}
+
+func createDIDConfiguration(domain, did string, expiryTime int64, signiningKeys ...*gojose.SigningKey) ([]byte, error) {
+	conf, err := didconfiguration.CreateDIDConfiguration(domain, did, expiryTime, signiningKeys...)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(conf)
+}
+
+func writeDIDConfiguration(outputDirectory string, filesData map[string][]byte) error {
+	if outputDirectory != "" {
 		if err := os.MkdirAll(outputDirectory, 0700); err != nil {
 			return err
 		}
 	}
 
-	for k, v := range filesData {
-		err := ioutil.WriteFile(path.Join(outputDirectory, k+".json"), v, 0644)
+	for domain, data := range filesData {
+		if err := os.MkdirAll(path.Join(outputDirectory, domain), 0700); err != nil {
+			return err
+		}
+
+		err := ioutil.WriteFile(path.Join(outputDirectory, domain, "did-configuration.json"), data, 0644)
 		if err != nil {
 			return fmt.Errorf("failed to write file %w", err)
 		}
@@ -240,9 +285,11 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(outputDirectoryFlagName, "", "", outputDirectoryFlagUsage)
 }
 
-func createConfig(parameters *parameters) (map[string][]byte, error) {
+func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte, error) {
 	filesData := make(map[string][]byte)
 	sigKeys := make([]gojose.SigningKey, 0)
+
+	didConfData := make(map[string][]byte)
 
 	consortium := models.Consortium{Domain: parameters.config.ConsortiumData.Domain,
 		Policy: parameters.config.ConsortiumData.Policy}
@@ -250,12 +297,12 @@ func createConfig(parameters *parameters) (map[string][]byte, error) {
 	for _, member := range parameters.config.MembersData {
 		didDoc, err := createDID(parameters.didClient, parameters.sidetreeURL, &member.jsonWebKey)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		pubKey, err := member.jsonWebKey.Public().MarshalJSON()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		consortium.Members = append(consortium.Members, &models.StakeholderListElement{Domain: member.Domain,
@@ -267,32 +314,40 @@ func createConfig(parameters *parameters) (map[string][]byte, error) {
 
 		stakeholderBytes, err := json.Marshal(stakeholder)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		jws, err := signConfig(stakeholderBytes, []gojose.SigningKey{member.sigKey})
+		jws, err :=
+			signConfig(stakeholderBytes, []gojose.SigningKey{member.sigKey})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		sigKeys = append(sigKeys, member.sigKey)
 
 		filesData[member.Domain] = []byte(jws)
+
+		didConf, err := createDIDConfiguration(member.Domain, didDoc.ID, 0, &member.sigKey)
+		if err != nil {
+			return nil, nil, fmt.Errorf("did configuration failed %w: ", err)
+		}
+
+		didConfData[member.Domain] = didConf
 	}
 
 	consortiumBytes, err := json.Marshal(consortium)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	jws, err := signConfig(consortiumBytes, sigKeys)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	filesData[consortium.Domain] = []byte(jws)
 
-	return filesData, nil
+	return filesData, didConfData, nil
 }
 
 func signConfig(configBytes []byte, keys []gojose.SigningKey) (string, error) {
@@ -310,19 +365,27 @@ func signConfig(configBytes []byte, keys []gojose.SigningKey) (string, error) {
 }
 
 func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey) (*docdid.Doc, error) {
-	pubKey, err := jwk.Public().MarshalJSON()
+	pkBytes, err := jwk.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
 
+	general := did.PublicKey{
+		ID:       jwk.KeyID,
+		Type:     did.JWSVerificationKey2020,
+		Encoding: did.PublicKeyEncodingJwk,
+		KeyType:  did.Ed25519KeyType,
+		Value:    pkBytes,
+		Purpose:  []string{did.KeyPurposeGeneral},
+	}
+
+	recovery := did.PublicKey{Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, Value: pkBytes, Recovery: true}
+
+	update := did.PublicKey{Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, Value: pkBytes, Update: true}
 
 	// TODO: Verify usage of this code - recovery, update and general purpose key should NOT be the same
-	return didClient.CreateDID("", did.WithSidetreeEndpoint(sidetreeURL), did.WithPublicKey(&did.PublicKey{
-		Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, Value: pubKey, Recovery: true}),
-		did.WithPublicKey(&did.PublicKey{
-			Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, Value: pubKey, Update: true}),
-		did.WithPublicKey(&did.PublicKey{ID: jwk.KeyID,
-			Type: did.JWSVerificationKey2020, Encoding: did.PublicKeyEncodingJwk, KeyType: did.Ed25519KeyType,
-			Value:   pubKey,
-			Purpose: []string{did.KeyPurposeGeneral}}))
+	return didClient.CreateDID("", did.WithSidetreeEndpoint(sidetreeURL),
+		did.WithPublicKey(&recovery),
+		did.WithPublicKey(&update),
+		did.WithPublicKey(&general))
 }
