@@ -27,7 +27,9 @@ type ConfigService struct {
 
 // NewService create new ConfigService
 func NewService(config config) *ConfigService {
-	configService := &ConfigService{config: config}
+	configService := &ConfigService{
+		config: config,
+	}
 
 	return configService
 }
@@ -56,16 +58,22 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 	// number of stakeholders that have verified
 	verifiedCount := 0
 
+	verificationErrors := ""
+
 	for i := 0; i < n; i++ {
 		stakeholder := consortium.Members[perm[i]].Domain
 		// get consortium file from stakeholder server
 		file, err := cs.config.GetConsortium(stakeholder, domain)
 		if err != nil {
-			log.Warnf("stakeholder peer failed to return consortium config")
+			msg := "stakeholder peer failed to return consortium config: " + err.Error()
+			log.Warn(msg)
+			verificationErrors += msg + ", "
+
 			continue // skip failed stakeholders
 		}
 
 		if !bytes.Equal(file.JWS.UnsafePayloadWithoutVerification(), consortiumData.JWS.UnsafePayloadWithoutVerification()) {
+			verificationErrors += "stakeholder copy of consortium file does not match, "
 			continue
 		}
 
@@ -73,7 +81,9 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 	}
 
 	if verifiedCount < n {
-		return nil, fmt.Errorf("insufficient stakeholder endorsement of consortium config file")
+		return nil, fmt.Errorf(
+			"insufficient stakeholder endorsement of consortium config file. errors are: [%s]",
+			verificationErrors)
 	}
 
 	return consortiumData, nil

@@ -114,7 +114,7 @@ func TestClient_CreateDID(t *testing.T) {
 
 		// test http status not equal 200
 		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer serv.Close()
 
@@ -395,6 +395,40 @@ func TestClient_CreateDID(t *testing.T) {
 		require.Equal(t, 1, len(createDIDOpts.services))
 		require.Equal(t, "serviceID", createDIDOpts.services[0].ID)
 		require.Equal(t, "sidetree", createDIDOpts.sidetreeEndpoint)
+	})
+}
+
+func Test_unwrapPubKeyJWK(t *testing.T) {
+	t.Run("no wrapping", func(t *testing.T) {
+		key := PublicKey{Value: []byte("abcd")}
+		key2, err := unwrapPubKeyJWK(key)
+		require.NoError(t, err)
+		require.Contains(t, string(key2.Value), "abcd")
+	})
+
+	t.Run("unwrap wrapped jwk", func(t *testing.T) {
+		key := PublicKey{Value: []byte(`{
+  "kty": "OKP",
+  "kid": "key1",
+  "crv": "Ed25519",
+  "x": "test value"
+}`)}
+		key2, err := unwrapPubKeyJWK(key)
+		require.NoError(t, err)
+		require.Contains(t, string(key2.Value), "test value")
+	})
+
+	t.Run("error unsupported type", func(t *testing.T) {
+		key := PublicKey{Value: []byte(`{
+          "kty":"EC",
+          "crv":"P-256",
+          "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+          "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+          "use":"enc",
+          "kid":"1"}`)}
+		_, err := unwrapPubKeyJWK(key)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unsupported PublicKey source key type")
 	})
 }
 

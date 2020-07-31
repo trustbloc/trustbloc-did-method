@@ -18,6 +18,7 @@ import (
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	log "github.com/sirupsen/logrus"
+	"github.com/square/go-jose/v3"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
@@ -111,12 +112,44 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 	return resDoc, nil
 }
 
+// unwrapPubKeyJWK takes a key which may contain a JSON JWK as a public key value
+// and returns a PublicKey which contains the JWK's key value as the public key value
+func unwrapPubKeyJWK(key PublicKey) (*PublicKey, error) { // nolint: gocritic
+	out := key
+
+	var jwk jose.JSONWebKey
+
+	// skip those that don't parse - expect them to be binary keys instead of JWKs
+	err := jwk.UnmarshalJSON(out.Value)
+	if err == nil {
+		pub := jwk.Public()
+
+		err = out.GetValueFromJWK(&pub)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &out, nil
+}
+
 // buildSideTreeRequest request builder for sidetree public DID creation
 func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, error) {
 	publicKeys := createDIDOpts.publicKeys
 
+	var parsedKeys []PublicKey
+
+	for _, key := range publicKeys {
+		parsedKey, err := unwrapPubKeyJWK(key)
+		if err != nil {
+			return nil, err
+		}
+
+		parsedKeys = append(parsedKeys, *parsedKey)
+	}
+
 	doc := &Doc{
-		PublicKey: publicKeys,
+		PublicKey: parsedKeys,
 		Service:   createDIDOpts.services,
 	}
 
