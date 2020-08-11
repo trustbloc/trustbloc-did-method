@@ -61,8 +61,8 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
-		// TODO retry
+	if res.StatusCode != http.StatusOK {
+		// TODO retry https://github.com/trustbloc/trustbloc-did-method/issues/159
 		return nil, fmt.Errorf("consortium config request failed: error %d, `%s`", res.StatusCode, string(body))
 	}
 
@@ -84,8 +84,8 @@ func (cs *ConfigService) GetStakeholder(url, domain string) (*models.Stakeholder
 		return nil, err
 	}
 
-	if res.StatusCode != 200 {
-		// TODO retry
+	if res.StatusCode != http.StatusOK {
+		// TODO retry https://github.com/trustbloc/trustbloc-did-method/issues/159
 		return nil, fmt.Errorf("stakeholder config request failed: error %d, `%s`", res.StatusCode, string(body))
 	}
 
