@@ -32,8 +32,6 @@ const (
 	// PublicKeyEncodingJwk define jwk encoding type
 	PublicKeyEncodingJwk = "Jwk"
 
-	// KeyPurposeOps defines key purpose as operations key
-	KeyPurposeOps = "ops"
 	// KeyPurposeAuth defines key purpose as authentication key
 	KeyPurposeAuth = "auth"
 	// KeyPurposeAssertion defines key purpose as assertion key

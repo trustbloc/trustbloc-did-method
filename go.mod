@@ -16,5 +16,5 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/square/go-jose/v3 v3.0.0-20191119004800-96c717272387
 	github.com/stretchr/testify v1.5.1
-	github.com/trustbloc/sidetree-core-go v0.1.4-0.20200702215916-b02022f5ec37
+	github.com/trustbloc/sidetree-core-go v0.1.4-0.20200818145448-94243b40fa44
 )

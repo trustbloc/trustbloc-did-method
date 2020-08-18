@@ -11,7 +11,7 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/square/go-jose/v3 v3.0.0-20191119004800-96c717272387
 	github.com/stretchr/testify v1.5.1
-	github.com/trustbloc/edge-core v0.1.3
+	github.com/trustbloc/edge-core v0.1.4-0.20200709143857-e104bb29f6c6
 	github.com/trustbloc/trustbloc-did-method v0.0.0-00010101000000-000000000000
 )
 
