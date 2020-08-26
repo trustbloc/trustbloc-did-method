@@ -48,7 +48,7 @@ func TestConfigService_GetConsortium(t *testing.T) {
 	t.Run("failure: can't reach server", func(t *testing.T) {
 		cs := NewService()
 
-		_, err := cs.GetConsortium("http://0.0.0.0:0", "foo.bar")
+		_, err := cs.GetConsortium("https://0.0.0.0:8080", "foo.bar")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "connection refused")
 	})
@@ -105,7 +105,7 @@ func TestConfigService_GetStakeholder(t *testing.T) {
 	t.Run("failure: can't reach server", func(t *testing.T) {
 		cs := NewService()
 
-		_, err := cs.GetStakeholder("http://0.0.0.0:0", "foo.bar")
+		_, err := cs.GetStakeholder("https://0.0.0.0:8080", "foo.bar")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "connection refused")
 	})
