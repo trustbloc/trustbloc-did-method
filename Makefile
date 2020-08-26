@@ -12,7 +12,7 @@ ALPINE_VER ?= 3.10
 GO_VER     ?= 1.13.1
 
 .PHONY: all
-all: checks unit-test
+all: checks unit-test bdd-test
 
 .PHONY: checks
 checks: license lint

@@ -7,9 +7,6 @@ package vdri
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -18,15 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/cucumber/godog"
 	"github.com/google/uuid"
 	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	ariesapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api"
-	ariescontext "github.com/hyperledger/aries-framework-go/pkg/framework/context"
-	"github.com/hyperledger/aries-framework-go/pkg/kms/legacykms"
-	"github.com/hyperledger/aries-framework-go/pkg/storage"
-	"github.com/hyperledger/aries-framework-go/pkg/storage/mem"
+	"github.com/hyperledger/aries-framework-go/pkg/kms"
+	"github.com/hyperledger/aries-framework-go/pkg/kms/localkms"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
@@ -36,7 +29,6 @@ import (
 
 const (
 	maxRetry      = 10
-	pubKeyIndex1  = "key-1"
 	recoveryKeyID = "recovery"
 	updateKeyID   = "update"
 	serviceID     = "service"
@@ -64,7 +56,7 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 }
 
 func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nolint: gocyclo,funlen
-	pubKey, err := getPublicKey(keyType)
+	kid, pubKey, err := e.getPublicKey(keyType)
 	if err != nil {
 		return err
 	}
@@ -73,7 +65,7 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID, DIDDocument: operation.DIDDocument{
 		PublicKey: []*operation.PublicKey{
-			{ID: pubKeyIndex1, Type: signatureSuite, Value: base64.StdEncoding.EncodeToString(pubKey),
+			{ID: kid, Type: signatureSuite, Value: base64.StdEncoding.EncodeToString(pubKey),
 				Encoding: did.PublicKeyEncodingJwk, KeyType: keyType, Purpose: []string{did.KeyPurposeGeneral}},
 			{ID: recoveryKeyID, Type: did.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
 				KeyType: keyType, Encoding: did.PublicKeyEncodingJwk, Recovery: true},
@@ -156,48 +148,17 @@ func (e *Steps) resolveCreatedDID(url, keyType, signatureSuite string) error {
 	return nil
 }
 
-func createKMS(s storage.Provider) (ariesapi.CloseableKMS, error) {
-	kmsProvider, err := ariescontext.New(ariescontext.WithStorageProvider(s))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new kms provider: %w", err)
-	}
-
-	kms, err := legacykms.New(kmsProvider)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new kms: %w", err)
-	}
-
-	return kms, nil
-}
-
-func getPublicKey(keyType string) ([]byte, error) {
-	var pubKey []byte
+func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {
+	var kt kms.KeyType
 
 	switch keyType {
 	case did.Ed25519KeyType:
-		kms, err := createKMS(mem.NewProvider())
-		if err != nil {
-			return nil, err
-		}
-
-		_, base58PubKey, err := kms.CreateKeySet()
-		if err != nil {
-			return nil, err
-		}
-
-		pubKey = base58.Decode(base58PubKey)
+		kt = kms.ED25519Type
 	case P256KeyType:
-		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-
-		ecPubKeyBytes := elliptic.Marshal(ecPrivKey.PublicKey.Curve, ecPrivKey.PublicKey.X, ecPrivKey.PublicKey.Y)
-
-		pubKey = ecPubKeyBytes
+		kt = kms.ECDSAP256TypeIEEEP1363
 	}
 
-	return pubKey, nil
+	return e.bddContext.LocalKMS.CreateAndExportPubKeyBytes(kt)
 }
 
 func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error {
@@ -207,11 +168,15 @@ func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error 
 
 	expectedJwkKeyType := ""
 
+	var kt kms.KeyType
+
 	switch keyType {
 	case did.Ed25519KeyType:
 		expectedJwkKeyType = "OKP"
+		kt = kms.ED25519Type
 	case P256KeyType:
 		expectedJwkKeyType = "EC"
+		kt = kms.ECDSAP256TypeIEEEP1363
 	}
 
 	if signatureSuite == did.JWSVerificationKey2020 &&
@@ -225,9 +190,18 @@ func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error 
 		return fmt.Errorf("jwk is not nil for %s", signatureSuite)
 	}
 
-	if doc.PublicKey[0].ID != doc.ID+"#"+pubKeyIndex1 {
+	return verifyPublicKeyAndType(doc, kt, signatureSuite)
+}
+
+func verifyPublicKeyAndType(doc *ariesdid.Doc, kt kms.KeyType, signatureSuite string) error {
+	pubKeyID, err := localkms.CreateKID(doc.PublicKey[0].Value, kt)
+	if err != nil {
+		return err
+	}
+
+	if doc.PublicKey[0].ID != doc.ID+"#"+pubKeyID {
 		return fmt.Errorf("resolved did public key ID %s not equal to %s",
-			doc.PublicKey[0].ID, doc.ID+"#"+pubKeyIndex1)
+			doc.PublicKey[0].ID, doc.ID+"#"+pubKeyID)
 	}
 
 	if doc.PublicKey[0].Type != signatureSuite {
