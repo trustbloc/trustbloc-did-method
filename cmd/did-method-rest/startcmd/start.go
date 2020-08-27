@@ -19,6 +19,7 @@ import (
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
+	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/healthcheck"
 )
 
 const (
@@ -223,8 +224,17 @@ func startDidMethod(parameters *parameters) error {
 		return err
 	}
 
-	handlers := didMethodService.GetOperations()
 	router := mux.NewRouter()
+
+	// add health check endpoint
+	healthCheckService := healthcheck.New()
+
+	healthCheckHandlers := healthCheckService.GetOperations()
+	for _, handler := range healthCheckHandlers {
+		router.HandleFunc(handler.Path(), handler.Handle()).Methods(handler.Method())
+	}
+
+	handlers := didMethodService.GetOperations()
 
 	for _, handler := range handlers {
 		router.HandleFunc(handler.Path(), handler.Handle()).Methods(handler.Method())
