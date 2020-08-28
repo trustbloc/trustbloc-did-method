@@ -61,11 +61,14 @@ type VDRI struct {
 	authToken        string
 
 	validatedConsortium map[string]bool
+
+	enableSignatureVerification bool
 }
 
 // New creates new bloc vdri
 func New(opts ...Option) *VDRI {
 	v := &VDRI{}
+	v.enableSignatureVerification = false
 
 	for _, opt := range opts {
 		opt(v)
@@ -77,8 +80,14 @@ func New(opts ...Option) *VDRI {
 	}
 
 	configService := httpconfig.NewService(httpconfig.WithTLSConfig(v.tlsConfig))
-	verifyingService := signatureconfig.NewService(verifyingconfig.NewService(configService))
-	v.configService = memorycacheconfig.NewService(verifyingService)
+
+	if v.enableSignatureVerification {
+		verifyingService := signatureconfig.NewService(verifyingconfig.NewService(configService))
+		v.configService = memorycacheconfig.NewService(verifyingService)
+	} else {
+		v.configService = memorycacheconfig.NewService(verifyingconfig.NewService(configService))
+	}
+
 	v.endpointService = endpoint.NewService(
 		staticdiscovery.NewService(v.configService),
 		staticselection.NewService(v.configService))
@@ -140,13 +149,15 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 		return nil, fmt.Errorf("wrong did %s", did)
 	}
 
-	if _, ok := v.validatedConsortium[didParts[domainDIDPart]]; !ok {
-		_, err := v.ValidateConsortium(didParts[domainDIDPart])
-		if err != nil {
-			return nil, fmt.Errorf("invalid consortium: %w", err)
-		}
+	if v.enableSignatureVerification {
+		if _, ok := v.validatedConsortium[didParts[domainDIDPart]]; !ok {
+			_, err := v.ValidateConsortium(didParts[domainDIDPart])
+			if err != nil {
+				return nil, fmt.Errorf("invalid consortium: %w", err)
+			}
 
-		v.validatedConsortium[didParts[domainDIDPart]] = true
+			v.validatedConsortium[didParts[domainDIDPart]] = true
+		}
 	}
 
 	endpoints, err := v.endpointService.GetEndpoints(didParts[domainDIDPart])
@@ -334,5 +345,12 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 func WithAuthToken(authToken string) Option {
 	return func(opts *VDRI) {
 		opts.authToken = authToken
+	}
+}
+
+// EnableSignatureVerification enables signature verification
+func EnableSignatureVerification() Option {
+	return func(opts *VDRI) {
+		opts.enableSignatureVerification = true
 	}
 }
