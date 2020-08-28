@@ -6,7 +6,7 @@
 #
 set -e
 
-echo "Running vc integration tests..."
+echo "Running trustbloc-did-method integration tests..."
 PWD=`pwd`
 cd test/bdd
 go test -count=1 -v -cover . -p 1 -timeout=20m -race
