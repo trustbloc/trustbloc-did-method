@@ -249,8 +249,8 @@ github.com/trustbloc/edge-core v0.1.4 h1:qOtQxHY+a6PSxz+o9Cdi8kRzUyA5c4CPd9NsNPz
 github.com/trustbloc/edge-core v0.1.4/go.mod h1:mTU1E/HcKcjmHaPCjBOvHERuryGhh5zgVkRSi4slAHg=
 github.com/trustbloc/json-gold v0.3.1-0.20200414173446-30d742ee949e h1:i+hGa8C1MKGO71j3jIV7e2aKX72/DTrzLjq9R8kc6xk=
 github.com/trustbloc/json-gold v0.3.1-0.20200414173446-30d742ee949e/go.mod h1:OK1z7UgtBZk06n2cDE2OSq1kffmjFFp5/2yhLLCz9UM=
-github.com/trustbloc/sidetree-core-go v0.1.4 h1:rnHipgA4mqR7J/cNgen4ZjaghCV0UaEKwVo3j38NDRY=
-github.com/trustbloc/sidetree-core-go v0.1.4/go.mod h1:prRWqxBavkSxgKtPmUriSxCemrvl47yStMbW4jMFuRs=
+github.com/trustbloc/sidetree-core-go v0.1.5-0.20200904134412-6c2efa84f694 h1:eOGjUCAEFiyUCfqJxXBxDhovyXqSFu4pjyuelyZTY9k=
+github.com/trustbloc/sidetree-core-go v0.1.5-0.20200904134412-6c2efa84f694/go.mod h1:prRWqxBavkSxgKtPmUriSxCemrvl47yStMbW4jMFuRs=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb h1:zGWFAtiMcyryUHoUjUJX0/lt1H2+i2Ka2n+D3DImSNo=
