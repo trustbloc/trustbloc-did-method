@@ -32,7 +32,9 @@ import (
 )
 
 const (
-	sha2_256 = 18
+	// default hashes for sidetree
+	sha2_256 = 18 // multihash
+	sha256   = 5  // hash
 )
 
 type endpointService interface {
@@ -168,12 +170,12 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 		return nil, fmt.Errorf("failed to get update key : %s", err)
 	}
 
-	recoveryCommitment, err := commitment.Calculate(recoveryKey, sha2_256)
+	recoveryCommitment, err := commitment.Calculate(recoveryKey, sha2_256, sha256)
 	if err != nil {
 		return nil, err
 	}
 
-	updateCommitment, err := commitment.Calculate(updateKey, sha2_256)
+	updateCommitment, err := commitment.Calculate(updateKey, sha2_256, sha256)
 	if err != nil {
 		return nil, err
 	}
