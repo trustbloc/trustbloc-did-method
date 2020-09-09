@@ -68,7 +68,6 @@ type VDRI struct {
 // New creates new bloc vdri
 func New(opts ...Option) *VDRI {
 	v := &VDRI{}
-	v.enableSignatureVerification = false
 
 	for _, opt := range opts {
 		opt(v)
@@ -349,8 +348,8 @@ func WithAuthToken(authToken string) Option {
 }
 
 // EnableSignatureVerification enables signature verification
-func EnableSignatureVerification() Option {
+func EnableSignatureVerification(enable bool) Option {
 	return func(opts *VDRI) {
-		opts.enableSignatureVerification = true
+		opts.enableSignatureVerification = enable
 	}
 }

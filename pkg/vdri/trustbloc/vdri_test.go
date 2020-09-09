@@ -627,7 +627,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 
 		didConfFile = string(didConfBytes)
 
-		v := New()
+		v := New(EnableSignatureVerification(true))
 
 		v.configService = &mockconfig.MockConfigService{
 			GetConsortiumFunc: func(u string, d string) (*models.ConsortiumFileData, error) {
@@ -952,6 +952,20 @@ func TestOpts(t *testing.T) {
 
 		require.Equal(t, "test", v.tlsConfig.ServerName)
 		require.Equal(t, "tk1", v.authToken)
+	})
+
+	t.Run("test signature verification", func(t *testing.T) {
+		var opts []Option
+		opts = append(opts, EnableSignatureVerification(true))
+
+		v := &VDRI{}
+
+		// Apply options
+		for _, opt := range opts {
+			opt(v)
+		}
+
+		require.Equal(t, true, v.enableSignatureVerification)
 	})
 }
 

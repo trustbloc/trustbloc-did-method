@@ -54,13 +54,18 @@ const (
 
 	sidetreeReadTokenFlagName  = "sidetree-read-token"
 	sidetreeReadTokenEnvKey    = "SIDETREE_READ_TOKEN"
-	sidetreeReadTokenFlagUsage = "The sidetree read token " +
+	sidetreeReadTokenFlagUsage = "The sidetree read token." +
 		" Alternatively, this can be set with the following environment variable: " + sidetreeReadTokenEnvKey
 
 	sidetreeWriteTokenFlagName  = "sidetree-write-token"
 	sidetreeWriteTokenEnvKey    = "SIDETREE_WRITE_TOKEN" //nolint: gosec
-	sidetreeWriteTokenFlagUsage = "The sidetree write token " +
+	sidetreeWriteTokenFlagUsage = "The sidetree write token." +
 		" Alternatively, this can be set with the following environment variable: " + sidetreeWriteTokenEnvKey
+
+	enableSignaturesFlagName  = "enable-signatures"
+	enableSignaturesEnvKey    = "ENABLE_SIGNATURES"
+	enableSignaturesFlagUsage = "Enable signatures. Possible values [true] [false]. Defaults to true if not set." +
+		" Alternatively, this can be set with the following environment variable: " + enableSignaturesEnvKey
 )
 
 // mode in which to run the did-method service
@@ -93,6 +98,7 @@ type parameters struct {
 	mode               string
 	sidetreeReadToken  string
 	sidetreeWriteToken string
+	enableSignatures   bool
 }
 
 // GetStartCmd returns the Cobra start command.
@@ -143,6 +149,20 @@ func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 				return err
 			}
 
+			enableSignaturesString, err := cmdutils.GetUserSetVarFromString(cmd, enableSignaturesFlagName,
+				enableSignaturesEnvKey, true)
+			if err != nil {
+				return err
+			}
+
+			enableSignatures := true
+			if enableSignaturesString != "" {
+				enableSignatures, err = strconv.ParseBool(enableSignaturesString)
+				if err != nil {
+					return err
+				}
+			}
+
 			parameters := &parameters{
 				srv:                srv,
 				hostURL:            strings.TrimSpace(hostURL),
@@ -152,6 +172,7 @@ func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 				mode:               mode,
 				sidetreeReadToken:  sidetreeReadToken,
 				sidetreeWriteToken: sidetreeWriteToken,
+				enableSignatures:   enableSignatures,
 			}
 
 			return startDidMethod(parameters)
@@ -209,6 +230,7 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(modeFlagName, modeFlagShorthand, "", modeFlagUsage)
 	startCmd.Flags().StringP(sidetreeReadTokenFlagName, "", "", sidetreeReadTokenFlagUsage)
 	startCmd.Flags().StringP(sidetreeWriteTokenFlagName, "", "", sidetreeWriteTokenFlagUsage)
+	startCmd.Flags().StringP(enableSignaturesFlagName, "", "", enableSignaturesFlagUsage)
 }
 
 func startDidMethod(parameters *parameters) error {
@@ -219,7 +241,7 @@ func startDidMethod(parameters *parameters) error {
 
 	didMethodService, err := didmethod.New(&operation.Config{TLSConfig: &tls.Config{RootCAs: rootCAs},
 		BlocDomain: parameters.blocDomain, Mode: parameters.mode, SidetreeReadToken: parameters.sidetreeReadToken,
-		SidetreeWriteToken: parameters.sidetreeWriteToken})
+		SidetreeWriteToken: parameters.sidetreeWriteToken, EnableSignatures: parameters.enableSignatures})
 	if err != nil {
 		return err
 	}
