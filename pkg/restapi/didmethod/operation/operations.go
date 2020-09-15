@@ -58,6 +58,7 @@ type Config struct {
 	Mode               string
 	SidetreeReadToken  string
 	SidetreeWriteToken string
+	EnableSignatures   bool
 }
 
 type didBlocClient interface {
@@ -67,7 +68,7 @@ type didBlocClient interface {
 // New returns did method operation instance
 func New(config *Config) *Operation {
 	svc := &Operation{blocVDRI: trustbloc.New(trustbloc.WithTLSConfig(config.TLSConfig),
-		trustbloc.WithAuthToken(config.SidetreeReadToken)),
+		trustbloc.WithAuthToken(config.SidetreeReadToken), trustbloc.EnableSignatureVerification(config.EnableSignatures)),
 		didBlocClient: didclient.New(didclient.WithTLSConfig(config.TLSConfig),
 			didclient.WithAuthToken(config.SidetreeWriteToken)),
 		blocDomain: config.BlocDomain}

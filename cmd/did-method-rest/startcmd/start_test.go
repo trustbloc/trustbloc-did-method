@@ -59,6 +59,18 @@ func TestStartCmdValidArgs(t *testing.T) {
 	require.Nil(t, err)
 }
 
+func TestStartCmdWithInvalidEnableSignaturesArg(t *testing.T) {
+	startCmd := GetStartCmd(&mockServer{})
+
+	args := getValidArgs()
+	args = append(args, flag+"enable-signatures", "aaaaaa")
+
+	startCmd.SetArgs(args)
+
+	err := startCmd.Execute()
+	require.Error(t, err)
+}
+
 func TestStartCmdValidArgsEnvVar(t *testing.T) {
 	startCmd := GetStartCmd(&mockServer{})
 
