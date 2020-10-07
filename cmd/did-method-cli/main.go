@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/confighashcmd"
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/createconfigcmd"
 )
 
@@ -21,6 +22,7 @@ func main() {
 	}
 
 	rootCmd.AddCommand(createconfigcmd.GetCreateConfigCmd())
+	rootCmd.AddCommand(confighashcmd.GetConfigHashCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatalf("Failed to run did method cli: %s", err.Error())

@@ -5,7 +5,7 @@
       "url": "https://ashburn.capybara.veres.one/dids/$1"
     },
     {
-      "pattern": "^(did:trustbloc:testnet.trustbloc.local:.+)$",
+      "pattern": "^(did:trustbloc:.+)$",
       "url": "http://trustbloc.did.method.example.com:8070/resolveDID?did=$1"
     }
   ]

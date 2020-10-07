@@ -47,6 +47,11 @@ did-method-cli:
 	@cd cmd/did-method-cli && go build -o ../../.build/bin/cli main.go
 
 
+.PHONY: generate-config-hash
+generate-config-hash: did-method-cli
+	@echo "Generate config hash"
+	@scripts/generate_config_hash.sh
+
 .PHONY: did-method-rest-docker
 did-method-rest-docker:
 	@echo "Building did method docker image"

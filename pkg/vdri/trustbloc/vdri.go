@@ -53,6 +53,7 @@ type vdri interface {
 // VDRI bloc
 type VDRI struct {
 	resolverURL      string
+	domain           string
 	configService    configService
 	endpointService  endpointService
 	didConfigService didConfigService
@@ -148,18 +149,23 @@ func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error
 		return nil, fmt.Errorf("wrong did %s", did)
 	}
 
+	domain := didParts[domainDIDPart]
+	if v.domain != "" {
+		domain = v.domain
+	}
+
 	if v.enableSignatureVerification {
-		if _, ok := v.validatedConsortium[didParts[domainDIDPart]]; !ok {
-			_, err := v.ValidateConsortium(didParts[domainDIDPart])
+		if _, ok := v.validatedConsortium[domain]; !ok {
+			_, err := v.ValidateConsortium(domain)
 			if err != nil {
 				return nil, fmt.Errorf("invalid consortium: %w", err)
 			}
 
-			v.validatedConsortium[didParts[domainDIDPart]] = true
+			v.validatedConsortium[domain] = true
 		}
 	}
 
-	endpoints, err := v.endpointService.GetEndpoints(didParts[domainDIDPart])
+	endpoints, err := v.endpointService.GetEndpoints(domain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get endpoints: %w", err)
 	}
@@ -330,6 +336,13 @@ type Option func(opts *VDRI)
 func WithResolverURL(resolverURL string) Option {
 	return func(opts *VDRI) {
 		opts.resolverURL = resolverURL
+	}
+}
+
+// WithDomain option is setting domain
+func WithDomain(domain string) Option {
+	return func(opts *VDRI) {
+		opts.domain = domain
 	}
 }
 
