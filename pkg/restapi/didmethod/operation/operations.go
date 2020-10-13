@@ -68,7 +68,8 @@ type didBlocClient interface {
 // New returns did method operation instance
 func New(config *Config) *Operation {
 	svc := &Operation{blocVDRI: trustbloc.New(trustbloc.WithTLSConfig(config.TLSConfig),
-		trustbloc.WithAuthToken(config.SidetreeReadToken), trustbloc.EnableSignatureVerification(config.EnableSignatures)),
+		trustbloc.WithAuthToken(config.SidetreeReadToken), trustbloc.EnableSignatureVerification(config.EnableSignatures),
+		trustbloc.WithDomain(config.BlocDomain)),
 		didBlocClient: didclient.New(didclient.WithTLSConfig(config.TLSConfig),
 			didclient.WithAuthToken(config.SidetreeWriteToken)),
 		blocDomain: config.BlocDomain}

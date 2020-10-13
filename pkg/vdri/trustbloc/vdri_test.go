@@ -312,7 +312,7 @@ func TestVDRI_Read(t *testing.T) {
 	// })
 
 	t.Run("test success", func(t *testing.T) {
-		v := New()
+		v := New(WithDomain("domain"))
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {

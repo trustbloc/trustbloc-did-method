@@ -25,6 +25,7 @@ const flag = "--"
 var configData = `{
   "consortium_data": {
     "domain": "consortium.net",
+    "genesis_block": "6e2f978e16b59df1d6a1dfbacb92e7d3eddeb8b3fd825e573138b3fd77d77264",
     "policy": {
       "cache": {
         "max_age": 2419200
