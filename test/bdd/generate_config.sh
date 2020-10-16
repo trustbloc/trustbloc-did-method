@@ -9,4 +9,6 @@
 --tls-cacerts ../../test/bdd/fixtures/keys/tls/ec-cacert.pem --sidetree-write-token rw_token \
 --config-file ./fixtures/wellknown/config.json --output-directory ./fixtures/wellknown/jws
 rm -rf ./fixtures/wellknown/jws/stakeholder.one
+rm -rf ./fixtures/wellknown/jws/stakeholder.two
 mv ./fixtures/wellknown/jws/stakeholder.one:8088 ./fixtures/wellknown/jws/stakeholder.one
+mv ./fixtures/wellknown/jws/stakeholder.two:8089 ./fixtures/wellknown/jws/stakeholder.two
