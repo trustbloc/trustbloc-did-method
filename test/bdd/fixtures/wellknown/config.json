@@ -24,6 +24,14 @@
         "https://sidetree-mock:48326/sidetree/0.0.1"
       ],
       "privateKeyJwkPath": "../../test/bdd/fixtures/wellknown/stakeholderone_jwk.json"
+    },
+    {
+      "domain": "stakeholder.two:8089",
+      "policy": {"cache": {"max_age": 604800}},
+      "endpoints": [
+        "https://sidetree-mock:48326/sidetree/0.0.1"
+      ],
+      "privateKeyJwkPath": "../../test/bdd/fixtures/wellknown/stakeholdertwo_jwk.json"
     }
   ]
 }

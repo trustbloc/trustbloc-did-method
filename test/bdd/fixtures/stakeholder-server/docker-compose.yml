@@ -27,6 +27,25 @@ services:
     networks:
       - did-method-rest_bdd_net
 
+  stakeholder-two:
+    container_name: stakeholder.two
+    image: halverneus/static-file-server:latest
+    environment:
+      - PORT=8089
+      - FOLDER=/web
+      - CORS=true
+      - DEBUG=true
+      - TLS_CERT=/etc/tls/ec-pubCert.pem
+      - TLS_KEY=/etc/tls/ec-key.pem
+    ports:
+      - "8089:8089"
+    volumes:
+      - ../wellknown/jws/did-trustbloc:/web/.well-known/did-trustbloc
+      - ../wellknown/jws/stakeholder.two/did-configuration.json:/web/.well-known/did-configuration.json
+      - ../keys/tls:/etc/tls
+    networks:
+      - did-method-rest_bdd_net
+
 networks:
   did-method-rest_bdd_net:
     external: true

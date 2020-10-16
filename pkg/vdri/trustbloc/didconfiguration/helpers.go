@@ -162,7 +162,7 @@ func VerifyDIDSignature(jws *jose.JSONWebSignature, doc *did.Doc) ([]byte, error
 			return nil, fmt.Errorf("key is nil")
 		}
 
-		val, err = jws.Verify(key.Key)
+		_, _, val, err = jws.VerifyMulti(key.Key)
 		if err == nil {
 			verified = true
 			break
