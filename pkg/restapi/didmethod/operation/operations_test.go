@@ -16,8 +16,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
-	mockvdri "github.com/hyperledger/aries-framework-go/pkg/mock/vdri"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
+	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/stretchr/testify/require"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/didbloc"
@@ -170,8 +170,8 @@ func TestResolveDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test error from bloc vdri read", func(t *testing.T) {
-		handler := getHandler(t, &mockvdri.MockVDRI{
-			ReadFunc: func(didID string, opts ...vdri.ResolveOpts) (doc *did.Doc, err error) {
+		handler := getHandler(t, &mockvdr.MockVDR{
+			ReadFunc: func(didID string, opts ...vdr.ResolveOpts) (doc *did.Doc, err error) {
 				return nil, fmt.Errorf("read error")
 			}}, nil, resolveDIDEndpoint)
 
@@ -182,8 +182,8 @@ func TestResolveDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test success", func(t *testing.T) {
-		handler := getHandler(t, &mockvdri.MockVDRI{
-			ReadFunc: func(didID string, opts ...vdri.ResolveOpts) (doc *did.Doc, err error) {
+		handler := getHandler(t, &mockvdr.MockVDR{
+			ReadFunc: func(didID string, opts ...vdr.ResolveOpts) (doc *did.Doc, err error) {
 				return &did.Doc{ID: "didID", Context: []string{"context"}}, nil
 			}}, nil, resolveDIDEndpoint)
 
@@ -212,7 +212,7 @@ func handleRequest(handler Handler, path string, body []byte) (*bytes.Buffer, in
 	return rr.Body, rr.Code, nil
 }
 
-func getHandler(t *testing.T, blocVDRI vdri.VDRI,
+func getHandler(t *testing.T, blocVDRI vdr.VDR,
 	didBlocClient didBlocClient, lookup string) Handler {
 	svc := New(&Config{})
 	require.NotNil(t, svc)

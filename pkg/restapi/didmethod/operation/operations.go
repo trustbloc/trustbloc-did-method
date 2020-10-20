@@ -15,7 +15,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	log "github.com/sirupsen/logrus"
 
 	didclient "github.com/trustbloc/trustbloc-did-method/pkg/did"
@@ -46,7 +46,7 @@ type Handler interface {
 
 // Operation defines handlers
 type Operation struct {
-	blocVDRI      vdri.VDRI
+	blocVDRI      vdr.VDR
 	didBlocClient didBlocClient
 	blocDomain    string
 }

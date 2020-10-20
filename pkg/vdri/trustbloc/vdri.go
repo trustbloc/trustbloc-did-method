@@ -17,8 +17,8 @@ import (
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/signature/jsonld"
-	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
-	"github.com/hyperledger/aries-framework-go/pkg/vdri/httpbinding"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
+	"github.com/hyperledger/aries-framework-go/pkg/vdr/httpbinding"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
@@ -46,8 +46,8 @@ type didConfigService interface {
 }
 
 type vdri interface {
-	Build(pubKey *vdriapi.PubKey, opts ...vdriapi.DocOpts) (*docdid.Doc, error)
-	Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error)
+	Build(pubKey *vdrapi.PubKey, opts ...vdrapi.DocOpts) (*docdid.Doc, error)
+	Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error)
 }
 
 // VDRI bloc
@@ -110,16 +110,16 @@ func (v *VDRI) Close() error {
 }
 
 // Store did doc
-func (v *VDRI) Store(doc *docdid.Doc, by *[]vdriapi.ModifiedBy) error {
+func (v *VDRI) Store(doc *docdid.Doc, by *[]vdrapi.ModifiedBy) error {
 	return nil
 }
 
 // Build did doc
-func (v *VDRI) Build(pubKey *vdriapi.PubKey, opts ...vdriapi.DocOpts) (*docdid.Doc, error) {
+func (v *VDRI) Build(pubKey *vdrapi.PubKey, opts ...vdrapi.DocOpts) (*docdid.Doc, error) {
 	return nil, fmt.Errorf("build method not supported for did bloc")
 }
 
-func (v *VDRI) sidetreeResolve(url, did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error) {
+func (v *VDRI) sidetreeResolve(url, did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error) {
 	resolver, err := v.getHTTPVDRI(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new sidetree vdri: %w", err)
@@ -138,7 +138,7 @@ const (
 	domainDIDPart             = 2
 )
 
-func (v *VDRI) Read(did string, opts ...vdriapi.ResolveOpts) (*docdid.Doc, error) { //nolint: gocyclo
+func (v *VDRI) Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error) { //nolint: gocyclo
 	if v.resolverURL != "" {
 		return v.sidetreeResolve(v.resolverURL, did, opts...)
 	}
