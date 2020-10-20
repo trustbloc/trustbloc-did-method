@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	vdriapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdri"
-	mockvdri "github.com/hyperledger/aries-framework-go/pkg/mock/vdri"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
+	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/square/go-jose/v3"
 	"github.com/stretchr/testify/require"
 
@@ -59,8 +59,8 @@ func TestVDRI_Build(t *testing.T) {
 
 func httpVdriFunc(doc *did.Doc, err error) func(url string) (v vdri, err error) {
 	return func(url string) (v vdri, e error) {
-		return &mockvdri.MockVDRI{
-			ReadFunc: func(didID string, opts ...vdriapi.ResolveOpts) (*did.Doc, error) {
+		return &mockvdr.MockVDR{
+			ReadFunc: func(didID string, opts ...vdrapi.ResolveOpts) (*did.Doc, error) {
 				return doc, err
 			}}, nil
 	}
@@ -299,8 +299,8 @@ func TestVDRI_Read(t *testing.T) {
 	// 	counter := 0
 	//
 	// 	v.getHTTPVDRI = func(url string) (v vdri, err error) {
-	// 		return &mockvdri.MockVDRI{
-	// 			ReadFunc: func(didID string, opts ...vdriapi.ResolveOpts) (*did.Doc, error) {
+	// 		return &mockvdr.MockVDRI{
+	// 			ReadFunc: func(didID string, opts ...vdrapi.ResolveOpts) (*did.Doc, error) {
 	// 				counter++
 	// 				return generateDIDDoc("test:" + string(counter)), nil
 	// 			}}, nil
