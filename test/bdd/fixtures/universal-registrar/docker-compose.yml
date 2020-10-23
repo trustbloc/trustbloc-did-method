@@ -9,7 +9,7 @@ version: '3'
 services:
 
   uni-registrar-web:
-    image: universalregistrar/uni-registrar-web:latest
+    image: honeyblock/uni-registrar-web:custom_v1.0
     volumes:
       - ./config.json:/opt/uni-registrar-java/uni-registrar-web/config.json
     ports:
