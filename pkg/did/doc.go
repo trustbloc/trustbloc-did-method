@@ -21,27 +21,29 @@ import (
 const (
 	jsonldID            = "id"
 	jsonldType          = "type"
-	jsonldUsage         = "purpose"
-	jsonldServicePoint  = "endpoint"
+	jsonldPurposes      = "purposes"
+	jsonldServicePoint  = "serviceEndpoint"
 	jsonldRecipientKeys = "recipientKeys"
 	jsonldRoutingKeys   = "routingKeys"
 	jsonldPriority      = "priority"
 
-	jsonldPublicKeyjwk = "jwk"
+	jsonldPublicKeyjwk = "publicKeyJwk"
 
 	// PublicKeyEncodingJwk define jwk encoding type
 	PublicKeyEncodingJwk = "Jwk"
 
-	// KeyPurposeAuth defines key purpose as authentication key
-	KeyPurposeAuth = "auth"
-	// KeyPurposeAssertion defines key purpose as assertion key
-	KeyPurposeAssertion = "assertion"
-	// KeyPurposeDelegation defines key purpose as delegation key
-	KeyPurposeDelegation = "delegation"
-	// KeyPurposeInvocation defines key purpose as invocation key
-	KeyPurposeInvocation = "invocation"
-	// KeyPurposeGeneral defines key purpose as general key
-	KeyPurposeGeneral = "general"
+	// KeyPurposeAuthentication defines key purpose as authentication key.
+	KeyPurposeAuthentication = "authentication"
+	// KeyPurposeAssertionMethod defines key purpose as assertion key.
+	KeyPurposeAssertionMethod = "assertionMethod"
+	// KeyPurposeKeyAgreement defines key purpose as agreement key.
+	KeyPurposeKeyAgreement = "keyAgreement"
+	// KeyPurposeCapabilityDelegation defines key purpose as delegation key.
+	KeyPurposeCapabilityDelegation = "capabilityDelegation"
+	// KeyPurposeCapabilityInvocation defines key purpose as invocation key.
+	KeyPurposeCapabilityInvocation = "capabilityInvocation"
+	// KeyPurposeVerificationMethod defines key purpose as verification(general key).
+	KeyPurposeVerificationMethod = "verificationMethod"
 
 	// JWSVerificationKey2020 defines key type signature
 	JWSVerificationKey2020 = "JwsVerificationKey2020"
@@ -73,7 +75,7 @@ type PublicKey struct {
 	Type     string
 	Encoding string
 	KeyType  string
-	Purpose  []string
+	Purposes []string
 	Recovery bool
 	Update   bool
 
@@ -131,7 +133,7 @@ func populateRawPublicKey(pk *PublicKey) (map[string]interface{}, error) {
 	rawPK := make(map[string]interface{})
 	rawPK[jsonldID] = pk.ID
 	rawPK[jsonldType] = pk.Type
-	rawPK[jsonldUsage] = pk.Purpose
+	rawPK[jsonldPurposes] = pk.Purposes
 
 	switch pk.Encoding {
 	case PublicKeyEncodingJwk:

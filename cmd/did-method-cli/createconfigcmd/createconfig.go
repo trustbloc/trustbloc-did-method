@@ -376,7 +376,7 @@ func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey) 
 		Encoding: did.PublicKeyEncodingJwk,
 		KeyType:  did.Ed25519KeyType,
 		Value:    pkBytes,
-		Purpose:  []string{did.KeyPurposeGeneral},
+		Purposes:  []string{did.KeyPurposeVerificationMethod},
 	}
 
 	recovery := did.PublicKey{Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, Value: pkBytes, Recovery: true}
