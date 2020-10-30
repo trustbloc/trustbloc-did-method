@@ -10,7 +10,7 @@ replace github.com/phoreproject/bls => github.com/trustbloc/bls v0.0.0-202010231
 
 replace github.com/kilic/bls12-381 => github.com/trustbloc/bls12-381 v0.0.0-20201008080608-ba2e87ef05ef
 
-go 1.13
+go 1.15
 
 require (
 	github.com/cucumber/godog v0.9.0
