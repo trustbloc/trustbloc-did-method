@@ -8,8 +8,8 @@ DOCKER_OUTPUT_NS                 ?= docker.pkg.github.com
 DID_METHOD_REST_IMAGE_NAME       ?= trustbloc/trustbloc-did-method/did-method-rest
 
 # Tool commands (overridable)
-ALPINE_VER ?= 3.10
-GO_VER     ?= 1.13.1
+ALPINE_VER ?= 3.12
+GO_VER     ?= 1.15
 
 .PHONY: all
 all: checks unit-test bdd-test

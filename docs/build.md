@@ -1,7 +1,7 @@
 # TrustBloc-DID-Method - Build
 
 ## Prerequisites
-- Go 1.13
+- Go 1.15
 
 ## Prerequisites for Tests 
 - Make
