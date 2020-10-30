@@ -167,19 +167,19 @@ func populateRawPublicKey(pk *PublicKey) (map[string]interface{}, error) {
 func populateRawServices(services []docdid.Service) []map[string]interface{} {
 	var rawServices []map[string]interface{}
 
-	for _, service := range services {
+	for i := range services {
 		rawService := make(map[string]interface{})
 
-		for k, v := range service.Properties {
+		for k, v := range services[i].Properties {
 			rawService[k] = v
 		}
 
-		rawService[jsonldID] = service.ID
-		rawService[jsonldType] = service.Type
-		rawService[jsonldServicePoint] = service.ServiceEndpoint
-		rawService[jsonldRecipientKeys] = service.RecipientKeys
-		rawService[jsonldRoutingKeys] = service.RoutingKeys
-		rawService[jsonldPriority] = service.Priority
+		rawService[jsonldID] = services[i].ID
+		rawService[jsonldType] = services[i].Type
+		rawService[jsonldServicePoint] = services[i].ServiceEndpoint
+		rawService[jsonldRecipientKeys] = services[i].RecipientKeys
+		rawService[jsonldRoutingKeys] = services[i].RoutingKeys
+		rawService[jsonldPriority] = services[i].Priority
 
 		rawServices = append(rawServices, rawService)
 	}
