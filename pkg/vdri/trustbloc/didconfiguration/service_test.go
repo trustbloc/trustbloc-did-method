@@ -110,7 +110,7 @@ func TestOpts(t *testing.T) {
 	t.Run("test opts", func(t *testing.T) {
 		// test WithTLSConfig
 		var opts []Option
-		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}))
+		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test", MinVersion: tls.VersionTLS12}))
 
 		s := &Service{}
 

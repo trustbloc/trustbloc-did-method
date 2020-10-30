@@ -60,7 +60,7 @@ func TestEndpointService_GetEndpoints(t *testing.T) {
 		}))
 		defer serv.Close()
 
-		configService := httpconfig.NewService(httpconfig.WithTLSConfig(&tls.Config{}))
+		configService := httpconfig.NewService(httpconfig.WithTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12}))
 		endpointService := NewService(staticdiscovery.NewService(configService), staticselection.NewService(configService))
 
 		endpoints, err := endpointService.GetEndpoints(serv.URL)

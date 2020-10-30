@@ -55,7 +55,7 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 		e.resolveCreatedDID)
 }
 
-func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nolint: gocyclo,funlen
+func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error {
 	kid, pubKey, err := e.getPublicKey(keyType)
 	if err != nil {
 		return err

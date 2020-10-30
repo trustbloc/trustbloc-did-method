@@ -92,7 +92,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 	keysID := make(map[string][]byte)
 
 	if len(data.DIDDocument.PublicKey) == 0 {
-		registerResponse.DIDState = DIDState{Reason: fmt.Sprintf("AddPublicKeys is empty"),
+		registerResponse.DIDState = DIDState{Reason: "AddPublicKeys is empty",
 			State: RegistrationStateFailure}
 
 		o.writeResponse(rw, registerResponse)
@@ -161,8 +161,7 @@ func (o *Operation) resolveDIDHandler(rw http.ResponseWriter, req *http.Request)
 	didParam, ok := req.URL.Query()["did"]
 
 	if !ok || didParam[0] == "" {
-		o.writeErrorResponse(rw, http.StatusBadRequest,
-			fmt.Sprintf("url param 'did' is missing"))
+		o.writeErrorResponse(rw, http.StatusBadRequest, "url param 'did' is missing")
 
 		return
 	}

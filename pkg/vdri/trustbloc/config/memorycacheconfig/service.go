@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
-
 	"github.com/bluele/gcache"
+
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 type config interface {

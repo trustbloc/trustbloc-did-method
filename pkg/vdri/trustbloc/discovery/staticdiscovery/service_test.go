@@ -54,7 +54,7 @@ func TestDiscoveryService_GetEndpoints(t *testing.T) {
 		}))
 		defer stakeholderServ2.Close()
 
-		s := NewService(httpconfig.NewService(httpconfig.WithTLSConfig(&tls.Config{})))
+		s := NewService(httpconfig.NewService(httpconfig.WithTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12})))
 		endpoints, err := s.GetEndpoints(consortiumServ.URL)
 		require.NoError(t, err)
 		require.Len(t, endpoints, 4)

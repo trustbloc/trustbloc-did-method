@@ -6,8 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 package staticselection
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
+	mathrand "math/rand"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
@@ -63,11 +65,17 @@ func (ds *SelectionService) SelectEndpoints(consortiumDomain string, endpoints [
 		n = len(d)
 	}
 
-	perm := rand.Perm(len(d))
+	perm := mathrand.Perm(len(d))
 
 	for i := 0; i < n && i < len(d); i++ {
 		list := domains[d[perm[i]]]
-		out = append(out, list[rand.Intn(len(list))])
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(list))))
+
+		if err != nil {
+			return nil, err
+		}
+
+		out = append(out, list[n.Uint64()])
 	}
 
 	return out, nil
