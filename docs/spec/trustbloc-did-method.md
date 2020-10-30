@@ -6,7 +6,7 @@ This is version `0.1` of the TrustBloc DID Method Specification.
 ## Introduction
 _This section is non-normative_
 
-The `did:trustbloc` DID method allows groups of independent entities to share custody of a DID registry consisting of a Sidetree implementation over a permissioned ledger. For more information on Sidetree, please refer to the [Sidetree protocol specification](https://identity.foundation/sidetree/docs/spec/).
+The `did:trustbloc` DID method allows groups of independent entities to share custody of a DID registry consisting of a Sidetree implementation over a permissioned ledger. For more information on Sidetree, please refer to the [Sidetree protocol specification](https://identity.foundation/sidetree/spec/).
 
 Independent [*stakeholders*](#stakeholder) wishing to transact with one another using DIDs can come together to form a [*consortium*](#consortium) to manage their shared custody of a ledger.
 
