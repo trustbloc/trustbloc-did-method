@@ -941,7 +941,8 @@ func TestOpts(t *testing.T) {
 	t.Run("test opts", func(t *testing.T) {
 		// test WithTLSConfig
 		var opts []Option
-		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test"}), WithAuthToken("tk1"))
+		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test", MinVersion: tls.VersionTLS12}),
+			WithAuthToken("tk1"))
 
 		v := &VDRI{}
 

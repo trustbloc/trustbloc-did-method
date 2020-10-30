@@ -38,7 +38,7 @@ func NewBDDContext(caCertPaths ...string) (*BDDContext, error) {
 		return nil, err
 	}
 
-	return &BDDContext{TLSConfig: &tls.Config{RootCAs: rootCAs}, LocalKMS: km}, nil
+	return &BDDContext{TLSConfig: &tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}, LocalKMS: km}, nil
 }
 
 func createKMS(s storage.Provider) (kms.KeyManager, error) {

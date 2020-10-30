@@ -239,9 +239,10 @@ func startDidMethod(parameters *parameters) error {
 		return err
 	}
 
-	didMethodService, err := didmethod.New(&operation.Config{TLSConfig: &tls.Config{RootCAs: rootCAs},
-		BlocDomain: parameters.blocDomain, Mode: parameters.mode, SidetreeReadToken: parameters.sidetreeReadToken,
-		SidetreeWriteToken: parameters.sidetreeWriteToken, EnableSignatures: parameters.enableSignatures})
+	didMethodService, err := didmethod.New(&operation.Config{TLSConfig: &tls.Config{RootCAs: rootCAs,
+		MinVersion: tls.VersionTLS12}, BlocDomain: parameters.blocDomain, Mode: parameters.mode,
+		SidetreeReadToken: parameters.sidetreeReadToken, SidetreeWriteToken: parameters.sidetreeWriteToken,
+		EnableSignatures: parameters.enableSignatures})
 	if err != nil {
 		return err
 	}

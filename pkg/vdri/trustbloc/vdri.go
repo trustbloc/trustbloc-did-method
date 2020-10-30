@@ -7,11 +7,13 @@ package trustbloc
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
+	mathrand "math/rand"
 	"strings"
 	"time"
 
@@ -251,7 +253,12 @@ func (v *VDRI) verifyStakeholder(cfd *models.ConsortiumFileData, sfd *models.Sta
 		return fmt.Errorf("stakeholder has nil config")
 	}
 
-	ep := s.Endpoints[rand.Intn(len(s.Endpoints))]
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(s.Endpoints))))
+	if err != nil {
+		return err
+	}
+
+	ep := s.Endpoints[n.Uint64()]
 
 	doc, e := v.sidetreeResolve(ep+"/identifiers", s.DID)
 	if e != nil {
@@ -284,7 +291,7 @@ func (v *VDRI) selectStakeholders(consortium *models.Consortium) ([]*models.Stak
 		n = len(consortium.Members)
 	}
 
-	perm := rand.Perm(len(consortium.Members))
+	perm := mathrand.Perm(len(consortium.Members))
 
 	successCount := 0
 

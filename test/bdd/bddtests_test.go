@@ -59,7 +59,7 @@ func runBDDTests(tags, format string) int {
 		var discoveryServers = []string{"./fixtures/discovery-server", "./fixtures/stakeholder-server"}
 
 		s.BeforeSuite(func() {
-			if os.Getenv("DISABLE_COMPOSITION") != "true" {
+			if os.Getenv("DISABLE_COMPOSITION") != "true" { // nolint: nestif
 				// Need a unique name, but docker does not allow '-' in names
 				composeProjectName := strings.ReplaceAll(generateUUID(), "-", "")
 
