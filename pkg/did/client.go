@@ -21,8 +21,8 @@ import (
 	"github.com/square/go-jose/v3"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/jws"
-	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
@@ -180,7 +180,7 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 		return nil, err
 	}
 
-	req, err := helper.NewCreateRequest(&helper.CreateRequestInfo{
+	req, err := client.NewCreateRequest(&client.CreateRequestInfo{
 		OpaqueDocument:     string(docBytes),
 		RecoveryCommitment: recoveryCommitment,
 		UpdateCommitment:   updateCommitment,
