@@ -12,6 +12,7 @@ import (
 
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/confighashcmd"
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/createconfigcmd"
+	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/createdidcmd"
 )
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 
 	rootCmd.AddCommand(createconfigcmd.GetCreateConfigCmd())
 	rootCmd.AddCommand(confighashcmd.GetConfigHashCmd())
+	rootCmd.AddCommand(createdidcmd.GetCreateDIDCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatalf("Failed to run did method cli: %s", err.Error())
