@@ -28,4 +28,6 @@ coverage.out
 .build
 *.log
 test/bdd/fixtures/keys/tls
+test/bdd/fixtures/keys/update
+test/bdd/fixtures/keys/recover
 test/bdd/fixtures/wellknown/jws

@@ -74,5 +74,5 @@ type Service struct {
 	Priority      uint     `json:"priority,omitempty"`
 	RecipientKeys []string `json:"recipientKeys,omitempty"`
 	RoutingKeys   []string `json:"routingKeys,omitempty"`
-	Endpoint      string   `json:"endpoint,omitempty"`
+	Endpoint      string   `json:"serviceEndpoint,omitempty"`
 }

@@ -171,8 +171,11 @@ func TestClient_CreateDID(t *testing.T) {
 		ed25519RecoveryPubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		ed25519UpdatePubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		ecUpdatePrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
+
+		ecUpdatePubKeyBytes := elliptic.Marshal(ecUpdatePrivKey.PublicKey.Curve, ecUpdatePrivKey.PublicKey.X,
+			ecUpdatePrivKey.PublicKey.Y)
 
 		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
@@ -187,10 +190,10 @@ func TestClient_CreateDID(t *testing.T) {
 			}}
 
 		doc, err := v.CreateDID("testnet",
-			WithPublicKey(&PublicKey{ID: recoveryKeyID, Type: Ed25519VerificationKey2018, Encoding: PublicKeyEncodingJwk,
-				Value: ed25519RecoveryPubKey, Recovery: true}),
-			WithPublicKey(&PublicKey{ID: updateKeyID, Type: Ed25519VerificationKey2018, Encoding: PublicKeyEncodingJwk,
-				Value: ed25519UpdatePubKey, Update: true}),
+			WithPublicKey(&PublicKey{Encoding: PublicKeyEncodingJwk,
+				Value: ed25519RecoveryPubKey, KeyType: Ed25519KeyType, Recovery: true}),
+			WithPublicKey(&PublicKey{Encoding: PublicKeyEncodingJwk,
+				Value: ecUpdatePubKeyBytes, KeyType: P256KeyType, Update: true}),
 			WithPublicKey(&PublicKey{ID: "key1",
 				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
 				Value:    ed25519RecoveryPubKey,
@@ -294,6 +297,96 @@ func TestClient_CreateDID(t *testing.T) {
 				Value: []byte("value")}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get recovery key")
+		require.Nil(t, doc)
+	})
+
+	t.Run("test unsupported recovery public key type", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(bytes))
+			require.NoError(t, err)
+		}))
+		defer serv.Close()
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: "wrong", Value: pubKey, Recovery: true}),
+			WithPublicKey(&PublicKey{ID: "#key2",
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
+				Value: []byte("value")}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get recovery key")
+		require.Nil(t, doc)
+	})
+
+	t.Run("test unsupported update public key encoding", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(bytes))
+			require.NoError(t, err)
+		}))
+		defer serv.Close()
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType, Value: pubKey,
+			Recovery: true}), WithPublicKey(&PublicKey{Encoding: "wrong",
+			KeyType: P256KeyType, Update: true}),
+			WithPublicKey(&PublicKey{ID: "#key2",
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
+				Value: []byte("value")}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "update public key encoding not supported")
+		require.Nil(t, doc)
+	})
+
+	t.Run("test update public key empty", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(bytes))
+			require.NoError(t, err)
+		}))
+		defer serv.Close()
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		doc, err := v.CreateDID("testnet", WithPublicKey(&PublicKey{ID: "#key1",
+			Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType, Value: pubKey,
+			Recovery: true}),
+			WithPublicKey(&PublicKey{ID: "#key2",
+				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
+				Value: []byte("value")}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "update key not found")
 		require.Nil(t, doc)
 	})
 

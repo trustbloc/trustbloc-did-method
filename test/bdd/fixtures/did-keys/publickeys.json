@@ -1,0 +1,12 @@
+[
+ {
+  "type": "Ed25519VerificationKey2018",
+  "purposes": ["verificationMethod"],
+  "jwkPath": "./fixtures/did-keys/key1_jwk.json"
+ },
+ {
+  "type": "JwsVerificationKey2020",
+  "purposes": ["verificationMethod"],
+  "jwkPath": "./fixtures/did-keys/key2_jwk.json"
+ }
+]

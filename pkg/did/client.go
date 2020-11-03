@@ -7,7 +7,9 @@ package did
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -194,13 +196,18 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 }
 
 func (c *Client) getRecoveryKey(publicKeys []PublicKey) (*jws.JWK, error) {
-	for _, v := range publicKeys {
-		if v.Recovery {
-			if v.Encoding != PublicKeyEncodingJwk {
-				return nil, fmt.Errorf("recovery public key encoding not supported: %s", v.Encoding)
+	for i := range publicKeys {
+		if publicKeys[i].Recovery {
+			if publicKeys[i].Encoding != PublicKeyEncodingJwk {
+				return nil, fmt.Errorf("recovery public key encoding not supported: %s", publicKeys[i].Encoding)
 			}
 
-			return pubkey.GetPublicKeyJWK(ed25519.PublicKey(v.Value))
+			key, err := c.getKey(&publicKeys[i])
+			if err != nil {
+				return nil, err
+			}
+
+			return pubkey.GetPublicKeyJWK(key)
 		}
 	}
 
@@ -208,17 +215,35 @@ func (c *Client) getRecoveryKey(publicKeys []PublicKey) (*jws.JWK, error) {
 }
 
 func (c *Client) getUpdateKey(publicKeys []PublicKey) (*jws.JWK, error) {
-	for _, v := range publicKeys {
-		if v.Update {
-			if v.Encoding != PublicKeyEncodingJwk {
-				return nil, fmt.Errorf("update public key encoding not supported: %s", v.Encoding)
+	for i := range publicKeys {
+		if publicKeys[i].Update {
+			if publicKeys[i].Encoding != PublicKeyEncodingJwk {
+				return nil, fmt.Errorf("update public key encoding not supported: %s", publicKeys[i].Encoding)
 			}
 
-			return pubkey.GetPublicKeyJWK(ed25519.PublicKey(v.Value))
+			key, err := c.getKey(&publicKeys[i])
+			if err != nil {
+				return nil, err
+			}
+
+			return pubkey.GetPublicKeyJWK(key)
 		}
 	}
 
 	return nil, fmt.Errorf("update key not found")
+}
+
+func (c *Client) getKey(pk *PublicKey) (interface{}, error) {
+	switch pk.KeyType {
+	case Ed25519KeyType:
+		return ed25519.PublicKey(pk.Value), nil
+	case P256KeyType:
+		x, y := elliptic.Unmarshal(elliptic.P256(), pk.Value)
+
+		return &ecdsa.PublicKey{X: x, Y: y, Curve: elliptic.P256()}, nil
+	default:
+		return nil, fmt.Errorf("invalid key type: %s", pk.KeyType)
+	}
 }
 
 func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc, error) {
