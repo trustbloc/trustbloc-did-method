@@ -51,7 +51,7 @@ type Key struct {
 	PublicKeyBase58  string   `json:"publicKeyBase58,omitempty"`
 	PrivateKeyBase58 string   `json:"privateKeyBase58,omitempty"`
 	ID               string   `json:"id,omitempty"`
-	Purpose          []string `json:"purpose,omitempty"`
+	Purposes         []string `json:"purposes,omitempty"`
 }
 
 // PublicKey public key
@@ -60,7 +60,7 @@ type PublicKey struct {
 	Type string `json:"type,omitempty"`
 	// Value is always Base64
 	Value    string   `json:"value,omitempty"`
-	Purpose  []string `json:"purpose,omitempty"`
+	Purposes []string `json:"purposes,omitempty"`
 	Encoding string   `json:"encoding,omitempty"`
 	Recovery bool     `json:"recovery,omitempty"`
 	Update   bool     `json:"update,omitempty"`
