@@ -84,14 +84,16 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 		opt(createDIDOpts)
 	}
 
-	if domain == "" && createDIDOpts.sidetreeEndpoint == "" {
-		return nil, errors.New("domain is empty and sidetree endpoint is empty")
+	if domain == "" && len(createDIDOpts.sidetreeEndpoints) == 0 {
+		return nil, errors.New("domain is empty and sidetree endpoints is empty")
 	}
 
-	sidetreeEndpoint := createDIDOpts.sidetreeEndpoint
+	endpoints := createDIDOpts.sidetreeEndpoints
 
 	if domain != "" {
-		endpoints, err := c.endpointService.GetEndpoints(domain)
+		var err error
+		endpoints, err = c.endpointService.GetEndpoints(domain)
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to get endpoints: %w", err)
 		}
@@ -99,9 +101,10 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 		if len(endpoints) == 0 {
 			return nil, errors.New("list of endpoints is empty")
 		}
-
-		sidetreeEndpoint = endpoints[0].URL
 	}
+
+	// TODO change the logic of choosing first endpoints
+	sidetreeEndpoint := endpoints[0].URL
 
 	req, err := c.buildSideTreeRequest(createDIDOpts)
 	if err != nil {
@@ -320,9 +323,9 @@ func WithAuthToken(authToken string) Option {
 
 // CreateDIDOpts create did opts
 type CreateDIDOpts struct {
-	publicKeys       []PublicKey
-	services         []docdid.Service
-	sidetreeEndpoint string
+	publicKeys        []PublicKey
+	services          []docdid.Service
+	sidetreeEndpoints []*models.Endpoint
 }
 
 // CreateDIDOption is a create DID option
@@ -345,6 +348,7 @@ func WithService(service *docdid.Service) CreateDIDOption {
 // WithSidetreeEndpoint go directly to sidetree
 func WithSidetreeEndpoint(sidetreeEndpoint string) CreateDIDOption {
 	return func(opts *CreateDIDOpts) {
-		opts.sidetreeEndpoint = sidetreeEndpoint
+		opts.sidetreeEndpoints = append(opts.sidetreeEndpoints,
+			&models.Endpoint{URL: sidetreeEndpoint})
 	}
 }

@@ -30,6 +30,7 @@ func NewSteps(ctx *context.BDDContext) *Steps {
 // RegisterSteps registers agent steps.
 func (e *Steps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^TrustBloc DID is created through cli using domain "([^"]*)"$`, e.createDID)
+	s.Step(`^TrustBloc DID is created through cli using direct url "([^"]*)"$`, e.createDIDDirect)
 	s.Step(`^check cli created valid DID$`, e.checkCreatedDID)
 }
 
@@ -55,10 +56,30 @@ func (e *Steps) checkCreatedDID() error {
 }
 
 func (e *Steps) createDID(domain string) error {
-	value, err := execCMD("../../.build/bin/cli", "create-did", "--domain", domain,
+	return e.executeCreateDIDCMD(domain, "")
+}
+
+func (e *Steps) createDIDDirect(sidetreeURL string) error {
+	return e.executeCreateDIDCMD("", sidetreeURL)
+}
+
+func (e *Steps) executeCreateDIDCMD(domain, sidetreeURL string) error {
+	var args []string
+
+	if domain != "" {
+		args = append(args, "--domain", domain)
+	}
+
+	if sidetreeURL != "" {
+		args = append(args, "--sidetree-url", sidetreeURL)
+	}
+
+	args = append(args, "create-did",
 		"--tls-cacerts", "fixtures/keys/tls/ec-cacert.pem", "--publickey-file", "fixtures/did-keys/publickeys.json",
 		"--sidetree-write-token", "rw_token", "--service-file", "fixtures/did-services/services.json",
 		"--recoverykey-file", "./fixtures/keys/recover/public.pem", "--updatekey-file", "./fixtures/keys/update/public.pem")
+
+	value, err := execCMD("../../.build/bin/cli", args...)
 
 	if err != nil {
 		return err
