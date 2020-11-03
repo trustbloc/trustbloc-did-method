@@ -35,6 +35,11 @@ const (
 	domainFileFlagUsage = "URL to the did:trustbloc consortium's domain. " +
 		" Alternatively, this can be set with the following environment variable: " + domainFileEnvKey
 
+	sidetreeURLFlagName  = "sidetree-url"
+	sidetreeURLFlagUsage = "Comma-Separated list of sidetree url." +
+		" Alternatively, this can be set with the following environment variable: " + sidetreeURLEnvKey
+	sidetreeURLEnvKey = "DID_METHOD_CLI_SIDETREE_URL"
+
 	tlsSystemCertPoolFlagName  = "tls-systemcertpool"
 	tlsSystemCertPoolFlagUsage = "Use system certificate pool." +
 		" Possible values [true] [false]. Defaults to false if not set." +
@@ -115,7 +120,7 @@ func createDIDCmd() *cobra.Command {
 			}
 
 			domain, err := cmdutils.GetUserSetVarFromString(cmd, domainFlagName,
-				domainFileEnvKey, false)
+				domainFileEnvKey, true)
 			if err != nil {
 				return err
 			}
@@ -143,6 +148,22 @@ func createDIDCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func getSidetreeURL(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
+	var opts []did.CreateDIDOption
+
+	sidetreeURL, err := cmdutils.GetUserSetVarFromArrayString(cmd, sidetreeURLFlagName,
+		sidetreeURLEnvKey, true)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range sidetreeURL {
+		opts = append(opts, did.WithSidetreeEndpoint(v))
+	}
+
+	return opts, nil
 }
 
 func createDIDOption(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
@@ -173,6 +194,13 @@ func createDIDOption(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
 	}
 
 	opts = append(opts, serviceOpts...)
+
+	sidetreeURLOpts, err := getSidetreeURL(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	opts = append(opts, sidetreeURLOpts...)
 
 	return opts, nil
 }
@@ -388,4 +416,5 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(recoveryKeyFileFlagName, "", "", recoveryKeyFileFlagUsage)
 	startCmd.Flags().StringP(updateKeyFlagName, "", "", updateKeyFlagUsage)
 	startCmd.Flags().StringP(updateKeyFileFlagName, "", "", updateKeyFileFlagUsage)
+	startCmd.Flags().StringArrayP(sidetreeURLFlagName, "", []string{}, sidetreeURLFlagUsage)
 }

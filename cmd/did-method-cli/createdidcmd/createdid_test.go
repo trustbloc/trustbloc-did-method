@@ -336,20 +336,6 @@ func TestTLSSystemCertPoolInvalidArgsEnvVar(t *testing.T) {
 	require.Contains(t, err.Error(), "invalid syntax")
 }
 
-func TestCreateDIDCmdWithMissingArg(t *testing.T) {
-	t.Run("test missing domain", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetCreateDIDCmd()
-
-		err := cmd.Execute()
-
-		require.Error(t, err)
-		require.Equal(t,
-			"Neither domain (command line flag) nor DID_METHOD_CLI_DOMAIN (environment variable) have been set.",
-			err.Error())
-	})
-}
-
 func domainArg() []string {
 	return []string{flag + domainFlagName, "domain"}
 }

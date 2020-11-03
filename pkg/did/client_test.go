@@ -488,7 +488,7 @@ func TestClient_CreateDID(t *testing.T) {
 
 		require.Equal(t, 1, len(createDIDOpts.services))
 		require.Equal(t, "serviceID", createDIDOpts.services[0].ID)
-		require.Equal(t, "sidetree", createDIDOpts.sidetreeEndpoint)
+		require.Equal(t, "sidetree", createDIDOpts.sidetreeEndpoints[0].URL)
 	})
 }
 
