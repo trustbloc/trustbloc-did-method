@@ -7,6 +7,7 @@
 
 ../../.build/bin/cli create-config --sidetree-url https://localhost:48326/sidetree/0.0.1 \
 --tls-cacerts ../../test/bdd/fixtures/keys/tls/ec-cacert.pem --sidetree-write-token rw_token \
+--recoverykey-file fixtures/keys/recover/public.pem --updatekey-file fixtures/keys/update/public.pem \
 --config-file ./fixtures/wellknown/config.json --output-directory ./fixtures/wellknown/jws
 rm -rf ./fixtures/wellknown/jws/stakeholder.one
 rm -rf ./fixtures/wellknown/jws/stakeholder.two

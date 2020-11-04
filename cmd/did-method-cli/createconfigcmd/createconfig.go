@@ -6,13 +6,16 @@ SPDX-License-Identifier: Apache-2.0
 package createconfigcmd
 
 import (
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -58,6 +61,26 @@ const (
 	outputDirectoryEnvKey    = "DID_METHOD_CLI_OUTPUT_DIRECTORY" //nolint: gosec
 	outputDirectoryFlagUsage = "Output directory " +
 		" Alternatively, this can be set with the following environment variable: " + outputDirectoryEnvKey
+
+	recoveryKeyFlagName  = "recoverykey"
+	recoveryKeyEnvKey    = "DID_METHOD_CLI_RECOVERYKEY"
+	recoveryKeyFlagUsage = "The public key PEM used for recovery of the document. Example: --recoverykey 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXlp4fWF5rgLthKr20tsJ0tBIE6UmrGuAC8iVG/DaedkSt7HihCx/t2BGjooduaKwEIOmPjx2zBsbkbFrYhhnVw' " +
+		" Alternatively, this can be set with the following environment variable: " + recoveryKeyEnvKey
+
+	recoveryKeyFileFlagName  = "recoverykey-file"
+	recoveryKeyFileEnvKey    = "DID_METHOD_CLI_RECOVERYKEY_FILE"
+	recoveryKeyFileFlagUsage = "The file that contains the public key PEM used for recovery of the document. Example: --recoverykeyfile ./recovery_public.key " +
+		" Alternatively, this can be set with the following environment variable: " + recoveryKeyFileEnvKey
+
+	updateKeyFlagName  = "updatekey"
+	updateKeyEnvKey    = "DID_METHOD_CLI_UPDATEKEY"
+	updateKeyFlagUsage = "The public key PEM used for validating the signature of the next update of the document. Example: --updatekey 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFMy2n9jYZChYSjdhK9vUWvPjz9tzBcEa13Ye33haxFsT//3kGxOQhI7yb3MJsDvwLtdfLL6txM3RdOrmLABBvw' " +
+		" Alternatively, this can be set with the following environment variable: " + updateKeyEnvKey
+
+	updateKeyFileFlagName  = "updatekey-file"
+	updateKeyFileEnvKey    = "DID_METHOD_CLI_UPDATEKEY_FILE"
+	updateKeyFileFlagUsage = "The file that contains the public key PEM used for validating the signature of the next update of the document. Example: --updatekeyfile ./update_public.key " +
+		" Alternatively, this can be set with the following environment variable: " + updateKeyFileEnvKey
 )
 
 type config struct {
@@ -94,6 +117,8 @@ type parameters struct {
 	sidetreeURL string
 	didClient   didClient
 	config      *config
+	recoveryKey crypto.PublicKey
+	updateKey   crypto.PublicKey
 }
 
 // GetCreateConfigCmd returns the Cobra create conifg command.
@@ -139,11 +164,25 @@ func createCreateConfigCmd() *cobra.Command {
 				return err
 			}
 
+			recoveryKey, err := getKey(cmd, recoveryKeyFlagName, recoveryKeyEnvKey, recoveryKeyFileFlagName,
+				recoveryKeyFileEnvKey)
+			if err != nil {
+				return err
+			}
+
+			updateKey, err := getKey(cmd, updateKeyFlagName, updateKeyEnvKey, updateKeyFileFlagName,
+				updateKeyFileEnvKey)
+			if err != nil {
+				return err
+			}
+
 			parameters := &parameters{
 				sidetreeURL: strings.TrimSpace(sidetreeURL),
 				didClient: did.New(did.WithAuthToken(sidetreeWriteToken),
 					did.WithTLSConfig(&tls.Config{RootCAs: rootCAs})),
-				config: config,
+				config:      config,
+				recoveryKey: recoveryKey,
+				updateKey:   updateKey,
 			}
 
 			filesData, didConfData, err := createConfig(parameters)
@@ -164,6 +203,63 @@ func createCreateConfigCmd() *cobra.Command {
 			return writeDIDConfiguration(outputDirectory, didConfData)
 		},
 	}
+}
+
+func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFileEnvKey string) (crypto.PublicKey, error) {
+	keyString, err := cmdutils.GetUserSetVarFromString(cmd, keyFlagName,
+		keyEnvKey, true)
+	if err != nil {
+		return nil, err
+	}
+
+	keyFile, err := cmdutils.GetUserSetVarFromString(cmd, keyFileFlagName,
+		keyFileEnvKey, true)
+	if err != nil {
+		return nil, err
+	}
+
+	if keyString == "" && keyFile == "" {
+		return nil, fmt.Errorf("either key (--%s) or key file (--%s) is required", keyFlagName, keyFileFlagName)
+	}
+
+	if keyString != "" && keyFile != "" {
+		return nil, fmt.Errorf("only one of key (--%s) or key file (--%s) may be specified", keyFlagName, keyFileFlagName)
+	}
+
+	if keyFile != "" {
+		return publicKeyFromFile(keyFile)
+
+	}
+
+	return publicKeyFromPEM([]byte(keyString))
+}
+
+func publicKeyFromFile(file string) (crypto.PublicKey, error) {
+	keyBytes, err := ioutil.ReadFile(filepath.Clean(file))
+	if err != nil {
+		return nil, err
+	}
+
+	return publicKeyFromPEM(keyBytes)
+}
+
+func publicKeyFromPEM(pubKeyPEM []byte) (crypto.PublicKey, error) {
+	block, _ := pem.Decode(pubKeyPEM)
+	if block == nil {
+		return nil, fmt.Errorf("public key not found in PEM")
+	}
+
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey, ok := key.(crypto.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("invalid public key")
+	}
+
+	return publicKey, nil
 }
 
 func writeConfig(outputDirectory string, filesData map[string][]byte) error {
@@ -283,6 +379,10 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(sidetreeWriteTokenFlagName, "", "", sidetreeWriteTokenFlagUsage)
 	startCmd.Flags().StringP(configFileFlagName, "", "", configFileFlagUsage)
 	startCmd.Flags().StringP(outputDirectoryFlagName, "", "", outputDirectoryFlagUsage)
+	startCmd.Flags().StringP(recoveryKeyFlagName, "", "", recoveryKeyFlagUsage)
+	startCmd.Flags().StringP(recoveryKeyFileFlagName, "", "", recoveryKeyFileFlagUsage)
+	startCmd.Flags().StringP(updateKeyFlagName, "", "", updateKeyFlagUsage)
+	startCmd.Flags().StringP(updateKeyFileFlagName, "", "", updateKeyFileFlagUsage)
 }
 
 func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte, error) {
@@ -295,7 +395,8 @@ func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte,
 		Policy: parameters.config.ConsortiumData.Policy}
 
 	for _, member := range parameters.config.MembersData {
-		didDoc, err := createDID(parameters.didClient, parameters.sidetreeURL, &member.jsonWebKey)
+		didDoc, err := createDID(parameters.didClient, parameters.sidetreeURL, &member.jsonWebKey, parameters.recoveryKey,
+			parameters.updateKey)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -364,7 +465,8 @@ func signConfig(configBytes []byte, keys []gojose.SigningKey) (string, error) {
 	return jws.FullSerialize(), nil
 }
 
-func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey) (*docdid.Doc, error) {
+func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey, recoveryKey,
+	updateKey crypto.PublicKey) (*docdid.Doc, error) {
 	pkBytes, err := jwk.MarshalJSON()
 	if err != nil {
 		return nil, err
@@ -379,13 +481,8 @@ func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey) 
 		Purposes: []string{did.KeyPurposeVerificationMethod},
 	}
 
-	recovery := did.PublicKey{Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, KeyType: did.Ed25519KeyType, Value: pkBytes, Recovery: true}
-
-	update := did.PublicKey{Type: did.Ed25519VerificationKey2018, Encoding: did.PublicKeyEncodingJwk, KeyType: did.Ed25519KeyType, Value: pkBytes, Update: true}
-
-	// TODO: Verify usage of this code - recovery, update and general purpose key should NOT be the same
 	return didClient.CreateDID("", did.WithSidetreeEndpoint(sidetreeURL),
-		did.WithPublicKey(&recovery),
-		did.WithPublicKey(&update),
+		did.WithRecoveryPublicKey(recoveryKey),
+		did.WithUpdatePublicKey(updateKey),
 		did.WithPublicKey(&general))
 }

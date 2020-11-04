@@ -6,6 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 package operation
 
 import (
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -77,7 +80,7 @@ func New(config *Config) *Operation {
 	return svc
 }
 
-func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen
+func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen,gocyclo
 	data := RegisterDIDRequest{}
 
 	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
@@ -114,12 +117,40 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			return
 		}
 
-		opts = append(opts, didclient.WithPublicKey(&didclient.PublicKey{ID: v.ID, Type: v.Type, Value: keyValue,
-			Encoding: v.Encoding, Purposes: v.Purposes, Recovery: v.Recovery, Update: v.Update, KeyType: v.KeyType}))
+		if v.Recovery {
+			k, err := getKey(v.KeyType, keyValue)
+			if err != nil {
+				registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
 
-		if !v.Recovery {
-			keysID[v.ID] = keyValue
+				o.writeResponse(rw, registerResponse)
+
+				return
+			}
+
+			opts = append(opts, didclient.WithRecoveryPublicKey(k))
+
+			continue
 		}
+
+		if v.Update {
+			k, err := getKey(v.KeyType, keyValue)
+			if err != nil {
+				registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
+
+				o.writeResponse(rw, registerResponse)
+
+				return
+			}
+
+			opts = append(opts, didclient.WithUpdatePublicKey(k))
+
+			continue
+		}
+
+		opts = append(opts, didclient.WithPublicKey(&didclient.PublicKey{ID: v.ID, Type: v.Type, Value: keyValue,
+			Encoding: v.Encoding, Purposes: v.Purposes, KeyType: v.KeyType}))
+
+		keysID[v.ID] = keyValue
 	}
 
 	// Add services
@@ -145,6 +176,19 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 		Secret: Secret{Keys: createKeys(keysID, didDoc.ID)}}
 
 	o.writeResponse(rw, registerResponse)
+}
+
+func getKey(keyType string, value []byte) (interface{}, error) {
+	switch keyType {
+	case didclient.Ed25519KeyType:
+		return ed25519.PublicKey(value), nil
+	case didclient.P256KeyType:
+		x, y := elliptic.Unmarshal(elliptic.P256(), value)
+
+		return &ecdsa.PublicKey{X: x, Y: y, Curve: elliptic.P256()}, nil
+	default:
+		return nil, fmt.Errorf("invalid key type: %s", keyType)
+	}
 }
 
 func createKeys(keysID map[string][]byte, didID string) []Key {

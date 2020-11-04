@@ -268,28 +268,15 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 		}
 	}
 
-	keyType := ""
-	var value []byte
-
-	switch key := pubKey.(type) {
-	case ed25519.PublicKey:
-		keyType = did.Ed25519KeyType
-		value = []byte(fmt.Sprintf("%v", key))
-	case *ecdsa.PublicKey:
-		if key.Curve.Params().Name != elliptic.P256().Params().Name {
-			return nil, fmt.Errorf("ec cruve %s key not supported", elliptic.P256().Params().Name)
-		}
-
-		keyType = did.P256KeyType
-		value = elliptic.Marshal(key.Curve, key.X, key.Y)
-	default:
-		return nil, fmt.Errorf("key not supported")
-	}
-
 	var opts []did.CreateDIDOption
 
-	opts = append(opts, did.WithPublicKey(&did.PublicKey{Value: value, Encoding: did.PublicKeyEncodingJwk,
-		KeyType: keyType, Recovery: recovery, Update: update}))
+	if recovery {
+		opts = append(opts, did.WithRecoveryPublicKey(pubKey))
+	}
+
+	if update {
+		opts = append(opts, did.WithUpdatePublicKey(pubKey))
+	}
 
 	return opts, nil
 }
