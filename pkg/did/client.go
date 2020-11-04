@@ -7,9 +7,7 @@ package did
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/elliptic"
+	"crypto"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -22,7 +20,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/square/go-jose/v3"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
-	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
 
@@ -77,7 +74,7 @@ func New(opts ...Option) *Client {
 }
 
 // CreateDID create did doc
-func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc, error) {
+func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc, error) { //nolint: gocyclo
 	createDIDOpts := &CreateDIDOpts{}
 	// Apply options
 	for _, opt := range opts {
@@ -86,6 +83,14 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 
 	if domain == "" && len(createDIDOpts.sidetreeEndpoints) == 0 {
 		return nil, errors.New("domain is empty and sidetree endpoints is empty")
+	}
+
+	if createDIDOpts.recoveryPublicKey == nil {
+		return nil, fmt.Errorf("recovery public key is required")
+	}
+
+	if createDIDOpts.updatePublicKey == nil {
+		return nil, fmt.Errorf("update public key is required")
 	}
 
 	endpoints := createDIDOpts.sidetreeEndpoints
@@ -165,12 +170,12 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 		return nil, fmt.Errorf("failed to get document bytes : %s", err)
 	}
 
-	recoveryKey, err := c.getRecoveryKey(publicKeys)
+	recoveryKey, err := pubkey.GetPublicKeyJWK(createDIDOpts.recoveryPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get recovery key : %s", err)
 	}
 
-	updateKey, err := c.getUpdateKey(publicKeys)
+	updateKey, err := pubkey.GetPublicKeyJWK(createDIDOpts.updatePublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get update key : %s", err)
 	}
@@ -196,57 +201,6 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 	}
 
 	return req, nil
-}
-
-func (c *Client) getRecoveryKey(publicKeys []PublicKey) (*jws.JWK, error) {
-	for i := range publicKeys {
-		if publicKeys[i].Recovery {
-			if publicKeys[i].Encoding != PublicKeyEncodingJwk {
-				return nil, fmt.Errorf("recovery public key encoding not supported: %s", publicKeys[i].Encoding)
-			}
-
-			key, err := c.getKey(&publicKeys[i])
-			if err != nil {
-				return nil, err
-			}
-
-			return pubkey.GetPublicKeyJWK(key)
-		}
-	}
-
-	return nil, fmt.Errorf("recovery key not found")
-}
-
-func (c *Client) getUpdateKey(publicKeys []PublicKey) (*jws.JWK, error) {
-	for i := range publicKeys {
-		if publicKeys[i].Update {
-			if publicKeys[i].Encoding != PublicKeyEncodingJwk {
-				return nil, fmt.Errorf("update public key encoding not supported: %s", publicKeys[i].Encoding)
-			}
-
-			key, err := c.getKey(&publicKeys[i])
-			if err != nil {
-				return nil, err
-			}
-
-			return pubkey.GetPublicKeyJWK(key)
-		}
-	}
-
-	return nil, fmt.Errorf("update key not found")
-}
-
-func (c *Client) getKey(pk *PublicKey) (interface{}, error) {
-	switch pk.KeyType {
-	case Ed25519KeyType:
-		return ed25519.PublicKey(pk.Value), nil
-	case P256KeyType:
-		x, y := elliptic.Unmarshal(elliptic.P256(), pk.Value)
-
-		return &ecdsa.PublicKey{X: x, Y: y, Curve: elliptic.P256()}, nil
-	default:
-		return nil, fmt.Errorf("invalid key type: %s", pk.KeyType)
-	}
 }
 
 func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc, error) {
@@ -326,6 +280,8 @@ type CreateDIDOpts struct {
 	publicKeys        []PublicKey
 	services          []docdid.Service
 	sidetreeEndpoints []*models.Endpoint
+	recoveryPublicKey crypto.PublicKey
+	updatePublicKey   crypto.PublicKey
 }
 
 // CreateDIDOption is a create DID option
@@ -350,5 +306,19 @@ func WithSidetreeEndpoint(sidetreeEndpoint string) CreateDIDOption {
 	return func(opts *CreateDIDOpts) {
 		opts.sidetreeEndpoints = append(opts.sidetreeEndpoints,
 			&models.Endpoint{URL: sidetreeEndpoint})
+	}
+}
+
+// WithRecoveryPublicKey set recovery public key
+func WithRecoveryPublicKey(recoveryPublicKey crypto.PublicKey) CreateDIDOption {
+	return func(opts *CreateDIDOpts) {
+		opts.recoveryPublicKey = recoveryPublicKey
+	}
+}
+
+// WithUpdatePublicKey set update public key
+func WithUpdatePublicKey(updatePublicKey crypto.PublicKey) CreateDIDOption {
+	return func(opts *CreateDIDOpts) {
+		opts.updatePublicKey = updatePublicKey
 	}
 }

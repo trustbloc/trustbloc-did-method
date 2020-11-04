@@ -19,10 +19,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const flag = "--"
+const (
+	flag = "--"
 
-// nolint: gochecknoglobals
-var configData = `{
+	pkPEM = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFoxLiiZZYCh8XOZE0MXUYIgCrwIq
+ho+LGIVUXDNaduiNfpLmk5MXS5Q7WQAMgaJBRyRldIvbrNWqph4DH2gdKQ==
+-----END PUBLIC KEY-----`
+
+	configData = `{
   "consortium_data": {
     "domain": "consortium.net",
     "genesis_block": "6e2f978e16b59df1d6a1dfbacb92e7d3eddeb8b3fd825e573138b3fd77d77264",
@@ -53,14 +58,14 @@ var configData = `{
   ]
 }`
 
-// nolint: gochecknoglobals
-var jwkData = `{
+	jwkData = `{
         "kty": "OKP",
         "kid": "key1",
         "d": "-YawjZSeB9Rkdol9SHeOcT9hIvo_VuH6zM-pgtk3b10",
         "crv": "Ed25519",
         "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
       }`
+)
 
 func TestCreateConfigCmdWithMissingArg(t *testing.T) {
 	t.Run("test missing arg sidetree url", func(t *testing.T) {
@@ -172,9 +177,19 @@ func TestCreateConfigCmd(t *testing.T) {
 
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()
 
+		keyFile, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = keyFile.WriteString(pkPEM)
+		require.NoError(t, err)
+
+		defer func() { require.NoError(t, os.Remove(keyFile.Name())) }()
+
 		var args []string
 		args = append(args, sidetreeURLArg()...)
 		args = append(args, configFileArg(file.Name())...)
+		args = append(args, recoveryKeyFileFlagNameArg(keyFile.Name())...)
+		args = append(args, updateKeyFileFlagNameArg(keyFile.Name())...)
 
 		cmd.SetArgs(args)
 
@@ -248,6 +263,14 @@ func sidetreeURLArg() []string {
 
 func configFileArg(config string) []string {
 	return []string{flag + configFileFlagName, config}
+}
+
+func recoveryKeyFileFlagNameArg(value string) []string {
+	return []string{flag + recoveryKeyFileFlagName, value}
+}
+
+func updateKeyFileFlagNameArg(value string) []string {
+	return []string{flag + updateKeyFileFlagName, value}
 }
 
 type mockDIDClient struct {

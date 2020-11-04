@@ -7,6 +7,10 @@ package operation
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -20,6 +24,7 @@ import (
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/stretchr/testify/require"
 
+	didclient "github.com/trustbloc/trustbloc-did-method/pkg/did"
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/didbloc"
 )
 
@@ -133,13 +138,66 @@ func TestRegisterDIDHandler(t *testing.T) {
 		require.Contains(t, registerResponse.DIDState.Reason, "error create did")
 	})
 
+	t.Run("test unsupported recovery key", func(t *testing.T) {
+		handler := getHandler(t, nil,
+			&didbloc.Client{}, registerPath)
+
+		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
+			PublicKey: []*PublicKey{{KeyType: "wrong", Recovery: true},
+				{ID: "key2", Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}}}})
+		require.NoError(t, err)
+
+		body, status, err := handleRequest(handler, registerPath, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var registerResponse RegisterResponse
+		require.NoError(t, json.Unmarshal(body.Bytes(), &registerResponse))
+
+		require.Equal(t, "1", registerResponse.JobID)
+		require.Equal(t, RegistrationStateFailure, registerResponse.DIDState.State)
+		require.Contains(t, registerResponse.DIDState.Reason, "invalid key type: wrong")
+	})
+
+	t.Run("test unsupported recovery key", func(t *testing.T) {
+		handler := getHandler(t, nil,
+			&didbloc.Client{}, registerPath)
+
+		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
+			PublicKey: []*PublicKey{{KeyType: "wrong", Update: true},
+				{ID: "key2", Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}}}})
+		require.NoError(t, err)
+
+		body, status, err := handleRequest(handler, registerPath, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var registerResponse RegisterResponse
+		require.NoError(t, json.Unmarshal(body.Bytes(), &registerResponse))
+
+		require.Equal(t, "1", registerResponse.JobID)
+		require.Equal(t, RegistrationStateFailure, registerResponse.DIDState.State)
+		require.Contains(t, registerResponse.DIDState.Reason, "invalid key type: wrong")
+	})
+
 	t.Run("test success with provided public key", func(t *testing.T) {
 		handler := getHandler(t, nil,
 			&didbloc.Client{CreateDIDValue: &did.Doc{ID: "did1"}}, registerPath)
 
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		ecPubKeyBytes := elliptic.Marshal(ecPrivKey.PublicKey.Curve, ecPrivKey.PublicKey.X, ecPrivKey.PublicKey.Y)
+
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
-			PublicKey: []*PublicKey{{ID: "key2",
-				Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}},
+			PublicKey: []*PublicKey{{KeyType: didclient.Ed25519KeyType,
+				Value: base64.StdEncoding.EncodeToString(pubKey), Recovery: true},
+				{KeyType: didclient.P256KeyType,
+					Value: base64.StdEncoding.EncodeToString(ecPubKeyBytes), Update: true},
+				{ID: "key2", Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}},
 			Service: []*Service{{ID: "serviceID"}}}})
 		require.NoError(t, err)
 

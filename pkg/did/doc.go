@@ -76,8 +76,6 @@ type PublicKey struct {
 	Encoding string
 	KeyType  string
 	Purposes []string
-	Recovery bool
-	Update   bool
 
 	Value []byte
 }
@@ -116,14 +114,12 @@ func populateRawPublicKeys(pks []PublicKey) ([]map[string]interface{}, error) {
 	var rawPKs []map[string]interface{}
 
 	for i := range pks {
-		if !pks[i].Recovery && !pks[i].Update {
-			publicKey, err := populateRawPublicKey(&pks[i])
-			if err != nil {
-				return nil, err
-			}
-
-			rawPKs = append(rawPKs, publicKey)
+		publicKey, err := populateRawPublicKey(&pks[i])
+		if err != nil {
+			return nil, err
 		}
+
+		rawPKs = append(rawPKs, publicKey)
 	}
 
 	return rawPKs, nil
