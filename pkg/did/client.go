@@ -8,6 +8,8 @@ package did
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -15,11 +17,16 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	log "github.com/sirupsen/logrus"
 	"github.com/square/go-jose/v3"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
+	"github.com/trustbloc/sidetree-core-go/pkg/jws"
+	"github.com/trustbloc/sidetree-core-go/pkg/patch"
+	"github.com/trustbloc/sidetree-core-go/pkg/util/ecsigner"
+	"github.com/trustbloc/sidetree-core-go/pkg/util/edsigner"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
 
@@ -74,15 +81,11 @@ func New(opts ...Option) *Client {
 }
 
 // CreateDID create did doc
-func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc, error) { //nolint: gocyclo
+func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc, error) {
 	createDIDOpts := &CreateDIDOpts{}
 	// Apply options
 	for _, opt := range opts {
 		opt(createDIDOpts)
-	}
-
-	if domain == "" && len(createDIDOpts.sidetreeEndpoints) == 0 {
-		return nil, errors.New("domain is empty and sidetree endpoints is empty")
 	}
 
 	if createDIDOpts.recoveryPublicKey == nil {
@@ -93,35 +96,96 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 		return nil, fmt.Errorf("update public key is required")
 	}
 
-	endpoints := createDIDOpts.sidetreeEndpoints
+	sidetreeEndpoint, err := c.getEndpoint(domain, createDIDOpts.sidetreeEndpoints)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := buildCreateRequest(createDIDOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build sidetree request: %w", err)
+	}
+
+	responseBytes, err := c.sendRequest(req, sidetreeEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send create sidetree request: %w", err)
+	}
+
+	var r didResolution
+	if errUnmarshal := json.Unmarshal(responseBytes, &r); errUnmarshal != nil {
+		return nil, fmt.Errorf("unmarshal data return from sidtree %w", errUnmarshal)
+	}
+
+	didDocBytes := responseBytes
+	// check if data is did resolution
+	if len(r.DIDDocument) != 0 {
+		didDocBytes = r.DIDDocument
+	}
+
+	didDoc, err := docdid.ParseDocument(didDocBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse public DID document: %s", err)
+	}
+
+	return didDoc, nil
+}
+
+// UpdateDID update did doc
+func (c *Client) UpdateDID(did, domain string, opts ...UpdateDIDOption) error {
+	updateDIDOpts := &UpdateDIDOpts{}
+	// Apply options
+	for _, opt := range opts {
+		opt(updateDIDOpts)
+	}
+
+	if updateDIDOpts.signingKey == nil {
+		return fmt.Errorf("signing public key is required")
+	}
+
+	if updateDIDOpts.nextUpdatePublicKey == nil {
+		return fmt.Errorf("next update public key is required")
+	}
+
+	sidetreeEndpoint, err := c.getEndpoint(domain, updateDIDOpts.sidetreeEndpoints)
+	if err != nil {
+		return err
+	}
+
+	req, err := c.buildUpdateRequest(did, updateDIDOpts)
+	if err != nil {
+		return fmt.Errorf("failed to build update request: %w", err)
+	}
+
+	_, err = c.sendRequest(req, sidetreeEndpoint)
+	if err != nil {
+		return fmt.Errorf("failed to send create sidetree request: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Client) getEndpoint(domain string, sidetreeEndpoints []*models.Endpoint) (string, error) {
+	if domain == "" && len(sidetreeEndpoints) == 0 {
+		return "", errors.New("domain is empty and sidetree endpoints is empty")
+	}
+
+	endpoints := sidetreeEndpoints
 
 	if domain != "" {
 		var err error
 		endpoints, err = c.endpointService.GetEndpoints(domain)
 
 		if err != nil {
-			return nil, fmt.Errorf("failed to get endpoints: %w", err)
+			return "", fmt.Errorf("failed to get endpoints: %w", err)
 		}
 
 		if len(endpoints) == 0 {
-			return nil, errors.New("list of endpoints is empty")
+			return "", errors.New("list of endpoints is empty")
 		}
 	}
 
 	// TODO change the logic of choosing first endpoints
-	sidetreeEndpoint := endpoints[0].URL
-
-	req, err := c.buildSideTreeRequest(createDIDOpts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build sidetree request: %w", err)
-	}
-
-	resDoc, err := c.sendCreateRequest(req, sidetreeEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send create sidetree request: %w", err)
-	}
-
-	return resDoc, nil
+	return endpoints[0].URL, nil
 }
 
 // unwrapPubKeyJWK takes a key which may contain a JSON JWK as a public key value
@@ -145,8 +209,158 @@ func unwrapPubKeyJWK(key PublicKey) (*PublicKey, error) { // nolint: gocritic
 	return &out, nil
 }
 
-// buildSideTreeRequest request builder for sidetree public DID creation
-func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, error) {
+// buildUpdateRequest request builder for sidetree public DID update
+func (c *Client) buildUpdateRequest(did string, updateDIDOpts *UpdateDIDOpts) ([]byte, error) {
+	nextUpdateKey, err := pubkey.GetPublicKeyJWK(updateDIDOpts.nextUpdatePublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get next update key : %s", err)
+	}
+
+	nextUpdateCommitment, err := commitment.Calculate(nextUpdateKey, sha2_256, sha256)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, updateKey, err := getSigner(updateDIDOpts.signingKey, updateDIDOpts.signingKeyID)
+	if err != nil {
+		return nil, err
+	}
+
+	patches, err := createUpdatePatches(updateDIDOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	didSuffix, err := getUniqueSuffix(did)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.NewUpdateRequest(&client.UpdateRequestInfo{
+		DidSuffix:        didSuffix,
+		UpdateCommitment: nextUpdateCommitment,
+		UpdateKey:        updateKey,
+		Patches:          patches,
+		MultihashCode:    sha2_256,
+		Signer:           signer,
+	})
+}
+
+func getSigner(signingkey crypto.PrivateKey, keyID string) (client.Signer, *jws.JWK, error) {
+	switch key := signingkey.(type) {
+	case *ecdsa.PrivateKey:
+		updateKey, err := pubkey.GetPublicKeyJWK(key.Public())
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return ecsigner.New(key, "ES256", keyID), updateKey, nil
+	case ed25519.PrivateKey:
+		updateKey, err := pubkey.GetPublicKeyJWK(key.Public())
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return edsigner.New(key, "EdDSA", keyID), updateKey, nil
+	default:
+		return nil, nil, fmt.Errorf("key not supported")
+	}
+}
+
+func getUniqueSuffix(id string) (string, error) {
+	p := strings.LastIndex(id, ":")
+	if p == -1 {
+		return "", fmt.Errorf("unique suffix not provided in id [%s]", id)
+	}
+
+	return id[p+1:], nil
+}
+
+func createUpdatePatches(updateDIDOpts *UpdateDIDOpts) ([]patch.Patch, error) {
+	var patches []patch.Patch
+
+	if len(updateDIDOpts.removePublicKeys) != 0 {
+		p, err := createRemovePublicKeysPatch(updateDIDOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		patches = append(patches, p)
+	}
+
+	if len(updateDIDOpts.removeServices) != 0 {
+		p, err := createRemoveServicesPatch(updateDIDOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		patches = append(patches, p)
+	}
+
+	if len(updateDIDOpts.addServices) != 0 {
+		p, err := createAddServicesPatch(updateDIDOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		patches = append(patches, p)
+	}
+
+	if len(updateDIDOpts.addPublicKeys) != 0 {
+		p, err := createAddPublicKeysPatch(updateDIDOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		patches = append(patches, p)
+	}
+
+	return patches, nil
+}
+
+func createRemovePublicKeysPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
+	removePubKeys, err := json.Marshal(updateDIDOpts.removePublicKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	return patch.NewRemovePublicKeysPatch(string(removePubKeys))
+}
+
+func createRemoveServicesPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
+	removeServices, err := json.Marshal(updateDIDOpts.removeServices)
+	if err != nil {
+		return nil, err
+	}
+
+	return patch.NewRemoveServiceEndpointsPatch(string(removeServices))
+}
+
+func createAddServicesPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
+	addServices, err := json.Marshal(populateRawServices(updateDIDOpts.addServices))
+	if err != nil {
+		return nil, err
+	}
+
+	return patch.NewAddServiceEndpointsPatch(string(addServices))
+}
+
+func createAddPublicKeysPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
+	rawPublicKeys, err := populateRawPublicKeys(updateDIDOpts.addPublicKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	addPublicKeys, err := json.Marshal(rawPublicKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	return patch.NewAddPublicKeysPatch(string(addPublicKeys))
+}
+
+// buildCreateRequest request builder for sidetree public DID creation
+func buildCreateRequest(createDIDOpts *CreateDIDOpts) ([]byte, error) {
 	publicKeys := createDIDOpts.publicKeys
 
 	var parsedKeys []PublicKey
@@ -196,6 +410,7 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 		UpdateCommitment:   updateCommitment,
 		MultihashCode:      sha2_256,
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sidetree request: %w", err)
 	}
@@ -203,7 +418,7 @@ func (c *Client) buildSideTreeRequest(createDIDOpts *CreateDIDOpts) ([]byte, err
 	return req, nil
 }
 
-func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc, error) {
+func (c *Client) sendRequest(req []byte, endpointURL string) ([]byte, error) {
 	httpReq, err := http.NewRequest(http.MethodPost, endpointURL+"/operations", bytes.NewReader(req))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http request: %w", err)
@@ -232,93 +447,12 @@ func (c *Client) sendCreateRequest(req []byte, endpointURL string) (*docdid.Doc,
 			endpointURL, resp.StatusCode, responseBytes)
 	}
 
-	var r didResolution
-	if errUnmarshal := json.Unmarshal(responseBytes, &r); errUnmarshal != nil {
-		return nil, fmt.Errorf("unmarshal data return from sidtree %w", errUnmarshal)
-	}
-
-	didDocBytes := responseBytes
-	// check if data is did resolution
-	if len(r.DIDDocument) != 0 {
-		didDocBytes = r.DIDDocument
-	}
-
-	didDoc, err := docdid.ParseDocument(didDocBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse public DID document: %s", err)
-	}
-
-	return didDoc, nil
+	return responseBytes, nil
 }
 
 func closeResponseBody(respBody io.Closer) {
 	e := respBody.Close()
 	if e != nil {
 		log.Errorf("Failed to close response body: %v", e)
-	}
-}
-
-// Option is a DID client instance option
-type Option func(opts *Client)
-
-// WithTLSConfig option is for definition of secured HTTP transport using a tls.Config instance
-func WithTLSConfig(tlsConfig *tls.Config) Option {
-	return func(opts *Client) {
-		opts.tlsConfig = tlsConfig
-	}
-}
-
-// WithAuthToken add auth token
-func WithAuthToken(authToken string) Option {
-	return func(opts *Client) {
-		opts.authToken = "Bearer " + authToken
-	}
-}
-
-// CreateDIDOpts create did opts
-type CreateDIDOpts struct {
-	publicKeys        []PublicKey
-	services          []docdid.Service
-	sidetreeEndpoints []*models.Endpoint
-	recoveryPublicKey crypto.PublicKey
-	updatePublicKey   crypto.PublicKey
-}
-
-// CreateDIDOption is a create DID option
-type CreateDIDOption func(opts *CreateDIDOpts)
-
-// WithPublicKey add DID public key
-func WithPublicKey(publicKey *PublicKey) CreateDIDOption {
-	return func(opts *CreateDIDOpts) {
-		opts.publicKeys = append(opts.publicKeys, *publicKey)
-	}
-}
-
-// WithService add service
-func WithService(service *docdid.Service) CreateDIDOption {
-	return func(opts *CreateDIDOpts) {
-		opts.services = append(opts.services, *service)
-	}
-}
-
-// WithSidetreeEndpoint go directly to sidetree
-func WithSidetreeEndpoint(sidetreeEndpoint string) CreateDIDOption {
-	return func(opts *CreateDIDOpts) {
-		opts.sidetreeEndpoints = append(opts.sidetreeEndpoints,
-			&models.Endpoint{URL: sidetreeEndpoint})
-	}
-}
-
-// WithRecoveryPublicKey set recovery public key
-func WithRecoveryPublicKey(recoveryPublicKey crypto.PublicKey) CreateDIDOption {
-	return func(opts *CreateDIDOpts) {
-		opts.recoveryPublicKey = recoveryPublicKey
-	}
-}
-
-// WithUpdatePublicKey set update public key
-func WithUpdatePublicKey(updatePublicKey crypto.PublicKey) CreateDIDOption {
-	return func(opts *CreateDIDOpts) {
-		opts.updatePublicKey = updatePublicKey
 	}
 }
