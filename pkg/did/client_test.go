@@ -27,11 +27,160 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
+func TestClient_UpdateDID(t *testing.T) {
+	t.Run("test domain is empty", func(t *testing.T) {
+		v := New()
+
+		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.UpdateDID("did:ex:123", "", WithNextUpdatePublicKey(pubKey),
+			WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "domain is empty")
+	})
+
+	t.Run("test signing key empty", func(t *testing.T) {
+		v := New()
+
+		err := v.UpdateDID("did:ex:123", "testnet")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signing public key is required")
+	})
+
+	t.Run("test next updates key empty", func(t *testing.T) {
+		v := New()
+
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.UpdateDID("did:ex:123", "testnet", WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "next update public key is required")
+	})
+
+	t.Run("test error from get endpoints", func(t *testing.T) {
+		v := New()
+
+		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v.endpointService = endpoint.NewService(
+			discoveryMock([]*models.Endpoint{}, fmt.Errorf("discover error")),
+			selectionMock([]*models.Endpoint{}, nil))
+
+		err = v.UpdateDID("did:ex:123", "testnet", WithNextUpdatePublicKey(pubKey),
+			WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "discover error")
+
+		v.endpointService = endpoint.NewService(
+			discoveryMock(nil, nil),
+			selectionMock(nil, fmt.Errorf("select error")))
+
+		err = v.UpdateDID("did:ex:123", "testnet", WithNextUpdatePublicKey(pubKey),
+			WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "select error")
+
+		v.endpointService = endpoint.NewService(
+			discoveryMock(nil, nil),
+			selectionMock(nil, nil))
+
+		err = v.UpdateDID("did:ex:123", "testnet", WithNextUpdatePublicKey(pubKey),
+			WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "list of endpoints is empty")
+	})
+
+	t.Run("test failed to get next update key", func(t *testing.T) {
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.UpdateDID("did:ex:123", "testnet", WithSigningKey(privKey),
+			WithNextUpdatePublicKey([]byte("wrong")))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get next update key")
+	})
+
+	t.Run("test unsupported signing key", func(t *testing.T) {
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.UpdateDID("did:ex:123", "testnet", WithSigningKey("www"),
+			WithNextUpdatePublicKey(pubKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "key not supported")
+	})
+
+	t.Run("test error from unique suffix", func(t *testing.T) {
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.UpdateDID("wrong", "testnet", WithSigningKey(privKey),
+			WithNextUpdatePublicKey(pubKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unique suffix not provided in id")
+	})
+
+	t.Run("test success", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer serv.Close()
+
+		v := New(WithAuthToken("tk1"))
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		err = v.UpdateDID("did:ex:123", "",
+			WithUpdateSidetreeEndpoint(serv.URL), WithSigningKey(ecPrivKey),
+			WithNextUpdatePublicKey(pubKey), WithRemoveService("svc1"), WithRemoveService("svc1"),
+			WithRemovePublicKey("k1"), WithRemovePublicKey("k2"),
+			WithAddPublicKey(&PublicKey{ID: "key3", Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType, Value: pubKey}),
+			WithAddService(&did.Service{ID: "svc3"}))
+		require.NoError(t, err)
+	})
+}
+
 func TestClient_CreateDID(t *testing.T) {
 	t.Run("test domain is empty", func(t *testing.T) {
 		v := New()
 
-		doc, err := v.CreateDID("")
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		doc, err := v.CreateDID("", WithUpdatePublicKey(pubKey), WithRecoveryPublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "domain is empty")
 		require.Nil(t, doc)
