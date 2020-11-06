@@ -58,28 +58,29 @@ const (
 		" Alternatively, this can be set with the following environment variable: " + configFileEnvKey
 
 	outputDirectoryFlagName  = "output-directory"
-	outputDirectoryEnvKey    = "DID_METHOD_CLI_OUTPUT_DIRECTORY" //nolint: gosec
+	outputDirectoryEnvKey    = "DID_METHOD_CLI_OUTPUT_DIRECTORY"
 	outputDirectoryFlagUsage = "Output directory " +
 		" Alternatively, this can be set with the following environment variable: " + outputDirectoryEnvKey
 
 	recoveryKeyFlagName  = "recoverykey"
 	recoveryKeyEnvKey    = "DID_METHOD_CLI_RECOVERYKEY"
-	recoveryKeyFlagUsage = "The public key PEM used for recovery of the document. Example: --recoverykey 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXlp4fWF5rgLthKr20tsJ0tBIE6UmrGuAC8iVG/DaedkSt7HihCx/t2BGjooduaKwEIOmPjx2zBsbkbFrYhhnVw' " +
+	recoveryKeyFlagUsage = "The public key PEM used for recovery of the document. " +
 		" Alternatively, this can be set with the following environment variable: " + recoveryKeyEnvKey
 
 	recoveryKeyFileFlagName  = "recoverykey-file"
 	recoveryKeyFileEnvKey    = "DID_METHOD_CLI_RECOVERYKEY_FILE"
-	recoveryKeyFileFlagUsage = "The file that contains the public key PEM used for recovery of the document. Example: --recoverykeyfile ./recovery_public.key " +
+	recoveryKeyFileFlagUsage = "The file that contains the public key PEM used for recovery of the document. " +
 		" Alternatively, this can be set with the following environment variable: " + recoveryKeyFileEnvKey
 
 	updateKeyFlagName  = "updatekey"
 	updateKeyEnvKey    = "DID_METHOD_CLI_UPDATEKEY"
-	updateKeyFlagUsage = "The public key PEM used for validating the signature of the next update of the document. Example: --updatekey 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFMy2n9jYZChYSjdhK9vUWvPjz9tzBcEa13Ye33haxFsT//3kGxOQhI7yb3MJsDvwLtdfLL6txM3RdOrmLABBvw' " +
+	updateKeyFlagUsage = "The public key PEM used for validating the signature of the next update of the document. " +
 		" Alternatively, this can be set with the following environment variable: " + updateKeyEnvKey
 
 	updateKeyFileFlagName  = "updatekey-file"
 	updateKeyFileEnvKey    = "DID_METHOD_CLI_UPDATEKEY_FILE"
-	updateKeyFileFlagUsage = "The file that contains the public key PEM used for validating the signature of the next update of the document. Example: --updatekeyfile ./update_public.key " +
+	updateKeyFileFlagUsage = "The file that contains the public key PEM used for" +
+		" validating the signature of the next update of the document " +
 		" Alternatively, this can be set with the following environment variable: " + updateKeyFileEnvKey
 )
 
@@ -147,17 +148,11 @@ func createCreateConfigCmd() *cobra.Command {
 				return err
 			}
 
-			sidetreeWriteToken, err := cmdutils.GetUserSetVarFromString(cmd, sidetreeWriteTokenFlagName,
-				sidetreeWriteTokenEnvKey, true)
-			if err != nil {
-				return err
-			}
+			sidetreeWriteToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeWriteTokenFlagName,
+				sidetreeWriteTokenEnvKey)
 
-			outputDirectory, err := cmdutils.GetUserSetVarFromString(cmd, outputDirectoryFlagName,
-				outputDirectoryEnvKey, true)
-			if err != nil {
-				return err
-			}
+			outputDirectory := cmdutils.GetUserSetOptionalVarFromString(cmd, outputDirectoryFlagName,
+				outputDirectoryEnvKey)
 
 			config, err := getConfig(cmd)
 			if err != nil {
@@ -179,7 +174,7 @@ func createCreateConfigCmd() *cobra.Command {
 			parameters := &parameters{
 				sidetreeURL: strings.TrimSpace(sidetreeURL),
 				didClient: did.New(did.WithAuthToken(sidetreeWriteToken),
-					did.WithTLSConfig(&tls.Config{RootCAs: rootCAs})),
+					did.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12})),
 				config:      config,
 				recoveryKey: recoveryKey,
 				updateKey:   updateKey,
@@ -209,18 +204,13 @@ func writeFiles(outputDirectory string, filesData, didConfData map[string][]byte
 	return writeDIDConfiguration(outputDirectory, didConfData)
 }
 
-func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFileEnvKey string) (crypto.PublicKey, error) {
-	keyString, err := cmdutils.GetUserSetVarFromString(cmd, keyFlagName,
-		keyEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName,
+	keyFileEnvKey string) (crypto.PublicKey, error) {
+	keyString := cmdutils.GetUserSetOptionalVarFromString(cmd, keyFlagName,
+		keyEnvKey)
 
-	keyFile, err := cmdutils.GetUserSetVarFromString(cmd, keyFileFlagName,
-		keyFileEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	keyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, keyFileFlagName,
+		keyFileEnvKey)
 
 	if keyString == "" && keyFile == "" {
 		return nil, fmt.Errorf("either key (--%s) or key file (--%s) is required", keyFlagName, keyFileFlagName)
@@ -232,7 +222,6 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 
 	if keyFile != "" {
 		return publicKeyFromFile(keyFile)
-
 	}
 
 	return publicKeyFromPEM([]byte(keyString))
@@ -268,17 +257,17 @@ func publicKeyFromPEM(pubKeyPEM []byte) (crypto.PublicKey, error) {
 
 func writeConfig(outputDirectory string, filesData map[string][]byte) error {
 	if outputDirectory != "" {
-		if err := os.MkdirAll(outputDirectory, 0755); err != nil {
+		if err := os.MkdirAll(outputDirectory, 0755); err != nil { //nolint: gosec
 			return err
 		}
 	}
 
-	if err := os.MkdirAll(path.Join(outputDirectory, "did-trustbloc"), 0755); err != nil {
+	if err := os.MkdirAll(path.Join(outputDirectory, "did-trustbloc"), 0755); err != nil { //nolint: gosec
 		return err
 	}
 
 	for k, v := range filesData {
-		err := ioutil.WriteFile(path.Join(outputDirectory, "did-trustbloc", k+".json"), v, 0644)
+		err := ioutil.WriteFile(path.Join(outputDirectory, "did-trustbloc", k+".json"), v, 0644) //nolint: gosec
 		if err != nil {
 			return fmt.Errorf("failed to write file %w", err)
 		}
@@ -287,8 +276,9 @@ func writeConfig(outputDirectory string, filesData map[string][]byte) error {
 	return nil
 }
 
-func createDIDConfiguration(domain, did string, expiryTime int64, signiningKeys ...*gojose.SigningKey) ([]byte, error) {
-	conf, err := didconfiguration.CreateDIDConfiguration(domain, did, expiryTime, signiningKeys...)
+func createDIDConfiguration(domain, didID string, expiryTime int64,
+	signiningKeys ...*gojose.SigningKey) ([]byte, error) {
+	conf, err := didconfiguration.CreateDIDConfiguration(domain, didID, expiryTime, signiningKeys...)
 	if err != nil {
 		return nil, err
 	}
@@ -298,17 +288,17 @@ func createDIDConfiguration(domain, did string, expiryTime int64, signiningKeys 
 
 func writeDIDConfiguration(outputDirectory string, filesData map[string][]byte) error {
 	if outputDirectory != "" {
-		if err := os.MkdirAll(outputDirectory, 0700); err != nil {
+		if err := os.MkdirAll(outputDirectory, 0755); err != nil { //nolint: gosec
 			return err
 		}
 	}
 
 	for domain, data := range filesData {
-		if err := os.MkdirAll(path.Join(outputDirectory, domain), 0700); err != nil {
+		if err := os.MkdirAll(path.Join(outputDirectory, domain), 0755); err != nil { //nolint: gosec
 			return err
 		}
 
-		err := ioutil.WriteFile(path.Join(outputDirectory, domain, "did-configuration.json"), data, 0644)
+		err := ioutil.WriteFile(path.Join(outputDirectory, domain, "did-configuration.json"), data, 0644) //nolint: gosec
 		if err != nil {
 			return fmt.Errorf("failed to write file %w", err)
 		}
@@ -329,14 +319,14 @@ func getConfig(cmd *cobra.Command) (*config, error) {
 		return nil, fmt.Errorf("failed to read config file '%s' : %w", configFile, err)
 	}
 
-	var config config
+	var conf config
 
-	if err := json.Unmarshal(data, &config); err != nil {
+	if err := json.Unmarshal(data, &conf); err != nil {
 		return nil, fmt.Errorf("failed unmarshal to config %w", err)
 	}
 
-	for _, member := range config.MembersData {
-		jwkData, err := ioutil.ReadFile(member.PrivateKeyJwkPath) //nolint: gosec
+	for _, member := range conf.MembersData {
+		jwkData, err := ioutil.ReadFile(filepath.Clean(member.PrivateKeyJwkPath))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read jwk file '%s' : %w", member.PrivateKeyJwkPath, err)
 		}
@@ -348,29 +338,26 @@ func getConfig(cmd *cobra.Command) (*config, error) {
 		member.sigKey = gojose.SigningKey{Key: member.jsonWebKey.Key, Algorithm: gojose.EdDSA}
 	}
 
-	return &config, nil
+	return &conf, nil
 }
 
 func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {
-	tlsSystemCertPoolString, err := cmdutils.GetUserSetVarFromString(cmd, tlsSystemCertPoolFlagName,
-		tlsSystemCertPoolEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	tlsSystemCertPoolString := cmdutils.GetUserSetOptionalVarFromString(cmd, tlsSystemCertPoolFlagName,
+		tlsSystemCertPoolEnvKey)
 
 	tlsSystemCertPool := false
+
 	if tlsSystemCertPoolString != "" {
+		var err error
+
 		tlsSystemCertPool, err = strconv.ParseBool(tlsSystemCertPoolString)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	tlsCACerts, err := cmdutils.GetUserSetVarFromArrayString(cmd, tlsCACertsFlagName,
-		tlsCACertsEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	tlsCACerts := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, tlsCACertsFlagName,
+		tlsCACertsEnvKey)
 
 	return tlsutils.GetCertPool(tlsSystemCertPool, tlsCACerts)
 }
@@ -389,7 +376,7 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(updateKeyFileFlagName, "", "", updateKeyFileFlagUsage)
 }
 
-func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte, error) {
+func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte, error) { //nolint: funlen
 	filesData := make(map[string][]byte)
 	sigKeys := make([]gojose.SigningKey, 0)
 

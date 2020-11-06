@@ -14,9 +14,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	"github.com/stretchr/testify/require"
 )
 
 const (

@@ -16,11 +16,12 @@ require (
 	github.com/cucumber/godog v0.9.0
 	github.com/fsouza/go-dockerclient v1.6.0
 	github.com/google/uuid v1.1.2
-	github.com/hyperledger/aries-framework-go v0.1.5-0.20201029183113-1e234a0af6c6
-	github.com/sirupsen/logrus v1.4.2
+	github.com/hyperledger/aries-framework-go v0.1.5-0.20201030222504-2f5e96e162b3
+	github.com/sirupsen/logrus v1.6.0
 	github.com/tidwall/gjson v1.6.0
-	github.com/trustbloc/edge-core v0.1.4
+	github.com/trustbloc/edge-core v0.1.5-0.20201106164919-76ecfeca954f
 	github.com/trustbloc/trustbloc-did-method v0.0.0
+	gotest.tools/v3 v3.0.3 // indirect
 )
 
 // https://github.com/ory/dockertest/issues/208#issuecomment-686820414

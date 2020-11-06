@@ -50,8 +50,8 @@ func createConfigHashCmd() *cobra.Command {
 			}
 
 			var m map[string]interface{}
-			if err := json.Unmarshal(configData, &m); err != nil {
-				return err
+			if errUnmarshal := json.Unmarshal(configData, &m); errUnmarshal != nil {
+				return errUnmarshal
 			}
 
 			data, err := docutil.MarshalCanonical(m)
