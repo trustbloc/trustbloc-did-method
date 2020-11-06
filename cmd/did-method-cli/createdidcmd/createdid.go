@@ -323,9 +323,6 @@ func getPublicKeys(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
 			keyType = did.Ed25519KeyType
 			value = []byte(fmt.Sprintf("%v", key))
 		case *ecdsa.PublicKey:
-			if key.Curve.Params().Name != elliptic.P256().Params().Name {
-				return nil, fmt.Errorf("ec cruve %s key not supported", elliptic.P256().Params().Name)
-			}
 			keyType = did.P256KeyType
 			value = elliptic.Marshal(key.Curve, key.X, key.Y)
 		default:

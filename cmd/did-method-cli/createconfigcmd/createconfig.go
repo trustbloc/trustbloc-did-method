@@ -190,19 +190,23 @@ func createCreateConfigCmd() *cobra.Command {
 				return err
 			}
 
-			err = os.RemoveAll(outputDirectory)
-			if err != nil {
-				return fmt.Errorf("remove outputDirectory: %w", err)
-			}
-
-			err = writeConfig(outputDirectory, filesData)
-			if err != nil {
-				return err
-			}
-
-			return writeDIDConfiguration(outputDirectory, didConfData)
+			return writeFiles(outputDirectory, filesData, didConfData)
 		},
 	}
+}
+
+func writeFiles(outputDirectory string, filesData, didConfData map[string][]byte) error {
+	err := os.RemoveAll(outputDirectory)
+	if err != nil {
+		return fmt.Errorf("remove outputDirectory: %w", err)
+	}
+
+	err = writeConfig(outputDirectory, filesData)
+	if err != nil {
+		return err
+	}
+
+	return writeDIDConfiguration(outputDirectory, didConfData)
 }
 
 func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFileEnvKey string) (crypto.PublicKey, error) {

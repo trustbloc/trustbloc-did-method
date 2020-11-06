@@ -37,6 +37,7 @@ openssl x509 -req -in test/bdd/fixtures/keys/tls/ec-key.csr -CA test/bdd/fixture
 # generate key pair for recover/updates
 mkdir -p test/bdd/fixtures/keys/recover
 mkdir -p test/bdd/fixtures/keys/update
+mkdir -p test/bdd/fixtures/keys/update2
 
 openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/recover/key.pem
 openssl ec -in test/bdd/fixtures/keys/recover/key.pem -passout pass:123 -out test/bdd/fixtures/keys/recover/key_encrypted.pem -aes256
@@ -44,5 +45,9 @@ openssl ec -in test/bdd/fixtures/keys/recover/key.pem -pubout -out test/bdd/fixt
 openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/update/key.pem
 openssl ec -in test/bdd/fixtures/keys/update/key.pem -passout pass:123 -out test/bdd/fixtures/keys/update/key_encrypted.pem -aes256
 openssl ec -in test/bdd/fixtures/keys/update/key.pem -pubout -out test/bdd/fixtures/keys/update/public.pem
+openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/update2/key.pem
+openssl ec -in test/bdd/fixtures/keys/update2/key.pem -passout pass:123 -out test/bdd/fixtures/keys/update2/key_encrypted.pem -aes256
+openssl ec -in test/bdd/fixtures/keys/update2/key.pem -pubout -out test/bdd/fixtures/keys/update2/public.pem
+
 
 echo "done generating trustbloc-did-method PKI"

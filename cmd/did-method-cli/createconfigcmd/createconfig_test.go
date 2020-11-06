@@ -67,6 +67,96 @@ ho+LGIVUXDNaduiNfpLmk5MXS5Q7WQAMgaJBRyRldIvbrNWqph4DH2gdKQ==
       }`
 )
 
+func TestRecoveryKey(t *testing.T) {
+	jwkFile, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = jwkFile.WriteString(jwkData)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(jwkFile.Name())) }()
+
+	file, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = file.WriteString(fmt.Sprintf(configData, jwkFile.Name()))
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(file.Name())) }()
+
+	t.Run("test recovery key empty", func(t *testing.T) {
+		os.Clearenv()
+		cmd := GetCreateConfigCmd()
+
+		var args []string
+		args = append(args, sidetreeURLArg()...)
+		args = append(args, configFileArg(file.Name())...)
+
+		cmd.SetArgs(args)
+		err = cmd.Execute()
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "either key (--recoverykey) or key file (--recoverykey-file) is required")
+	})
+
+	t.Run("test both recovery key and recovery key file exist", func(t *testing.T) {
+		os.Clearenv()
+		cmd := GetCreateConfigCmd()
+
+		var args []string
+		args = append(args, sidetreeURLArg()...)
+		args = append(args, configFileArg(file.Name())...)
+		args = append(args, recoveryKeyFlagNameArg("key")...)
+		args = append(args, recoveryKeyFileFlagNameArg("./file")...)
+
+		cmd.SetArgs(args)
+		err := cmd.Execute()
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "only one of key (--recoverykey) or key file (--recoverykey-file) may be specified")
+	})
+
+	t.Run("test recovery key wrong pem", func(t *testing.T) {
+		os.Clearenv()
+		cmd := GetCreateConfigCmd()
+
+		var args []string
+		args = append(args, sidetreeURLArg()...)
+		args = append(args, configFileArg(file.Name())...)
+		args = append(args, recoveryKeyFlagNameArg("w")...)
+
+		cmd.SetArgs(args)
+		err := cmd.Execute()
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "public key not found in PEM")
+	})
+
+	t.Run("test recovery key success", func(t *testing.T) {
+		os.Clearenv()
+		cmd := GetCreateConfigCmd()
+
+		pkFile, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = pkFile.WriteString(pkPEM)
+		require.NoError(t, err)
+
+		defer func() { require.NoError(t, os.Remove(pkFile.Name())) }()
+
+		var args []string
+		args = append(args, sidetreeURLArg()...)
+		args = append(args, configFileArg(file.Name())...)
+		args = append(args, recoveryKeyFileFlagNameArg(pkFile.Name())...)
+
+		cmd.SetArgs(args)
+		err = cmd.Execute()
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "either key (--updatekey) or key file (--updatekey-file) is required")
+	})
+}
+
 func TestCreateConfigCmdWithMissingArg(t *testing.T) {
 	t.Run("test missing arg sidetree url", func(t *testing.T) {
 		cmd := GetCreateConfigCmd()
@@ -222,7 +312,7 @@ func TestCreateConfigCmd(t *testing.T) {
 		c, err := getConfig(&cobra.Command{})
 		require.NoError(t, err)
 
-		filesData, _, err := createConfig(&parameters{config: c,
+		filesData, didConfData, err := createConfig(&parameters{config: c,
 			didClient: &mockDIDClient{&docdid.Doc{ID: "did:test:123"}}})
 		require.NoError(t, err)
 
@@ -233,12 +323,15 @@ func TestCreateConfigCmd(t *testing.T) {
 
 		defer func() { require.NoError(t, os.RemoveAll(dir)) }()
 
-		require.NoError(t, writeConfig(dir, filesData))
+		require.NoError(t, writeFiles(dir, filesData, didConfData))
 
-		_, err = os.Stat(dir + "/consortium.net.json")
+		_, err = os.Stat(dir + "/did-trustbloc/consortium.net.json")
 		require.False(t, os.IsNotExist(err))
 
-		_, err = os.Stat(dir + "/stakeholder.one.json")
+		_, err = os.Stat(dir + "/did-trustbloc/stakeholder.one.json")
+		require.False(t, os.IsNotExist(err))
+
+		_, err = os.Stat(dir + "/stakeholder.one/did-configuration.json")
 		require.False(t, os.IsNotExist(err))
 	})
 }
@@ -267,6 +360,10 @@ func configFileArg(config string) []string {
 
 func recoveryKeyFileFlagNameArg(value string) []string {
 	return []string{flag + recoveryKeyFileFlagName, value}
+}
+
+func recoveryKeyFlagNameArg(value string) []string {
+	return []string{flag + recoveryKeyFlagName, value}
 }
 
 func updateKeyFileFlagNameArg(value string) []string {
