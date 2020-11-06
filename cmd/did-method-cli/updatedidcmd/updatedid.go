@@ -83,27 +83,29 @@ const (
 
 	signingKeyFlagName  = "signingkey"
 	signingKeyEnvKey    = "DID_METHOD_CLI_SIGNINGKEY"
-	signingKeyFlagUsage = "The private key PEM used for signing the update of the index document. Example: --signingkey 'MHcCAQEEILmfa4yss8nsTJK2hKl+LAoiwW3p+eQzaHfITI9z8ptpoAoGCCqGSM49AwEHoUQDQgAEMd1/e/Nxh73bK12PEEcNSY9HxnP0N8er9ww9rjq1tNcsqfRjlL0bdTh9Basfn/4JrQHUHc6uS99yjQc+0u2bVg' " +
+	signingKeyFlagUsage = "The private key PEM used for signing the update of the index document." +
 		" Alternatively, this can be set with the following environment variable: " + signingKeyEnvKey
 
 	signingKeyFileFlagName  = "signingkey-file"
 	signingKeyFileEnvKey    = "DID_METHOD_CLI_SIGNINGKEY_FILE"
-	signingKeyFileFlagUsage = "The file that contains the private key PEM used for signing the update of the index document. Example: --signingkey-file ./keys/signing.key " +
+	signingKeyFileFlagUsage = "The file that contains the private key" +
+		" PEM used for signing the update of the index document" +
 		" Alternatively, this can be set with the following environment variable: " + signingKeyFileEnvKey
 
 	signingKeyPasswordFlagName  = "signingkey-password"
-	signingKeyPasswordEnvKey    = "DID_METHOD_CLI_SIGNINGKEY_PASSWORD"
+	signingKeyPasswordEnvKey    = "DID_METHOD_CLI_SIGNINGKEY_PASSWORD" //nolint: gosec
 	signingKeyPasswordFlagUsage = "signing key pem password. " +
 		" Alternatively, this can be set with the following environment variable: " + signingKeyPasswordEnvKey
 
 	nextUpdateKeyFlagName  = "nextupdatekey"
 	nextUpdateKeyEnvKey    = "DID_METHOD_CLI_NEXTUPDATEKEY"
-	nextUpdateKeyFlagUsage = "The public key PEM used for creating commitment for next update of the index document. Example: --nextupdatekey 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFMy2n9jYZChYSjdhK9vUWvPjz9tzBcEa13Ye33haxFsT//3kGxOQhI7yb3MJsDvwLtdfLL6txM3RdOrmLABBvw' " +
+	nextUpdateKeyFlagUsage = "The public key PEM used for creating commitment for next update of the index document." +
 		" Alternatively, this can be set with the following environment variable: " + nextUpdateKeyEnvKey
 
 	nextUpdateKeyFileFlagName  = "nextupdatekey-file"
 	nextUpdateKeyFileEnvKey    = "DID_METHOD_CLI_NEXTUPDATEKEY_FILE"
-	nextUpdateKeyFileFlagUsage = "The file that contains the public key PEM used for creating commitment for next update of the index document. Example: --nextupdatekey-file ./next_update_public.key " +
+	nextUpdateKeyFileFlagUsage = "The file that contains the public key" +
+		" PEM used for creating commitment for next update of the index document. " +
 		" Alternatively, this can be set with the following environment variable: " + nextUpdateKeyFileEnvKey
 )
 
@@ -139,20 +141,14 @@ func updateDIDCmd() *cobra.Command {
 				return err
 			}
 
-			sidetreeWriteToken, err := cmdutils.GetUserSetVarFromString(cmd, sidetreeWriteTokenFlagName,
-				sidetreeWriteTokenEnvKey, true)
-			if err != nil {
-				return err
-			}
+			sidetreeWriteToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeWriteTokenFlagName,
+				sidetreeWriteTokenEnvKey)
 
-			domain, err := cmdutils.GetUserSetVarFromString(cmd, domainFlagName,
-				domainFileEnvKey, true)
-			if err != nil {
-				return err
-			}
+			domain := cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName,
+				domainFileEnvKey)
 
 			client := did.New(did.WithAuthToken(sidetreeWriteToken),
-				did.WithTLSConfig(&tls.Config{RootCAs: rootCAs}))
+				did.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
 
 			opts, err := updateDIDOption(cmd)
 			if err != nil {
@@ -164,27 +160,24 @@ func updateDIDCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Println(fmt.Sprintf("successfully updated DID %s", didURI))
+			fmt.Printf("successfully updated DID %s", didURI)
 
 			return nil
 		},
 	}
 }
 
-func getSidetreeURL(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
+func getSidetreeURL(cmd *cobra.Command) []did.UpdateDIDOption {
 	var opts []did.UpdateDIDOption
 
-	sidetreeURL, err := cmdutils.GetUserSetVarFromArrayString(cmd, sidetreeURLFlagName,
-		sidetreeURLEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
+		sidetreeURLEnvKey)
 
 	for _, v := range sidetreeURL {
 		opts = append(opts, did.WithUpdateSidetreeEndpoint(v))
 	}
 
-	return opts, nil
+	return opts
 }
 
 func updateDIDOption(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
@@ -216,70 +209,46 @@ func updateDIDOption(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 
 	opts = append(opts, serviceOpts...)
 
-	sidetreeURLOpts, err := getSidetreeURL(cmd)
-	if err != nil {
-		return nil, err
-	}
+	opts = append(opts, getSidetreeURL(cmd)...)
 
-	opts = append(opts, sidetreeURLOpts...)
+	opts = append(opts, getRemovePublicKeyID(cmd)...)
 
-	removePublicKeyOpts, err := getRemovePublicKeyID(cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = append(opts, removePublicKeyOpts...)
-
-	removeServiceOpts, err := getRemoveServiceID(cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = append(opts, removeServiceOpts...)
+	opts = append(opts, getRemoveServiceID(cmd)...)
 
 	return opts, nil
 }
 
-func getRemoveServiceID(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
+func getRemoveServiceID(cmd *cobra.Command) []did.UpdateDIDOption {
 	var opts []did.UpdateDIDOption
 
-	removeServices, err := cmdutils.GetUserSetVarFromArrayString(cmd, removeServiceIDFlagName,
-		removeServiceIDEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	removeServices := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, removeServiceIDFlagName,
+		removeServiceIDEnvKey)
 
 	for _, v := range removeServices {
 		opts = append(opts, did.WithRemoveService(v))
 	}
 
-	return opts, nil
+	return opts
 }
 
-func getRemovePublicKeyID(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
+func getRemovePublicKeyID(cmd *cobra.Command) []did.UpdateDIDOption {
 	var opts []did.UpdateDIDOption
 
-	removePublicKeys, err := cmdutils.GetUserSetVarFromArrayString(cmd, removePublicKeyIDFlagName,
-		removePublicKeyIDEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	removePublicKeys := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, removePublicKeyIDFlagName,
+		removePublicKeyIDEnvKey)
 
 	for _, v := range removePublicKeys {
 		opts = append(opts, did.WithRemovePublicKey(v))
 	}
 
-	return opts, nil
+	return opts
 }
 
 func getServices(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 	var opts []did.UpdateDIDOption
 
-	serviceFile, err := cmdutils.GetUserSetVarFromString(cmd, addServiceFileFlagName,
-		addServiceFileEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	serviceFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addServiceFileFlagName,
+		addServiceFileEnvKey)
 
 	if serviceFile != "" {
 		svcData, err := ioutil.ReadFile(filepath.Clean(serviceFile))
@@ -302,19 +271,14 @@ func getServices(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 	return opts, nil
 }
 
+//nolint: gocyclo,nestif
 func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFileEnvKey string,
 	signing bool) ([]did.UpdateDIDOption, error) {
-	keyString, err := cmdutils.GetUserSetVarFromString(cmd, keyFlagName,
-		keyEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	keyString := cmdutils.GetUserSetOptionalVarFromString(cmd, keyFlagName,
+		keyEnvKey)
 
-	keyFile, err := cmdutils.GetUserSetVarFromString(cmd, keyFileFlagName,
-		keyFileEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	keyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, keyFileFlagName,
+		keyFileEnvKey)
 
 	if keyString == "" && keyFile == "" {
 		return nil, fmt.Errorf("either key (--%s) or key file (--%s) is required", keyFlagName, keyFileFlagName)
@@ -326,14 +290,13 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 
 	var opts []did.UpdateDIDOption
 
+	var err error
+
 	if signing {
 		var privKey crypto.PrivateKey
 
-		password, err := cmdutils.GetUserSetVarFromString(cmd, signingKeyPasswordFlagName,
-			signingKeyPasswordEnvKey, true)
-		if err != nil {
-			return nil, err
-		}
+		password := cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
+			signingKeyPasswordEnvKey)
 
 		if keyFile != "" {
 			privKey, err = privateKeyFromFile(keyFile, []byte(password))
@@ -351,6 +314,7 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 
 		return opts, nil
 	}
+
 	var pubKey crypto.PublicKey
 	if keyFile != "" {
 		pubKey, err = publicKeyFromFile(keyFile)
@@ -369,16 +333,13 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 	return opts, nil
 }
 
-func getPublicKeys(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
+func getPublicKeys(cmd *cobra.Command) ([]did.UpdateDIDOption, error) { //nolint: gocyclo
 	var opts []did.UpdateDIDOption
 
-	publicKeyFile, err := cmdutils.GetUserSetVarFromString(cmd, addPublicKeyFileFlagName,
-		addPublicKeyFileEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addPublicKeyFileFlagName,
+		addPublicKeyFileEnvKey)
 
-	if publicKeyFile != "" {
+	if publicKeyFile != "" { //nolint: nestif
 		pkData, err := ioutil.ReadFile(filepath.Clean(publicKeyFile))
 		if err != nil {
 			return nil, fmt.Errorf("failed to public key file '%s' : %w", publicKeyFile, err)
@@ -401,6 +362,7 @@ func getPublicKeys(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 			}
 
 			keyType := ""
+
 			var value []byte
 
 			switch key := jsonWebKey.Key.(type) {
@@ -411,7 +373,9 @@ func getPublicKeys(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 				if key.Curve.Params().Name != elliptic.P256().Params().Name {
 					return nil, fmt.Errorf("ec cruve %s key not supported", elliptic.P256().Params().Name)
 				}
+
 				keyType = did.P256KeyType
+
 				value = elliptic.Marshal(key.Curve, key.X, key.Y)
 			default:
 				return nil, fmt.Errorf("key not supported")
@@ -426,25 +390,22 @@ func getPublicKeys(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 }
 
 func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {
-	tlsSystemCertPoolString, err := cmdutils.GetUserSetVarFromString(cmd, tlsSystemCertPoolFlagName,
-		tlsSystemCertPoolEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	tlsSystemCertPoolString := cmdutils.GetUserSetOptionalVarFromString(cmd, tlsSystemCertPoolFlagName,
+		tlsSystemCertPoolEnvKey)
 
 	tlsSystemCertPool := false
+
 	if tlsSystemCertPoolString != "" {
+		var err error
 		tlsSystemCertPool, err = strconv.ParseBool(tlsSystemCertPoolString)
+
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	tlsCACerts, err := cmdutils.GetUserSetVarFromArrayString(cmd, tlsCACertsFlagName,
-		tlsCACertsEnvKey, true)
-	if err != nil {
-		return nil, err
-	}
+	tlsCACerts := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, tlsCACertsFlagName,
+		tlsCACertsEnvKey)
 
 	return tlsutils.GetCertPool(tlsSystemCertPool, tlsCACerts)
 }
@@ -497,6 +458,7 @@ func privateKeyFromPEM(privateKeyPEM, password []byte) (crypto.PrivateKey, error
 	if len(password) != 0 {
 		var err error
 		bytes, err = x509.DecryptPEMBlock(privBlock, password)
+
 		if err != nil {
 			return nil, err
 		}
@@ -519,9 +481,11 @@ func parsePrivateKey(der []byte) (crypto.PrivateKey, error) {
 			return nil, fmt.Errorf("found unknown private key type in PKCS#8 wrapping")
 		}
 	}
+
 	if key, err := x509.ParseECPrivateKey(der); err == nil {
 		return key, nil
 	}
+
 	return nil, fmt.Errorf("failed to parse private key")
 }
 

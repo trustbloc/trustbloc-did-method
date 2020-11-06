@@ -32,3 +32,11 @@ PKGS=`go list github.com/trustbloc/trustbloc-did-method/cmd/did-method-rest/... 
 go test $PKGS -count=1 -race -coverprofile=profile.out -covermode=atomic -timeout=10m
 amend_coverage_file
 cd "$pwd" || exit
+
+# Running did-method-cli unit tests
+cd cmd/did-method-cli
+PKGS=`go list github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/... 2> /dev/null | \
+                                                 grep -v /mocks`
+go test $PKGS -count=1 -race -coverprofile=profile.out -covermode=atomic -timeout=10m
+amend_coverage_file
+cd "$pwd" || exit

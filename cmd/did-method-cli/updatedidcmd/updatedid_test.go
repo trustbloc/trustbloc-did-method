@@ -108,7 +108,8 @@ func TestMissingArg(t *testing.T) {
 		err := cmd.Execute()
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "Neither did-uri (command line flag) nor DID_METHOD_CLI_DID_URI (environment variable) have been set.")
+		require.Contains(t, err.Error(), "Neither did-uri (command line flag) nor "+
+			"DID_METHOD_CLI_DID_URI (environment variable) have been set.")
 	})
 }
 
@@ -131,7 +132,7 @@ func TestParseKey(t *testing.T) {
 	})
 
 	t.Run("test found unknown private key type in PKCS#8 wrapping", func(t *testing.T) {
-		pk, err := rsa.GenerateKey(rand.Reader, 32)
+		pk, err := rsa.GenerateKey(rand.Reader, 2048)
 		require.NoError(t, err)
 
 		b, err := x509.MarshalPKCS8PrivateKey(pk)
@@ -319,8 +320,8 @@ func TestService(t *testing.T) {
 		args = append(args, signingKeyFileFlagNameArg(privateKeyFile.Name())...)
 		args = append(args, nextUpdateKeyFileFlagNameArg(publicKeyFile.Name())...)
 		args = append(args, addServicesFileArg(servicesFile.Name())...)
-		args = append(args, removeServiceIdArg("svc1")...)
-		args = append(args, removePublicKeyIdArg("key1")...)
+		args = append(args, removeServiceIDArg("svc1")...)
+		args = append(args, removePublicKeyIDArg("key1")...)
 		args = append(args, signingKeyPasswordArg()...)
 
 		cmd.SetArgs(args)
@@ -500,10 +501,10 @@ func addServicesFileArg(value string) []string {
 	return []string{flag + addServiceFileFlagName, value}
 }
 
-func removeServiceIdArg(value string) []string {
+func removeServiceIDArg(value string) []string {
 	return []string{flag + removeServiceIDFlagName, value}
 }
 
-func removePublicKeyIdArg(value string) []string {
+func removePublicKeyIDArg(value string) []string {
 	return []string{flag + removePublicKeyIDFlagName, value}
 }

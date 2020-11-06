@@ -110,7 +110,7 @@ func GetStartCmd(srv server) *cobra.Command {
 	return startCmd
 }
 
-func createStartCmd(srv server) *cobra.Command { //nolint: funlen
+func createStartCmd(srv server) *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
 		Short: "Start did-method",
@@ -137,23 +137,14 @@ func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 				return err
 			}
 
-			sidetreeReadToken, err := cmdutils.GetUserSetVarFromString(cmd, sidetreeReadTokenFlagName,
-				sidetreeReadTokenEnvKey, true)
-			if err != nil {
-				return err
-			}
+			sidetreeReadToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeReadTokenFlagName,
+				sidetreeReadTokenEnvKey)
 
-			sidetreeWriteToken, err := cmdutils.GetUserSetVarFromString(cmd, sidetreeWriteTokenFlagName,
-				sidetreeWriteTokenEnvKey, true)
-			if err != nil {
-				return err
-			}
+			sidetreeWriteToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeWriteTokenFlagName,
+				sidetreeWriteTokenEnvKey)
 
-			enableSignaturesString, err := cmdutils.GetUserSetVarFromString(cmd, enableSignaturesFlagName,
-				enableSignaturesEnvKey, true)
-			if err != nil {
-				return err
-			}
+			enableSignaturesString := cmdutils.GetUserSetOptionalVarFromString(cmd, enableSignaturesFlagName,
+				enableSignaturesEnvKey)
 
 			enableSignatures := true
 			if enableSignaturesString != "" {
@@ -181,34 +172,28 @@ func createStartCmd(srv server) *cobra.Command { //nolint: funlen
 }
 
 func getTLS(cmd *cobra.Command) (bool, []string, error) {
-	tlsSystemCertPoolString, err := cmdutils.GetUserSetVarFromString(cmd, tlsSystemCertPoolFlagName,
-		tlsSystemCertPoolEnvKey, true)
-	if err != nil {
-		return false, nil, err
-	}
+	tlsSystemCertPoolString := cmdutils.GetUserSetOptionalVarFromString(cmd, tlsSystemCertPoolFlagName,
+		tlsSystemCertPoolEnvKey)
 
 	tlsSystemCertPool := false
+
 	if tlsSystemCertPoolString != "" {
+		var err error
 		tlsSystemCertPool, err = strconv.ParseBool(tlsSystemCertPoolString)
+
 		if err != nil {
 			return false, nil, err
 		}
 	}
 
-	tlsCACerts, err := cmdutils.GetUserSetVarFromArrayString(cmd, tlsCACertsFlagName,
-		tlsCACertsEnvKey, true)
-	if err != nil {
-		return false, nil, err
-	}
+	tlsCACerts := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, tlsCACertsFlagName,
+		tlsCACertsEnvKey)
 
 	return tlsSystemCertPool, tlsCACerts, nil
 }
 
 func getMode(cmd *cobra.Command) (string, error) {
-	mode, err := cmdutils.GetUserSetVarFromString(cmd, modeFlagName, modeEnvKey, true)
-	if err != nil {
-		return "", err
-	}
+	mode := cmdutils.GetUserSetOptionalVarFromString(cmd, modeFlagName, modeEnvKey)
 
 	if !supportedMode(mode) {
 		return "", fmt.Errorf("unsupported mode: %s", mode)

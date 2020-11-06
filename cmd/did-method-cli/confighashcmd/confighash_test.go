@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package confighashcmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -81,7 +80,7 @@ func TestConfigHashCmd(t *testing.T) {
 		file, err := ioutil.TempFile("", "*.json")
 		require.NoError(t, err)
 
-		_, err = file.WriteString(fmt.Sprintf(configData))
+		_, err = file.WriteString(configData)
 		require.NoError(t, err)
 
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()

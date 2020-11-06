@@ -11,12 +11,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/spf13/cobra"
-
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did"
-
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+
+	"github.com/trustbloc/trustbloc-did-method/pkg/did"
 )
 
 const (
