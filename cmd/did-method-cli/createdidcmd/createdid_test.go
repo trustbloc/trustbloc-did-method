@@ -6,12 +6,17 @@ SPDX-License-Identifier: Apache-2.0
 package createdidcmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 )
 
 const (
@@ -177,6 +182,23 @@ func TestService(t *testing.T) {
 	})
 
 	t.Run("test services success", func(t *testing.T) {
+		type didResolution struct {
+			Context          interface{}     `json:"@context"`
+			DIDDocument      json.RawMessage `json:"didDocument"`
+			ResolverMetadata json.RawMessage `json:"resolverMetadata"`
+			MethodMetadata   json.RawMessage `json:"methodMetadata"`
+		}
+
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+			require.NoError(t, err)
+			b, err := json.Marshal(didResolution{Context: "https://www.w3.org/ns/did-resolution/v1",
+				DIDDocument: bytes})
+			require.NoError(t, err)
+			_, err = fmt.Fprint(w, string(b))
+			require.NoError(t, err)
+		}))
+
 		os.Clearenv()
 		cmd := GetCreateDIDCmd()
 
@@ -197,7 +219,7 @@ func TestService(t *testing.T) {
 		defer func() { require.NoError(t, os.Remove(servicesFile.Name())) }()
 
 		var args []string
-		args = append(args, domainArg()...)
+		args = append(args, sidetreeURLArg(serv.URL)...)
 		args = append(args, recoveryKeyFileFlagNameArg(file.Name())...)
 		args = append(args, updateKeyFileFlagNameArg(file.Name())...)
 		args = append(args, servicesFileArg(servicesFile.Name())...)
@@ -205,8 +227,7 @@ func TestService(t *testing.T) {
 		cmd.SetArgs(args)
 		err = cmd.Execute()
 
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to get endpoints")
+		require.NoError(t, err)
 	})
 }
 
@@ -358,4 +379,8 @@ func updateKeyFileFlagNameArg(value string) []string {
 
 func servicesFileArg(value string) []string {
 	return []string{flag + serviceFileFlagName, value}
+}
+
+func sidetreeURLArg(value string) []string {
+	return []string{flag + sidetreeURLFlagName, value}
 }
