@@ -26,6 +26,8 @@ import (
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/didconfiguration"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
@@ -111,7 +113,7 @@ type memberData struct {
 }
 
 type didClient interface {
-	CreateDID(domain string, opts ...did.CreateDIDOption) (*docdid.Doc, error)
+	CreateDID(domain string, opts ...create.Option) (*docdid.Doc, error)
 }
 
 type parameters struct {
@@ -463,17 +465,17 @@ func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey, 
 		return nil, err
 	}
 
-	general := did.PublicKey{
+	general := doc.PublicKey{
 		ID:       jwk.KeyID,
-		Type:     did.JWSVerificationKey2020,
-		Encoding: did.PublicKeyEncodingJwk,
-		KeyType:  did.Ed25519KeyType,
+		Type:     doc.JWSVerificationKey2020,
+		Encoding: doc.PublicKeyEncodingJwk,
+		KeyType:  doc.Ed25519KeyType,
 		Value:    pkBytes,
-		Purposes: []string{did.KeyPurposeVerificationMethod},
+		Purposes: []string{doc.KeyPurposeVerificationMethod},
 	}
 
-	return didClient.CreateDID("", did.WithSidetreeEndpoint(sidetreeURL),
-		did.WithRecoveryPublicKey(recoveryKey),
-		did.WithUpdatePublicKey(updateKey),
-		did.WithPublicKey(&general))
+	return didClient.CreateDID("", create.WithSidetreeEndpoint(sidetreeURL),
+		create.WithRecoveryPublicKey(recoveryKey),
+		create.WithUpdatePublicKey(updateKey),
+		create.WithPublicKey(&general))
 }

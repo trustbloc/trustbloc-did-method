@@ -26,6 +26,8 @@ import (
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 )
 
@@ -167,20 +169,20 @@ func updateDIDCmd() *cobra.Command {
 	}
 }
 
-func getSidetreeURL(cmd *cobra.Command) []did.UpdateDIDOption {
-	var opts []did.UpdateDIDOption
+func getSidetreeURL(cmd *cobra.Command) []update.Option {
+	var opts []update.Option
 
 	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
 		sidetreeURLEnvKey)
 
 	for _, v := range sidetreeURL {
-		opts = append(opts, did.WithUpdateSidetreeEndpoint(v))
+		opts = append(opts, update.WithSidetreeEndpoint(v))
 	}
 
 	return opts
 }
 
-func updateDIDOption(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
+func updateDIDOption(cmd *cobra.Command) ([]update.Option, error) {
 	opts, err := getPublicKeys(cmd)
 	if err != nil {
 		return nil, err
@@ -218,34 +220,34 @@ func updateDIDOption(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 	return opts, nil
 }
 
-func getRemoveServiceID(cmd *cobra.Command) []did.UpdateDIDOption {
-	var opts []did.UpdateDIDOption
+func getRemoveServiceID(cmd *cobra.Command) []update.Option {
+	var opts []update.Option
 
 	removeServices := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, removeServiceIDFlagName,
 		removeServiceIDEnvKey)
 
 	for _, v := range removeServices {
-		opts = append(opts, did.WithRemoveService(v))
+		opts = append(opts, update.WithRemoveService(v))
 	}
 
 	return opts
 }
 
-func getRemovePublicKeyID(cmd *cobra.Command) []did.UpdateDIDOption {
-	var opts []did.UpdateDIDOption
+func getRemovePublicKeyID(cmd *cobra.Command) []update.Option {
+	var opts []update.Option
 
 	removePublicKeys := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, removePublicKeyIDFlagName,
 		removePublicKeyIDEnvKey)
 
 	for _, v := range removePublicKeys {
-		opts = append(opts, did.WithRemovePublicKey(v))
+		opts = append(opts, update.WithRemovePublicKey(v))
 	}
 
 	return opts
 }
 
-func getServices(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
-	var opts []did.UpdateDIDOption
+func getServices(cmd *cobra.Command) ([]update.Option, error) {
+	var opts []update.Option
 
 	serviceFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addServiceFileFlagName,
 		addServiceFileEnvKey)
@@ -262,7 +264,7 @@ func getServices(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 		}
 
 		for _, v := range services {
-			opts = append(opts, did.WithAddService(&docdid.Service{ID: v.ID, Type: v.Type,
+			opts = append(opts, update.WithAddService(&docdid.Service{ID: v.ID, Type: v.Type,
 				Priority: v.Priority, RecipientKeys: v.RecipientKeys, RoutingKeys: v.RoutingKeys,
 				ServiceEndpoint: v.Endpoint}))
 		}
@@ -273,7 +275,7 @@ func getServices(cmd *cobra.Command) ([]did.UpdateDIDOption, error) {
 
 //nolint: gocyclo,nestif
 func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFileEnvKey string,
-	signing bool) ([]did.UpdateDIDOption, error) {
+	signing bool) ([]update.Option, error) {
 	keyString := cmdutils.GetUserSetOptionalVarFromString(cmd, keyFlagName,
 		keyEnvKey)
 
@@ -288,7 +290,7 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 		return nil, fmt.Errorf("only one of key (--%s) or key file (--%s) may be specified", keyFlagName, keyFileFlagName)
 	}
 
-	var opts []did.UpdateDIDOption
+	var opts []update.Option
 
 	var err error
 
@@ -310,7 +312,7 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 			}
 		}
 
-		opts = append(opts, did.WithSigningKey(privKey))
+		opts = append(opts, update.WithSigningKey(privKey))
 
 		return opts, nil
 	}
@@ -328,13 +330,13 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 		}
 	}
 
-	opts = append(opts, did.WithNextUpdatePublicKey(pubKey))
+	opts = append(opts, update.WithNextUpdatePublicKey(pubKey))
 
 	return opts, nil
 }
 
-func getPublicKeys(cmd *cobra.Command) ([]did.UpdateDIDOption, error) { //nolint: gocyclo
-	var opts []did.UpdateDIDOption
+func getPublicKeys(cmd *cobra.Command) ([]update.Option, error) { //nolint: gocyclo
+	var opts []update.Option
 
 	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addPublicKeyFileFlagName,
 		addPublicKeyFileEnvKey)
@@ -367,22 +369,22 @@ func getPublicKeys(cmd *cobra.Command) ([]did.UpdateDIDOption, error) { //nolint
 
 			switch key := jsonWebKey.Key.(type) {
 			case ed25519.PublicKey:
-				keyType = did.Ed25519KeyType
+				keyType = doc.Ed25519KeyType
 				value = []byte(fmt.Sprintf("%v", key))
 			case *ecdsa.PublicKey:
 				if key.Curve.Params().Name != elliptic.P256().Params().Name {
 					return nil, fmt.Errorf("ec cruve %s key not supported", elliptic.P256().Params().Name)
 				}
 
-				keyType = did.P256KeyType
+				keyType = doc.P256KeyType
 
 				value = elliptic.Marshal(key.Curve, key.X, key.Y)
 			default:
 				return nil, fmt.Errorf("key not supported")
 			}
 
-			opts = append(opts, did.WithAddPublicKey(&did.PublicKey{ID: jsonWebKey.KeyID, Type: v.Type,
-				Value: value, Encoding: did.PublicKeyEncodingJwk, Purposes: v.Purposes, KeyType: keyType}))
+			opts = append(opts, update.WithAddPublicKey(&doc.PublicKey{ID: jsonWebKey.KeyID, Type: v.Type,
+				Value: value, Encoding: doc.PublicKeyEncodingJwk, Purposes: v.Purposes, KeyType: keyType}))
 		}
 	}
 

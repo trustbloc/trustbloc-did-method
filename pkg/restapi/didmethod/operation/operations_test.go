@@ -24,7 +24,7 @@ import (
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/stretchr/testify/require"
 
-	didclient "github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/didbloc"
 )
 
@@ -193,9 +193,9 @@ func TestRegisterDIDHandler(t *testing.T) {
 		ecPubKeyBytes := elliptic.Marshal(ecPrivKey.PublicKey.Curve, ecPrivKey.PublicKey.X, ecPrivKey.PublicKey.Y)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
-			PublicKey: []*PublicKey{{KeyType: didclient.Ed25519KeyType,
+			PublicKey: []*PublicKey{{KeyType: doc.Ed25519KeyType,
 				Value: base64.StdEncoding.EncodeToString(pubKey), Recovery: true},
-				{KeyType: didclient.P256KeyType,
+				{KeyType: doc.P256KeyType,
 					Value: base64.StdEncoding.EncodeToString(ecPubKeyBytes), Update: true},
 				{ID: "key2", Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}},
 			Service: []*Service{{ID: "serviceID"}}}})

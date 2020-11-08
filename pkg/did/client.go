@@ -30,6 +30,9 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
 
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
@@ -81,22 +84,22 @@ func New(opts ...Option) *Client {
 }
 
 // CreateDID create did doc
-func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc, error) {
-	createDIDOpts := &CreateDIDOpts{}
+func (c *Client) CreateDID(domain string, opts ...create.Option) (*docdid.Doc, error) {
+	createDIDOpts := &create.Opts{}
 	// Apply options
 	for _, opt := range opts {
 		opt(createDIDOpts)
 	}
 
-	if createDIDOpts.recoveryPublicKey == nil {
+	if createDIDOpts.RecoveryPublicKey == nil {
 		return nil, fmt.Errorf("recovery public key is required")
 	}
 
-	if createDIDOpts.updatePublicKey == nil {
+	if createDIDOpts.UpdatePublicKey == nil {
 		return nil, fmt.Errorf("update public key is required")
 	}
 
-	sidetreeEndpoint, err := c.getEndpoint(domain, createDIDOpts.sidetreeEndpoints)
+	sidetreeEndpoint, err := c.getEndpoint(domain, createDIDOpts.SidetreeEndpoints)
 	if err != nil {
 		return nil, err
 	}
@@ -131,22 +134,22 @@ func (c *Client) CreateDID(domain string, opts ...CreateDIDOption) (*docdid.Doc,
 }
 
 // UpdateDID update did doc
-func (c *Client) UpdateDID(did, domain string, opts ...UpdateDIDOption) error {
-	updateDIDOpts := &UpdateDIDOpts{}
+func (c *Client) UpdateDID(did, domain string, opts ...update.Option) error {
+	updateDIDOpts := &update.Opts{}
 	// Apply options
 	for _, opt := range opts {
 		opt(updateDIDOpts)
 	}
 
-	if updateDIDOpts.signingKey == nil {
+	if updateDIDOpts.SigningKey == nil {
 		return fmt.Errorf("signing public key is required")
 	}
 
-	if updateDIDOpts.nextUpdatePublicKey == nil {
+	if updateDIDOpts.NextUpdatePublicKey == nil {
 		return fmt.Errorf("next update public key is required")
 	}
 
-	sidetreeEndpoint, err := c.getEndpoint(domain, updateDIDOpts.sidetreeEndpoints)
+	sidetreeEndpoint, err := c.getEndpoint(domain, updateDIDOpts.SidetreeEndpoints)
 	if err != nil {
 		return err
 	}
@@ -190,7 +193,7 @@ func (c *Client) getEndpoint(domain string, sidetreeEndpoints []*models.Endpoint
 
 // unwrapPubKeyJWK takes a key which may contain a JSON JWK as a public key value
 // and returns a PublicKey which contains the JWK's key value as the public key value
-func unwrapPubKeyJWK(key PublicKey) (*PublicKey, error) { // nolint: gocritic
+func unwrapPubKeyJWK(key doc.PublicKey) (*doc.PublicKey, error) { // nolint: gocritic
 	out := key
 
 	var jwk jose.JSONWebKey
@@ -210,8 +213,8 @@ func unwrapPubKeyJWK(key PublicKey) (*PublicKey, error) { // nolint: gocritic
 }
 
 // buildUpdateRequest request builder for sidetree public DID update
-func (c *Client) buildUpdateRequest(did string, updateDIDOpts *UpdateDIDOpts) ([]byte, error) {
-	nextUpdateKey, err := pubkey.GetPublicKeyJWK(updateDIDOpts.nextUpdatePublicKey)
+func (c *Client) buildUpdateRequest(did string, updateDIDOpts *update.Opts) ([]byte, error) {
+	nextUpdateKey, err := pubkey.GetPublicKeyJWK(updateDIDOpts.NextUpdatePublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get next update key : %s", err)
 	}
@@ -221,7 +224,7 @@ func (c *Client) buildUpdateRequest(did string, updateDIDOpts *UpdateDIDOpts) ([
 		return nil, err
 	}
 
-	signer, updateKey, err := getSigner(updateDIDOpts.signingKey, updateDIDOpts.signingKeyID)
+	signer, updateKey, err := getSigner(updateDIDOpts.SigningKey, updateDIDOpts.SigningKeyID)
 	if err != nil {
 		return nil, err
 	}
@@ -276,10 +279,10 @@ func getUniqueSuffix(id string) (string, error) {
 	return id[p+1:], nil
 }
 
-func createUpdatePatches(updateDIDOpts *UpdateDIDOpts) ([]patch.Patch, error) {
+func createUpdatePatches(updateDIDOpts *update.Opts) ([]patch.Patch, error) {
 	var patches []patch.Patch
 
-	if len(updateDIDOpts.removePublicKeys) != 0 {
+	if len(updateDIDOpts.RemovePublicKeys) != 0 {
 		p, err := createRemovePublicKeysPatch(updateDIDOpts)
 		if err != nil {
 			return nil, err
@@ -288,7 +291,7 @@ func createUpdatePatches(updateDIDOpts *UpdateDIDOpts) ([]patch.Patch, error) {
 		patches = append(patches, p)
 	}
 
-	if len(updateDIDOpts.removeServices) != 0 {
+	if len(updateDIDOpts.RemoveServices) != 0 {
 		p, err := createRemoveServicesPatch(updateDIDOpts)
 		if err != nil {
 			return nil, err
@@ -297,7 +300,7 @@ func createUpdatePatches(updateDIDOpts *UpdateDIDOpts) ([]patch.Patch, error) {
 		patches = append(patches, p)
 	}
 
-	if len(updateDIDOpts.addServices) != 0 {
+	if len(updateDIDOpts.AddServices) != 0 {
 		p, err := createAddServicesPatch(updateDIDOpts)
 		if err != nil {
 			return nil, err
@@ -306,7 +309,7 @@ func createUpdatePatches(updateDIDOpts *UpdateDIDOpts) ([]patch.Patch, error) {
 		patches = append(patches, p)
 	}
 
-	if len(updateDIDOpts.addPublicKeys) != 0 {
+	if len(updateDIDOpts.AddPublicKeys) != 0 {
 		p, err := createAddPublicKeysPatch(updateDIDOpts)
 		if err != nil {
 			return nil, err
@@ -318,8 +321,8 @@ func createUpdatePatches(updateDIDOpts *UpdateDIDOpts) ([]patch.Patch, error) {
 	return patches, nil
 }
 
-func createRemovePublicKeysPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
-	removePubKeys, err := json.Marshal(updateDIDOpts.removePublicKeys)
+func createRemovePublicKeysPatch(updateDIDOpts *update.Opts) (patch.Patch, error) {
+	removePubKeys, err := json.Marshal(updateDIDOpts.RemovePublicKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -327,8 +330,8 @@ func createRemovePublicKeysPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, err
 	return patch.NewRemovePublicKeysPatch(string(removePubKeys))
 }
 
-func createRemoveServicesPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
-	removeServices, err := json.Marshal(updateDIDOpts.removeServices)
+func createRemoveServicesPatch(updateDIDOpts *update.Opts) (patch.Patch, error) {
+	removeServices, err := json.Marshal(updateDIDOpts.RemoveServices)
 	if err != nil {
 		return nil, err
 	}
@@ -336,8 +339,8 @@ func createRemoveServicesPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error
 	return patch.NewRemoveServiceEndpointsPatch(string(removeServices))
 }
 
-func createAddServicesPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
-	addServices, err := json.Marshal(populateRawServices(updateDIDOpts.addServices))
+func createAddServicesPatch(updateDIDOpts *update.Opts) (patch.Patch, error) {
+	addServices, err := json.Marshal(doc.PopulateRawServices(updateDIDOpts.AddServices))
 	if err != nil {
 		return nil, err
 	}
@@ -345,8 +348,8 @@ func createAddServicesPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
 	return patch.NewAddServiceEndpointsPatch(string(addServices))
 }
 
-func createAddPublicKeysPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error) {
-	rawPublicKeys, err := populateRawPublicKeys(updateDIDOpts.addPublicKeys)
+func createAddPublicKeysPatch(updateDIDOpts *update.Opts) (patch.Patch, error) {
+	rawPublicKeys, err := doc.PopulateRawPublicKeys(updateDIDOpts.AddPublicKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -360,10 +363,10 @@ func createAddPublicKeysPatch(updateDIDOpts *UpdateDIDOpts) (patch.Patch, error)
 }
 
 // buildCreateRequest request builder for sidetree public DID creation
-func buildCreateRequest(createDIDOpts *CreateDIDOpts) ([]byte, error) {
-	publicKeys := createDIDOpts.publicKeys
+func buildCreateRequest(createDIDOpts *create.Opts) ([]byte, error) {
+	publicKeys := createDIDOpts.PublicKeys
 
-	var parsedKeys []PublicKey
+	var parsedKeys []doc.PublicKey
 
 	for _, key := range publicKeys {
 		parsedKey, err := unwrapPubKeyJWK(key)
@@ -374,22 +377,22 @@ func buildCreateRequest(createDIDOpts *CreateDIDOpts) ([]byte, error) {
 		parsedKeys = append(parsedKeys, *parsedKey)
 	}
 
-	doc := &Doc{
+	didDoc := &doc.Doc{
 		PublicKey: parsedKeys,
-		Service:   createDIDOpts.services,
+		Service:   createDIDOpts.Services,
 	}
 
-	docBytes, err := doc.JSONBytes()
+	docBytes, err := didDoc.JSONBytes()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get document bytes : %s", err)
 	}
 
-	recoveryKey, err := pubkey.GetPublicKeyJWK(createDIDOpts.recoveryPublicKey)
+	recoveryKey, err := pubkey.GetPublicKeyJWK(createDIDOpts.RecoveryPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get recovery key : %s", err)
 	}
 
-	updateKey, err := pubkey.GetPublicKeyJWK(createDIDOpts.updatePublicKey)
+	updateKey, err := pubkey.GetPublicKeyJWK(createDIDOpts.UpdatePublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get update key : %s", err)
 	}
