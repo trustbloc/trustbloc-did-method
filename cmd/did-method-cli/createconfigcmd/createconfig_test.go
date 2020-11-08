@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
 )
 
 const (
@@ -373,6 +373,6 @@ type mockDIDClient struct {
 	createDIDValue *docdid.Doc
 }
 
-func (m *mockDIDClient) CreateDID(domain string, opts ...did.CreateDIDOption) (*docdid.Doc, error) {
+func (m *mockDIDClient) CreateDID(domain string, opts ...create.Option) (*docdid.Doc, error) {
 	return m.createDIDValue, nil
 }

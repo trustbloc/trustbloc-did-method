@@ -3,7 +3,7 @@ Copyright SecureKey Technologies Inc. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package did
+package doc
 
 import (
 	"crypto/ecdsa"
@@ -82,14 +82,14 @@ type PublicKey struct {
 
 // JSONBytes converts document to json bytes
 func (doc *Doc) JSONBytes() ([]byte, error) {
-	publicKeys, err := populateRawPublicKeys(doc.PublicKey)
+	publicKeys, err := PopulateRawPublicKeys(doc.PublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("JSON unmarshalling of Public Key failed: %w", err)
 	}
 
 	raw := &rawDoc{
 		PublicKey: publicKeys,
-		Service:   populateRawServices(doc.Service),
+		Service:   PopulateRawServices(doc.Service),
 	}
 
 	byteDoc, err := json.Marshal(raw)
@@ -110,7 +110,8 @@ func (pk *PublicKey) GetValueFromJWK(jwk *jose.JSONWebKey) error {
 	return fmt.Errorf("unsupported PublicKey source key type")
 }
 
-func populateRawPublicKeys(pks []PublicKey) ([]map[string]interface{}, error) {
+// PopulateRawPublicKeys populate raw public keys
+func PopulateRawPublicKeys(pks []PublicKey) ([]map[string]interface{}, error) {
 	var rawPKs []map[string]interface{}
 
 	for i := range pks {
@@ -162,7 +163,8 @@ func populateRawPublicKey(pk *PublicKey) (map[string]interface{}, error) {
 	return rawPK, nil
 }
 
-func populateRawServices(services []docdid.Service) []map[string]interface{} {
+// PopulateRawServices populate raw services
+func PopulateRawServices(services []docdid.Service) []map[string]interface{} {
 	var rawServices []map[string]interface{}
 
 	for i := range services {

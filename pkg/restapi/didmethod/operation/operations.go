@@ -22,6 +22,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	didclient "github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
@@ -65,7 +67,7 @@ type Config struct {
 }
 
 type didBlocClient interface {
-	CreateDID(domain string, opts ...didclient.CreateDIDOption) (*did.Doc, error)
+	CreateDID(domain string, opts ...create.Option) (*did.Doc, error)
 }
 
 // New returns did method operation instance
@@ -89,7 +91,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	var opts []didclient.CreateDIDOption
+	var opts []create.Option
 
 	registerResponse := RegisterResponse{JobID: data.JobID}
 	keysID := make(map[string][]byte)
@@ -127,7 +129,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 				return
 			}
 
-			opts = append(opts, didclient.WithRecoveryPublicKey(k))
+			opts = append(opts, create.WithRecoveryPublicKey(k))
 
 			continue
 		}
@@ -142,12 +144,12 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 				return
 			}
 
-			opts = append(opts, didclient.WithUpdatePublicKey(k))
+			opts = append(opts, create.WithUpdatePublicKey(k))
 
 			continue
 		}
 
-		opts = append(opts, didclient.WithPublicKey(&didclient.PublicKey{ID: v.ID, Type: v.Type, Value: keyValue,
+		opts = append(opts, create.WithPublicKey(&doc.PublicKey{ID: v.ID, Type: v.Type, Value: keyValue,
 			Encoding: v.Encoding, Purposes: v.Purposes, KeyType: v.KeyType}))
 
 		keysID[v.ID] = keyValue
@@ -155,7 +157,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 	// Add services
 	for _, service := range data.DIDDocument.Service {
-		opts = append(opts, didclient.WithService(&did.Service{ID: service.ID, Type: service.Type,
+		opts = append(opts, create.WithService(&did.Service{ID: service.ID, Type: service.Type,
 			Priority: service.Priority, RecipientKeys: service.RecipientKeys, RoutingKeys: service.RoutingKeys,
 			ServiceEndpoint: service.Endpoint}))
 	}
@@ -180,9 +182,9 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 func getKey(keyType string, value []byte) (interface{}, error) {
 	switch keyType {
-	case didclient.Ed25519KeyType:
+	case doc.Ed25519KeyType:
 		return ed25519.PublicKey(value), nil
-	case didclient.P256KeyType:
+	case doc.P256KeyType:
 		x, y := elliptic.Unmarshal(elliptic.P256(), value)
 
 		return &ecdsa.PublicKey{X: x, Y: y, Curve: elliptic.P256()}, nil

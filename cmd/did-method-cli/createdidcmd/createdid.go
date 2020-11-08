@@ -26,6 +26,8 @@ import (
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 )
 
@@ -128,12 +130,12 @@ func createDIDCmd() *cobra.Command {
 				return err
 			}
 
-			doc, err := client.CreateDID(domain, opts...)
+			didDoc, err := client.CreateDID(domain, opts...)
 			if err != nil {
 				return err
 			}
 
-			bytes, err := doc.JSONBytes()
+			bytes, err := didDoc.JSONBytes()
 			if err != nil {
 				return err
 			}
@@ -145,20 +147,20 @@ func createDIDCmd() *cobra.Command {
 	}
 }
 
-func getSidetreeURL(cmd *cobra.Command) []did.CreateDIDOption {
-	var opts []did.CreateDIDOption
+func getSidetreeURL(cmd *cobra.Command) []create.Option {
+	var opts []create.Option
 
 	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
 		sidetreeURLEnvKey)
 
 	for _, v := range sidetreeURL {
-		opts = append(opts, did.WithSidetreeEndpoint(v))
+		opts = append(opts, create.WithSidetreeEndpoint(v))
 	}
 
 	return opts
 }
 
-func createDIDOption(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
+func createDIDOption(cmd *cobra.Command) ([]create.Option, error) {
 	opts, err := getPublicKeys(cmd)
 	if err != nil {
 		return nil, err
@@ -192,7 +194,7 @@ func createDIDOption(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
 	return opts, nil
 }
 
-func getServices(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
+func getServices(cmd *cobra.Command) ([]create.Option, error) {
 	serviceFile, err := cmdutils.GetUserSetVarFromString(cmd, serviceFileFlagName,
 		serviceFileEnvKey, false)
 	if err != nil {
@@ -209,10 +211,10 @@ func getServices(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
 		return nil, err
 	}
 
-	var opts []did.CreateDIDOption
+	var opts []create.Option
 
 	for _, v := range services {
-		opts = append(opts, did.WithService(&docdid.Service{ID: v.ID, Type: v.Type,
+		opts = append(opts, create.WithService(&docdid.Service{ID: v.ID, Type: v.Type,
 			Priority: v.Priority, RecipientKeys: v.RecipientKeys, RoutingKeys: v.RoutingKeys,
 			ServiceEndpoint: v.Endpoint}))
 	}
@@ -221,7 +223,7 @@ func getServices(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
 }
 
 func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFileEnvKey string,
-	recovery, update bool) ([]did.CreateDIDOption, error) {
+	recovery, update bool) ([]create.Option, error) {
 	keyString := cmdutils.GetUserSetOptionalVarFromString(cmd, keyFlagName,
 		keyEnvKey)
 
@@ -251,20 +253,20 @@ func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 		}
 	}
 
-	var opts []did.CreateDIDOption
+	var opts []create.Option
 
 	if recovery {
-		opts = append(opts, did.WithRecoveryPublicKey(pubKey))
+		opts = append(opts, create.WithRecoveryPublicKey(pubKey))
 	}
 
 	if update {
-		opts = append(opts, did.WithUpdatePublicKey(pubKey))
+		opts = append(opts, create.WithUpdatePublicKey(pubKey))
 	}
 
 	return opts, nil
 }
 
-func getPublicKeys(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
+func getPublicKeys(cmd *cobra.Command) ([]create.Option, error) {
 	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, publicKeyFileFlagName,
 		publicKeyFileEnvKey)
 
@@ -282,7 +284,7 @@ func getPublicKeys(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
 		return nil, err
 	}
 
-	var opts []did.CreateDIDOption
+	var opts []create.Option
 
 	for _, v := range publicKeys {
 		jwkData, err := ioutil.ReadFile(filepath.Clean(v.JWKPath))
@@ -301,17 +303,17 @@ func getPublicKeys(cmd *cobra.Command) ([]did.CreateDIDOption, error) {
 
 		switch key := jsonWebKey.Key.(type) {
 		case ed25519.PublicKey:
-			keyType = did.Ed25519KeyType
+			keyType = doc.Ed25519KeyType
 			value = []byte(fmt.Sprintf("%v", key))
 		case *ecdsa.PublicKey:
-			keyType = did.P256KeyType
+			keyType = doc.P256KeyType
 			value = elliptic.Marshal(key.Curve, key.X, key.Y)
 		default:
 			return nil, fmt.Errorf("key not supported")
 		}
 
-		opts = append(opts, did.WithPublicKey(&did.PublicKey{ID: jsonWebKey.KeyID, Type: v.Type,
-			Value: value, Encoding: did.PublicKeyEncodingJwk, Purposes: v.Purposes, KeyType: keyType}))
+		opts = append(opts, create.WithPublicKey(&doc.PublicKey{ID: jsonWebKey.KeyID, Type: v.Type,
+			Value: value, Encoding: doc.PublicKeyEncodingJwk, Purposes: v.Purposes, KeyType: keyType}))
 	}
 
 	return opts, nil

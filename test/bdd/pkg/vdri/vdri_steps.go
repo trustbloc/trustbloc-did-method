@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	"github.com/hyperledger/aries-framework-go/pkg/kms/localkms"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/did"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
@@ -66,11 +66,11 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error {
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID, DIDDocument: operation.DIDDocument{
 		PublicKey: []*operation.PublicKey{
 			{ID: kid, Type: signatureSuite, Value: base64.StdEncoding.EncodeToString(pubKey),
-				Encoding: did.PublicKeyEncodingJwk, KeyType: keyType, Purposes: []string{did.KeyPurposeVerificationMethod}},
-			{ID: recoveryKeyID, Type: did.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
-				KeyType: keyType, Encoding: did.PublicKeyEncodingJwk, Recovery: true},
-			{ID: updateKeyID, Type: did.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
-				KeyType: keyType, Encoding: did.PublicKeyEncodingJwk, Update: true},
+				Encoding: doc.PublicKeyEncodingJwk, KeyType: keyType, Purposes: []string{doc.KeyPurposeVerificationMethod}},
+			{ID: recoveryKeyID, Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
+				KeyType: keyType, Encoding: doc.PublicKeyEncodingJwk, Recovery: true},
+			{ID: updateKeyID, Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
+				KeyType: keyType, Encoding: doc.PublicKeyEncodingJwk, Update: true},
 		},
 		Service: []*operation.Service{{ID: serviceID, Type: "type", Endpoint: "http://www.example.com/"}}}})
 	if err != nil {
@@ -120,11 +120,11 @@ func (e *Steps) resolveCreatedDID(url, keyType, signatureSuite string) error {
 	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
 		trustbloc.WithAuthToken("rw_token"), trustbloc.WithDomain("testnet.trustbloc.local"))
 
-	var doc *ariesdid.Doc
+	var didDoc *ariesdid.Doc
 
 	for i := 1; i <= maxRetry; i++ {
 		var err error
-		doc, err = blocVDRI.Read(e.createdDID)
+		didDoc, err = blocVDRI.Read(e.createdDID)
 
 		if err != nil && (!strings.Contains(err.Error(), "DID does not exist") || i == maxRetry) {
 			return err
@@ -133,15 +133,16 @@ func (e *Steps) resolveCreatedDID(url, keyType, signatureSuite string) error {
 		time.Sleep(1 * time.Second)
 	}
 
-	if doc.ID != e.createdDID {
-		return fmt.Errorf("resolved did %s not equal to created did %s", doc.ID, e.createdDID)
+	if didDoc.ID != e.createdDID {
+		return fmt.Errorf("resolved did %s not equal to created did %s", didDoc.ID, e.createdDID)
 	}
 
-	if doc.Service[0].ID != doc.ID+"#"+serviceID {
-		return fmt.Errorf("resolved did service ID %s not equal to %s", doc.Service[0].ID, doc.ID+"#"+serviceID)
+	if didDoc.Service[0].ID != didDoc.ID+"#"+serviceID {
+		return fmt.Errorf("resolved did service ID %s not equal to %s",
+			didDoc.Service[0].ID, didDoc.ID+"#"+serviceID)
 	}
 
-	if err := validatePublicKey(doc, keyType, signatureSuite); err != nil {
+	if err := validatePublicKey(didDoc, keyType, signatureSuite); err != nil {
 		return err
 	}
 
@@ -152,7 +153,7 @@ func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {
 	var kt kms.KeyType
 
 	switch keyType {
-	case did.Ed25519KeyType:
+	case doc.Ed25519KeyType:
 		kt = kms.ED25519Type
 	case P256KeyType:
 		kt = kms.ECDSAP256TypeIEEEP1363
@@ -161,8 +162,8 @@ func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {
 	return e.bddContext.LocalKMS.CreateAndExportPubKeyBytes(kt)
 }
 
-func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error {
-	if len(doc.PublicKey) != 1 {
+func validatePublicKey(didDoc *ariesdid.Doc, keyType, signatureSuite string) error {
+	if len(didDoc.PublicKey) != 1 {
 		return fmt.Errorf("public key size not equal one")
 	}
 
@@ -171,7 +172,7 @@ func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error 
 	var kt kms.KeyType
 
 	switch keyType {
-	case did.Ed25519KeyType:
+	case doc.Ed25519KeyType:
 		expectedJwkKeyType = "OKP"
 		kt = kms.ED25519Type
 	case P256KeyType:
@@ -179,34 +180,34 @@ func validatePublicKey(doc *ariesdid.Doc, keyType, signatureSuite string) error 
 		kt = kms.ECDSAP256TypeIEEEP1363
 	}
 
-	if signatureSuite == did.JWSVerificationKey2020 &&
-		expectedJwkKeyType != doc.PublicKey[0].JSONWebKey().Kty {
+	if signatureSuite == doc.JWSVerificationKey2020 &&
+		expectedJwkKeyType != didDoc.PublicKey[0].JSONWebKey().Kty {
 		return fmt.Errorf("jwk key type : expected=%s actual=%s", expectedJwkKeyType,
-			doc.PublicKey[0].JSONWebKey().Kty)
+			didDoc.PublicKey[0].JSONWebKey().Kty)
 	}
 
-	if signatureSuite == did.Ed25519VerificationKey2018 &&
-		doc.PublicKey[0].JSONWebKey() != nil {
+	if signatureSuite == doc.Ed25519VerificationKey2018 &&
+		didDoc.PublicKey[0].JSONWebKey() != nil {
 		return fmt.Errorf("jwk is not nil for %s", signatureSuite)
 	}
 
-	return verifyPublicKeyAndType(doc, kt, signatureSuite)
+	return verifyPublicKeyAndType(didDoc, kt, signatureSuite)
 }
 
-func verifyPublicKeyAndType(doc *ariesdid.Doc, kt kms.KeyType, signatureSuite string) error {
-	pubKeyID, err := localkms.CreateKID(doc.PublicKey[0].Value, kt)
+func verifyPublicKeyAndType(didDoc *ariesdid.Doc, kt kms.KeyType, signatureSuite string) error {
+	pubKeyID, err := localkms.CreateKID(didDoc.PublicKey[0].Value, kt)
 	if err != nil {
 		return err
 	}
 
-	if doc.PublicKey[0].ID != doc.ID+"#"+pubKeyID {
+	if didDoc.PublicKey[0].ID != didDoc.ID+"#"+pubKeyID {
 		return fmt.Errorf("resolved did public key ID %s not equal to %s",
-			doc.PublicKey[0].ID, doc.ID+"#"+pubKeyID)
+			didDoc.PublicKey[0].ID, didDoc.ID+"#"+pubKeyID)
 	}
 
-	if doc.PublicKey[0].Type != signatureSuite {
+	if didDoc.PublicKey[0].Type != signatureSuite {
 		return fmt.Errorf("resolved did public key type %s not equal to %s",
-			doc.PublicKey[0].Type, signatureSuite)
+			didDoc.PublicKey[0].Type, signatureSuite)
 	}
 
 	return nil

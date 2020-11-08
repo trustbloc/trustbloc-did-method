@@ -10,7 +10,6 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,6 +19,9 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/stretchr/testify/require"
 
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
 	mockdiscovery "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/discovery"
 	mockendpoint "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/endpoint"
 	mockselection "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/selection"
@@ -34,8 +36,8 @@ func TestClient_UpdateDID(t *testing.T) {
 		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		err = v.UpdateDID("did:ex:123", "", WithNextUpdatePublicKey(pubKey),
-			WithSigningKey(privKey))
+		err = v.UpdateDID("did:ex:123", "", update.WithNextUpdatePublicKey(pubKey),
+			update.WithSigningKey(privKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "domain is empty")
 	})
@@ -54,7 +56,7 @@ func TestClient_UpdateDID(t *testing.T) {
 		_, privKey, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		err = v.UpdateDID("did:ex:123", "testnet", WithSigningKey(privKey))
+		err = v.UpdateDID("did:ex:123", "testnet", update.WithSigningKey(privKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "next update public key is required")
 	})
@@ -69,8 +71,8 @@ func TestClient_UpdateDID(t *testing.T) {
 			discoveryMock([]*models.Endpoint{}, fmt.Errorf("discover error")),
 			selectionMock([]*models.Endpoint{}, nil))
 
-		err = v.UpdateDID("did:ex:123", "testnet", WithNextUpdatePublicKey(pubKey),
-			WithSigningKey(privKey))
+		err = v.UpdateDID("did:ex:123", "testnet", update.WithNextUpdatePublicKey(pubKey),
+			update.WithSigningKey(privKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "discover error")
 
@@ -78,8 +80,8 @@ func TestClient_UpdateDID(t *testing.T) {
 			discoveryMock(nil, nil),
 			selectionMock(nil, fmt.Errorf("select error")))
 
-		err = v.UpdateDID("did:ex:123", "testnet", WithNextUpdatePublicKey(pubKey),
-			WithSigningKey(privKey))
+		err = v.UpdateDID("did:ex:123", "testnet", update.WithNextUpdatePublicKey(pubKey),
+			update.WithSigningKey(privKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "select error")
 
@@ -87,8 +89,8 @@ func TestClient_UpdateDID(t *testing.T) {
 			discoveryMock(nil, nil),
 			selectionMock(nil, nil))
 
-		err = v.UpdateDID("did:ex:123", "testnet", WithNextUpdatePublicKey(pubKey),
-			WithSigningKey(privKey))
+		err = v.UpdateDID("did:ex:123", "testnet", update.WithNextUpdatePublicKey(pubKey),
+			update.WithSigningKey(privKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "list of endpoints is empty")
 	})
@@ -104,8 +106,8 @@ func TestClient_UpdateDID(t *testing.T) {
 		_, privKey, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		err = v.UpdateDID("did:ex:123", "testnet", WithSigningKey(privKey),
-			WithNextUpdatePublicKey([]byte("wrong")))
+		err = v.UpdateDID("did:ex:123", "testnet", update.WithSigningKey(privKey),
+			update.WithNextUpdatePublicKey([]byte("wrong")))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get next update key")
 	})
@@ -121,8 +123,8 @@ func TestClient_UpdateDID(t *testing.T) {
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		err = v.UpdateDID("did:ex:123", "testnet", WithSigningKey("www"),
-			WithNextUpdatePublicKey(pubKey))
+		err = v.UpdateDID("did:ex:123", "testnet", update.WithSigningKey("www"),
+			update.WithNextUpdatePublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "key not supported")
 	})
@@ -138,8 +140,8 @@ func TestClient_UpdateDID(t *testing.T) {
 		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		err = v.UpdateDID("wrong", "testnet", WithSigningKey(privKey),
-			WithNextUpdatePublicKey(pubKey))
+		err = v.UpdateDID("wrong", "testnet", update.WithSigningKey(privKey),
+			update.WithNextUpdatePublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "unique suffix not provided in id")
 	})
@@ -164,11 +166,12 @@ func TestClient_UpdateDID(t *testing.T) {
 		require.NoError(t, err)
 
 		err = v.UpdateDID("did:ex:123", "",
-			WithUpdateSidetreeEndpoint(serv.URL), WithSigningKey(ecPrivKey),
-			WithNextUpdatePublicKey(pubKey), WithRemoveService("svc1"), WithRemoveService("svc1"),
-			WithRemovePublicKey("k1"), WithRemovePublicKey("k2"),
-			WithAddPublicKey(&PublicKey{ID: "key3", Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType, Value: pubKey}),
-			WithAddService(&did.Service{ID: "svc3"}))
+			update.WithSidetreeEndpoint(serv.URL), update.WithSigningKey(ecPrivKey),
+			update.WithNextUpdatePublicKey(pubKey), update.WithRemoveService("svc1"),
+			update.WithRemoveService("svc1"), update.WithRemovePublicKey("k1"),
+			update.WithRemovePublicKey("k2"), update.WithAddPublicKey(&doc.PublicKey{ID: "key3",
+				Encoding: doc.PublicKeyEncodingJwk, KeyType: doc.Ed25519KeyType, Value: pubKey}),
+			update.WithAddService(&did.Service{ID: "svc3"}))
 		require.NoError(t, err)
 	})
 }
@@ -180,10 +183,10 @@ func TestClient_CreateDID(t *testing.T) {
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		doc, err := v.CreateDID("", WithUpdatePublicKey(pubKey), WithRecoveryPublicKey(pubKey))
+		createDID, err := v.CreateDID("", create.WithUpdatePublicKey(pubKey), create.WithRecoveryPublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "domain is empty")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 	})
 
 	t.Run("test error from get endpoints", func(t *testing.T) {
@@ -196,28 +199,30 @@ func TestClient_CreateDID(t *testing.T) {
 			discoveryMock(nil, fmt.Errorf("discover error")),
 			selectionMock(nil, nil))
 
-		doc, err := v.CreateDID("testnet", WithUpdatePublicKey(pubKey), WithRecoveryPublicKey(pubKey))
+		createDID, err := v.CreateDID("testnet", create.WithUpdatePublicKey(pubKey), create.WithRecoveryPublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "discover error")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 
 		v.endpointService = endpoint.NewService(
 			discoveryMock(nil, nil),
 			selectionMock(nil, fmt.Errorf("select error")))
 
-		doc, err = v.CreateDID("testnet", WithUpdatePublicKey(pubKey), WithRecoveryPublicKey(pubKey))
+		createDID, err = v.CreateDID("testnet", create.WithUpdatePublicKey(pubKey),
+			create.WithRecoveryPublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "select error")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 
 		v.endpointService = endpoint.NewService(
 			discoveryMock(nil, nil),
 			selectionMock(nil, nil))
 
-		doc, err = v.CreateDID("testnet", WithUpdatePublicKey(pubKey), WithRecoveryPublicKey(pubKey))
+		createDID, err = v.CreateDID("testnet", create.WithUpdatePublicKey(pubKey),
+			create.WithRecoveryPublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "list of endpoints is empty")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 	})
 
 	t.Run("test error from send create sidetree request", func(t *testing.T) {
@@ -235,11 +240,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "http://[]%20%/"}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithRecoveryPublicKey(ed25519RecoveryPubKey),
-			WithUpdatePublicKey(ed25519UpdatePubKey))
+		createDID, err := v.CreateDID("testnet", create.WithRecoveryPublicKey(ed25519RecoveryPubKey),
+			create.WithUpdatePublicKey(ed25519UpdatePubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to create http request")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 
 		// test failed to send request
 		v.endpointService = &mockendpoint.MockEndpointService{
@@ -247,11 +252,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet", WithRecoveryPublicKey(ed25519RecoveryPubKey),
-			WithUpdatePublicKey(ed25519UpdatePubKey))
+		createDID, err = v.CreateDID("testnet", create.WithRecoveryPublicKey(ed25519RecoveryPubKey),
+			create.WithUpdatePublicKey(ed25519UpdatePubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to send request")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 
 		// test http status not equal 200
 		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -264,11 +269,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet", WithRecoveryPublicKey(ed25519RecoveryPubKey),
-			WithUpdatePublicKey(ed25519UpdatePubKey))
+		createDID, err = v.CreateDID("testnet", create.WithRecoveryPublicKey(ed25519RecoveryPubKey),
+			create.WithUpdatePublicKey(ed25519UpdatePubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "got unexpected response")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 
 		// test failed to parse did
 		serv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -284,11 +289,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err = v.CreateDID("testnet", WithRecoveryPublicKey(ed25519RecoveryPubKey),
-			WithUpdatePublicKey(ed25519UpdatePubKey))
+		createDID, err = v.CreateDID("testnet", create.WithRecoveryPublicKey(ed25519RecoveryPubKey),
+			create.WithUpdatePublicKey(ed25519UpdatePubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse public DID document")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 	})
 
 	t.Run("test success", func(t *testing.T) {
@@ -314,30 +319,30 @@ func TestClient_CreateDID(t *testing.T) {
 
 		ecPubKeyBytes := elliptic.Marshal(ecPrivKey.PublicKey.Curve, ecPrivKey.PublicKey.X, ecPrivKey.PublicKey.Y)
 
-		v := New()
+		v := New(WithTLSConfig(nil))
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithRecoveryPublicKey(ed25519RecoveryPubKey),
-			WithUpdatePublicKey(ecUpdatePrivKey.Public()),
-			WithPublicKey(&PublicKey{ID: "key1",
-				Type: JWSVerificationKey2020, Encoding: PublicKeyEncodingJwk, KeyType: Ed25519KeyType,
+		createDID, err := v.CreateDID("testnet", create.WithRecoveryPublicKey(ed25519RecoveryPubKey),
+			create.WithUpdatePublicKey(ecUpdatePrivKey.Public()),
+			create.WithPublicKey(&doc.PublicKey{ID: "key1",
+				Type: doc.JWSVerificationKey2020, Encoding: doc.PublicKeyEncodingJwk, KeyType: doc.Ed25519KeyType,
 				Value:    ed25519RecoveryPubKey,
-				Purposes: []string{KeyPurposeVerificationMethod}}),
-			WithPublicKey(&PublicKey{ID: "key2",
-				Type:     JWSVerificationKey2020,
-				Encoding: PublicKeyEncodingJwk,
+				Purposes: []string{doc.KeyPurposeVerificationMethod}}),
+			create.WithPublicKey(&doc.PublicKey{ID: "key2",
+				Type:     doc.JWSVerificationKey2020,
+				Encoding: doc.PublicKeyEncodingJwk,
 				Value:    ecPubKeyBytes,
-				KeyType:  P256KeyType,
-				Purposes: []string{KeyPurposeVerificationMethod},
+				KeyType:  doc.P256KeyType,
+				Purposes: []string{doc.KeyPurposeVerificationMethod},
 			}),
-			WithService(&did.Service{ID: "srv1", Type: "type", ServiceEndpoint: "http://example.com",
+			create.WithService(&did.Service{ID: "srv1", Type: "type", ServiceEndpoint: "http://example.com",
 				Properties: map[string]interface{}{"priority": "1"}}))
 		require.NoError(t, err)
-		require.Equal(t, "did1", doc.ID)
+		require.Equal(t, "did1", createDID.ID)
 	})
 
 	t.Run("test create DID - invalid key type", func(t *testing.T) {
@@ -362,16 +367,16 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithRecoveryPublicKey(ed25519RecoveryPubKey),
-			WithUpdatePublicKey(ed25519UpdatePubKey), WithPublicKey(&PublicKey{ID: "#key1",
-				Type:     JWSVerificationKey2020,
-				Encoding: PublicKeyEncodingJwk,
+		createDID, err := v.CreateDID("testnet", create.WithRecoveryPublicKey(ed25519RecoveryPubKey),
+			create.WithUpdatePublicKey(ed25519UpdatePubKey), create.WithPublicKey(&doc.PublicKey{ID: "#key1",
+				Type:     doc.JWSVerificationKey2020,
+				Encoding: doc.PublicKeyEncodingJwk,
 				KeyType:  "InvalidKeyType",
 			}),
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid key type: InvalidKeyType")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 	})
 
 	t.Run("test create DID - EC key error", func(t *testing.T) {
@@ -399,18 +404,18 @@ func TestClient_CreateDID(t *testing.T) {
 		ed25519PubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		doc, err := v.CreateDID("testnet", WithRecoveryPublicKey(ed25519RecoveryPubKey),
-			WithUpdatePublicKey(ed25519UpdatePubKey),
-			WithPublicKey(&PublicKey{ID: "#key1",
-				Type:     JWSVerificationKey2020,
-				Encoding: PublicKeyEncodingJwk,
-				KeyType:  P256KeyType,
+		createDID, err := v.CreateDID("testnet", create.WithRecoveryPublicKey(ed25519RecoveryPubKey),
+			create.WithUpdatePublicKey(ed25519UpdatePubKey),
+			create.WithPublicKey(&doc.PublicKey{ID: "#key1",
+				Type:     doc.JWSVerificationKey2020,
+				Encoding: doc.PublicKeyEncodingJwk,
+				KeyType:  doc.P256KeyType,
 				Value:    ed25519PubKey,
 			}),
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid EC key")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 	})
 
 	t.Run("test unsupported recovery public key type", func(t *testing.T) {
@@ -429,11 +434,11 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithRecoveryPublicKey("wrongkey"),
-			WithUpdatePublicKey("wrongvalue"))
+		createDID, err := v.CreateDID("testnet", create.WithRecoveryPublicKey("wrongkey"),
+			create.WithUpdatePublicKey("wrongvalue"))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get recovery key")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 	})
 
 	t.Run("test recovery public key empty", func(t *testing.T) {
@@ -452,10 +457,10 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet")
+		createDID, err := v.CreateDID("testnet")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "recovery public key is required")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 	})
 
 	t.Run("test update public key empty", func(t *testing.T) {
@@ -477,10 +482,10 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithRecoveryPublicKey(pubKey))
+		createDID, err := v.CreateDID("testnet", create.WithRecoveryPublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "update public key is required")
-		require.Nil(t, doc)
+		require.Nil(t, createDID)
 	})
 
 	t.Run("test unsupported public key encoding", func(t *testing.T) {
@@ -502,70 +507,25 @@ func TestClient_CreateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		doc, err := v.CreateDID("testnet", WithRecoveryPublicKey(pubKey), WithUpdatePublicKey(pubKey),
-			WithPublicKey(&PublicKey{ID: "#key2",
-				Type: JWSVerificationKey2020, Encoding: "wrong", Value: []byte("wrongValue")}))
+		createDID, err := v.CreateDID("testnet", create.WithRecoveryPublicKey(pubKey),
+			create.WithUpdatePublicKey(pubKey), create.WithPublicKey(&doc.PublicKey{ID: "#key2",
+				Type: doc.JWSVerificationKey2020, Encoding: "wrong", Value: []byte("wrongValue")}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "public key encoding not supported")
-		require.Nil(t, doc)
-	})
-
-	t.Run("test opts", func(t *testing.T) {
-		// test WithTLSConfig
-		var opts []Option
-		opts = append(opts, WithTLSConfig(&tls.Config{ServerName: "test", MinVersion: tls.VersionTLS12}),
-			WithAuthToken("tk1"))
-
-		c := &Client{}
-
-		// Apply options
-		for _, opt := range opts {
-			opt(c)
-		}
-
-		require.Equal(t, "test", c.tlsConfig.ServerName)
-		require.Equal(t, "Bearer tk1", c.authToken)
-
-		// test WithPublicKey
-		var createOpts []CreateDIDOption
-		createOpts = append(createOpts, WithPublicKey(&PublicKey{ID: "#key-2"}))
-
-		createDIDOpts := &CreateDIDOpts{}
-		// Apply options
-		for _, opt := range createOpts {
-			opt(createDIDOpts)
-		}
-
-		require.Equal(t, 1, len(createDIDOpts.publicKeys))
-		require.Equal(t, "#key-2", createDIDOpts.publicKeys[0].ID)
-
-		// test WithService and  WithSidetreeEndpoint
-		createOpts = make([]CreateDIDOption, 0)
-		createOpts = append(createOpts, WithService(&did.Service{ID: "serviceID"}),
-			WithSidetreeEndpoint("sidetree"))
-
-		createDIDOpts = &CreateDIDOpts{}
-		// Apply options
-		for _, opt := range createOpts {
-			opt(createDIDOpts)
-		}
-
-		require.Equal(t, 1, len(createDIDOpts.services))
-		require.Equal(t, "serviceID", createDIDOpts.services[0].ID)
-		require.Equal(t, "sidetree", createDIDOpts.sidetreeEndpoints[0].URL)
+		require.Nil(t, createDID)
 	})
 }
 
 func Test_unwrapPubKeyJWK(t *testing.T) {
 	t.Run("no wrapping", func(t *testing.T) {
-		key := PublicKey{Value: []byte("abcd")}
+		key := doc.PublicKey{Value: []byte("abcd")}
 		key2, err := unwrapPubKeyJWK(key)
 		require.NoError(t, err)
 		require.Contains(t, string(key2.Value), "abcd")
 	})
 
 	t.Run("unwrap wrapped jwk", func(t *testing.T) {
-		key := PublicKey{Value: []byte(`{
+		key := doc.PublicKey{Value: []byte(`{
   "kty": "OKP",
   "kid": "key1",
   "crv": "Ed25519",
@@ -577,7 +537,7 @@ func Test_unwrapPubKeyJWK(t *testing.T) {
 	})
 
 	t.Run("error unsupported type", func(t *testing.T) {
-		key := PublicKey{Value: []byte(`{
+		key := doc.PublicKey{Value: []byte(`{
           "kty":"EC",
           "crv":"P-256",
           "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
