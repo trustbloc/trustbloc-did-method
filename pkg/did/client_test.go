@@ -21,6 +21,7 @@ import (
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/deactivate"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/recovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
 	mockdiscovery "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/discovery"
@@ -29,6 +30,113 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
+
+func TestClient_DeactivateDID(t *testing.T) {
+	t.Run("test domain is empty", func(t *testing.T) {
+		v := New()
+
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.DeactivateDID("did:ex:123", "", deactivate.WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "domain is empty")
+	})
+
+	t.Run("test signing key empty", func(t *testing.T) {
+		v := New()
+
+		err := v.DeactivateDID("did:ex:123", "testnet")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signing key is required")
+	})
+
+	t.Run("test error from get endpoints", func(t *testing.T) {
+		v := New()
+
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v.endpointService = endpoint.NewService(
+			discoveryMock([]*models.Endpoint{}, fmt.Errorf("discover error")),
+			selectionMock([]*models.Endpoint{}, nil))
+
+		err = v.DeactivateDID("did:ex:123", "testnet", deactivate.WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "discover error")
+	})
+
+	t.Run("test unsupported signing key", func(t *testing.T) {
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		err := v.DeactivateDID("did:ex:123", "testnet", deactivate.WithSigningKey("www"))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "key not supported")
+	})
+
+	t.Run("test error from unique suffix", func(t *testing.T) {
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.DeactivateDID("wrong", "testnet", deactivate.WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unique suffix not provided in id")
+	})
+
+	t.Run("test error from send request", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer serv.Close()
+
+		v := New(WithAuthToken("tk1"))
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.DeactivateDID("did:ex:123", "testnet", deactivate.WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to send deactivate sidetree request")
+	})
+
+	t.Run("test success", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer serv.Close()
+
+		v := New(WithAuthToken("tk1"))
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		err = v.DeactivateDID("did:ex:123", "", deactivate.WithSigningKey(privKey),
+			deactivate.WithSidetreeEndpoint(serv.URL), deactivate.WithSigningKeyID("k1"))
+		require.NoError(t, err)
+	})
+}
 
 func TestClient_RecoverDID(t *testing.T) {
 	t.Run("test domain is empty", func(t *testing.T) {
