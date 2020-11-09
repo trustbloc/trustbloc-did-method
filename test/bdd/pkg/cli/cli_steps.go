@@ -36,8 +36,11 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^TrustBloc DID is created through cli using domain "([^"]*)", direct url "([^"]*)"$`, e.createDID)
 	s.Step(`^TrustBloc DID is updated through cli using domain "([^"]*)", direct url "([^"]*)"$`, e.updateDID)
 	s.Step(`^TrustBloc DID is recovered through cli using domain "([^"]*)", direct url "([^"]*)"$`, e.recoverDID)
+	s.Step(`^TrustBloc DID is deactivated through cli using domain "([^"]*)", direct url "([^"]*)"$`,
+		e.deactivateDID)
 	s.Step(`^check cli created valid DID$`, e.checkCreatedDID)
 	s.Step(`^check cli recovered DID$`, e.checkRecoveredDID)
+	s.Step(`^check cli deactivated DID$`, e.checkDeactivatedDID)
 	s.Step(`^check cli updated DID$`, e.checkUpdatedDID)
 }
 
@@ -121,6 +124,22 @@ func (e *Steps) checkRecoveredDID() error {
 	return nil
 }
 
+func (e *Steps) checkDeactivatedDID() error {
+	const errMsg = "unsupported response from DID resolver [410] header [text/plain] " +
+		"body [document is no longer available]"
+
+	_, err := e.resolveDID(e.createdDID.ID)
+	if err == nil {
+		return fmt.Errorf("did %s is still active", e.createdDID.ID)
+	}
+
+	if !strings.Contains(err.Error(), errMsg) {
+		return fmt.Errorf("expected err msg %s but receive %s", errMsg, err.Error())
+	}
+
+	return nil
+}
+
 func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
 	const numberOfPublicKeys = 2
 
@@ -195,7 +214,7 @@ func (e *Steps) updateDID(domain, sidetreeURL string) error {
 		"--remove-publickey-id", "key1", "--remove-service-id", "svc1", "--remove-service-id", "svc2",
 		"--add-service-file", "fixtures/did-services/update/services.json")
 
-	value, err := execCMD("../../.build/bin/cli", args...)
+	value, err := execCMD(args...)
 
 	if err != nil {
 		return err
@@ -224,7 +243,33 @@ func (e *Steps) recoverDID(domain, sidetreeURL string) error {
 		"--nextrecoverkey-file", "./fixtures/keys/recover2/public.pem", "--nextupdatekey-file",
 		"./fixtures/keys/update3/public.pem", "--signingkey-file", "./fixtures/keys/recover/key_encrypted.pem")
 
-	value, err := execCMD("../../.build/bin/cli", args...)
+	value, err := execCMD(args...)
+
+	if err != nil {
+		return err
+	}
+
+	e.cliValue = value
+
+	return nil
+}
+
+func (e *Steps) deactivateDID(domain, sidetreeURL string) error {
+	var args []string
+
+	if domain != "" {
+		args = append(args, "--domain", domain)
+	}
+
+	if sidetreeURL != "" {
+		args = append(args, "--sidetree-url", sidetreeURL)
+	}
+
+	args = append(args, "deactivate-did", "--did-uri", e.createdDID.ID, "--signingkey-password", "123",
+		"--tls-cacerts", "fixtures/keys/tls/ec-cacert.pem", "--sidetree-write-token", "rw_token",
+		"--signingkey-file", "./fixtures/keys/recover2/key_encrypted.pem")
+
+	value, err := execCMD(args...)
 
 	if err != nil {
 		return err
@@ -251,7 +296,7 @@ func (e *Steps) createDID(domain, sidetreeURL string) error {
 		"--sidetree-write-token", "rw_token", "--service-file", "fixtures/did-services/create/services.json",
 		"--recoverykey-file", "./fixtures/keys/recover/public.pem", "--updatekey-file", "./fixtures/keys/update/public.pem")
 
-	value, err := execCMD("../../.build/bin/cli", args...)
+	value, err := execCMD(args...)
 
 	if err != nil {
 		return err
@@ -262,8 +307,8 @@ func (e *Steps) createDID(domain, sidetreeURL string) error {
 	return nil
 }
 
-func execCMD(command string, args ...string) (string, error) {
-	cmd := exec.Command(command, args...) // nolint: gosec
+func execCMD(args ...string) (string, error) {
+	cmd := exec.Command("../../.build/bin/cli", args...) // nolint: gosec
 
 	var out bytes.Buffer
 
