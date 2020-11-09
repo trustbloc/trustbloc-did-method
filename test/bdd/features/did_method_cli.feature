@@ -10,7 +10,10 @@ Feature: Using DID method CLI
 
   @cli_did
   Scenario: test create and update did doc using cli
-    When TrustBloc DID is created through cli using domain "testnet.trustbloc.local", direct url ""
+    When TrustBloc DID is created through cli using domain "", direct url "https://localhost:48326/sidetree/0.0.1"
     Then check cli created valid DID
-    When TrustBloc DID is updated through cli using domain "", direct url "https://localhost:48326/sidetree/0.0.1"
+    When TrustBloc DID is updated through cli using domain "testnet.trustbloc.local", direct url ""
     Then check cli updated DID
+    When TrustBloc DID is recovered through cli using domain "", direct url "https://localhost:48326/sidetree/0.0.1"
+    Then check cli recovered DID
+

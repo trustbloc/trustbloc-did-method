@@ -38,16 +38,28 @@ openssl x509 -req -in test/bdd/fixtures/keys/tls/ec-key.csr -CA test/bdd/fixture
 mkdir -p test/bdd/fixtures/keys/recover
 mkdir -p test/bdd/fixtures/keys/update
 mkdir -p test/bdd/fixtures/keys/update2
+mkdir -p test/bdd/fixtures/keys/recover2
+mkdir -p test/bdd/fixtures/keys/update3
 
 openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/recover/key.pem
 openssl ec -in test/bdd/fixtures/keys/recover/key.pem -passout pass:123 -out test/bdd/fixtures/keys/recover/key_encrypted.pem -aes256
 openssl ec -in test/bdd/fixtures/keys/recover/key.pem -pubout -out test/bdd/fixtures/keys/recover/public.pem
+
+openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/recover2/key.pem
+openssl ec -in test/bdd/fixtures/keys/recover2/key.pem -passout pass:123 -out test/bdd/fixtures/keys/recover2/key_encrypted.pem -aes256
+openssl ec -in test/bdd/fixtures/keys/recover2/key.pem -pubout -out test/bdd/fixtures/keys/recover2/public.pem
+
 openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/update/key.pem
 openssl ec -in test/bdd/fixtures/keys/update/key.pem -passout pass:123 -out test/bdd/fixtures/keys/update/key_encrypted.pem -aes256
 openssl ec -in test/bdd/fixtures/keys/update/key.pem -pubout -out test/bdd/fixtures/keys/update/public.pem
+
 openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/update2/key.pem
 openssl ec -in test/bdd/fixtures/keys/update2/key.pem -passout pass:123 -out test/bdd/fixtures/keys/update2/key_encrypted.pem -aes256
 openssl ec -in test/bdd/fixtures/keys/update2/key.pem -pubout -out test/bdd/fixtures/keys/update2/public.pem
+
+openssl ecparam -name prime256v1 -genkey -noout -out test/bdd/fixtures/keys/update3/key.pem
+openssl ec -in test/bdd/fixtures/keys/update3/key.pem -passout pass:123 -out test/bdd/fixtures/keys/update3/key_encrypted.pem -aes256
+openssl ec -in test/bdd/fixtures/keys/update3/key.pem -pubout -out test/bdd/fixtures/keys/update3/public.pem
 
 
 echo "done generating trustbloc-did-method PKI"

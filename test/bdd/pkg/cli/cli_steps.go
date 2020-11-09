@@ -35,7 +35,9 @@ func NewSteps(ctx *context.BDDContext) *Steps {
 func (e *Steps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^TrustBloc DID is created through cli using domain "([^"]*)", direct url "([^"]*)"$`, e.createDID)
 	s.Step(`^TrustBloc DID is updated through cli using domain "([^"]*)", direct url "([^"]*)"$`, e.updateDID)
+	s.Step(`^TrustBloc DID is recovered through cli using domain "([^"]*)", direct url "([^"]*)"$`, e.recoverDID)
 	s.Step(`^check cli created valid DID$`, e.checkCreatedDID)
+	s.Step(`^check cli recovered DID$`, e.checkRecoveredDID)
 	s.Step(`^check cli updated DID$`, e.checkUpdatedDID)
 }
 
@@ -78,14 +80,43 @@ func (e *Steps) checkCreatedDID() error {
 	}
 
 	if len(doc.PublicKey) != numberOfPublicKeys {
-		return fmt.Errorf("did doc public key is not equal to 2")
+		return fmt.Errorf("did doc public key is not equal to %d", numberOfPublicKeys)
 	}
 
 	if len(doc.Service) != numberOfServices {
-		return fmt.Errorf("did doc services is not equal to 2")
+		return fmt.Errorf("did doc services is not equal to %d", numberOfServices)
 	}
 
 	e.createdDID = doc
+
+	return nil
+}
+
+func (e *Steps) checkRecoveredDID() error {
+	const numberOfPublicKeys = 1
+
+	const numberOfServices = 1
+
+	doc, err := e.resolveDID(e.createdDID.ID)
+	if err != nil {
+		return err
+	}
+
+	if len(doc.PublicKey) != numberOfPublicKeys {
+		return fmt.Errorf("did doc public key is not equal to %d", numberOfPublicKeys)
+	}
+
+	if len(doc.Service) != numberOfServices {
+		return fmt.Errorf("did doc services is not equal to %d", numberOfServices)
+	}
+
+	if !strings.Contains(doc.PublicKey[0].ID, "key-recover-id") {
+		return fmt.Errorf("wrong recoverd public key")
+	}
+
+	if !strings.Contains(doc.Service[0].ID, "svc-recover-id") {
+		return fmt.Errorf("wrong recoverd service")
+	}
 
 	return nil
 }
@@ -101,7 +132,7 @@ func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
 	}
 
 	if len(doc.PublicKey) != numberOfPublicKeys {
-		return fmt.Errorf("did doc public key is not equal to 3")
+		return fmt.Errorf("did doc public key is not equal to %d", numberOfPublicKeys)
 	}
 
 	key2ID := "key2"
@@ -136,7 +167,7 @@ func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
 	}
 
 	if len(doc.Service) != numberOfServices {
-		return fmt.Errorf("did doc services is not equal to 1")
+		return fmt.Errorf("did doc services is not equal to %d", numberOfServices)
 	}
 
 	if !strings.Contains(doc.Service[0].ID, svc3ID) {
@@ -163,6 +194,35 @@ func (e *Steps) updateDID(domain, sidetreeURL string) error {
 		"--signingkey-password", "123", "--nextupdatekey-file", "./fixtures/keys/update2/public.pem",
 		"--remove-publickey-id", "key1", "--remove-service-id", "svc1", "--remove-service-id", "svc2",
 		"--add-service-file", "fixtures/did-services/update/services.json")
+
+	value, err := execCMD("../../.build/bin/cli", args...)
+
+	if err != nil {
+		return err
+	}
+
+	e.cliValue = value
+
+	return nil
+}
+
+func (e *Steps) recoverDID(domain, sidetreeURL string) error {
+	var args []string
+
+	if domain != "" {
+		args = append(args, "--domain", domain)
+	}
+
+	if sidetreeURL != "" {
+		args = append(args, "--sidetree-url", sidetreeURL)
+	}
+
+	args = append(args, "recover-did", "--did-uri", e.createdDID.ID, "--signingkey-password", "123",
+		"--tls-cacerts", "fixtures/keys/tls/ec-cacert.pem",
+		"--publickey-file", "fixtures/did-keys/recover/publickeys.json", "--sidetree-write-token", "rw_token",
+		"--service-file", "fixtures/did-services/recover/services.json",
+		"--nextrecoverkey-file", "./fixtures/keys/recover2/public.pem", "--nextupdatekey-file",
+		"./fixtures/keys/update3/public.pem", "--signingkey-file", "./fixtures/keys/recover/key_encrypted.pem")
 
 	value, err := execCMD("../../.build/bin/cli", args...)
 

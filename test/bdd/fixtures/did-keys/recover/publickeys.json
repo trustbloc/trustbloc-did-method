@@ -1,0 +1,7 @@
+[
+ {
+  "type": "Ed25519VerificationKey2018",
+  "purposes": ["verificationMethod"],
+  "jwkPath": "./fixtures/did-keys/recover/key1_jwk.json"
+ }
+]
