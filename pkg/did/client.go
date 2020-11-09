@@ -32,6 +32,7 @@ import (
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/deactivate"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/recovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
@@ -199,6 +200,36 @@ func (c *Client) RecoverDID(did, domain string, opts ...recovery.Option) error {
 	return err
 }
 
+// DeactivateDID deactivate did doc
+func (c *Client) DeactivateDID(did, domain string, opts ...deactivate.Option) error {
+	deactivateDIDOpts := &deactivate.Opts{}
+	// Apply options
+	for _, opt := range opts {
+		opt(deactivateDIDOpts)
+	}
+
+	if deactivateDIDOpts.SigningKey == nil {
+		return fmt.Errorf("signing key is required")
+	}
+
+	sidetreeEndpoint, err := c.getEndpoint(domain, deactivateDIDOpts.SidetreeEndpoints)
+	if err != nil {
+		return err
+	}
+
+	req, err := buildDeactivateRequest(did, deactivateDIDOpts)
+	if err != nil {
+		return fmt.Errorf("failed to build sidetree request: %w", err)
+	}
+
+	_, err = c.sendRequest(req, sidetreeEndpoint)
+	if err != nil {
+		return fmt.Errorf("failed to send deactivate sidetree request: %w", err)
+	}
+
+	return err
+}
+
 func validateRecoverReq(recoverDIDOpts *recovery.Opts) error {
 	if recoverDIDOpts.NextRecoveryPublicKey == nil {
 		return fmt.Errorf("next recovery public key is required")
@@ -294,6 +325,25 @@ func (c *Client) buildUpdateRequest(did string, updateDIDOpts *update.Opts) ([]b
 		Patches:          patches,
 		MultihashCode:    sha2_256,
 		Signer:           signer,
+	})
+}
+
+// buildDeactivateRequest request builder for sidetree public DID deactivate
+func buildDeactivateRequest(did string, deactivateDIDOpts *deactivate.Opts) ([]byte, error) {
+	signer, publicKey, err := getSigner(deactivateDIDOpts.SigningKey, deactivateDIDOpts.SigningKeyID)
+	if err != nil {
+		return nil, err
+	}
+
+	didSuffix, err := getUniqueSuffix(did)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.NewDeactivateRequest(&client.DeactivateRequestInfo{
+		DidSuffix:   didSuffix,
+		RecoveryKey: publicKey,
+		Signer:      signer,
 	})
 }
 
