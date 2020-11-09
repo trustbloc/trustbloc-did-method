@@ -3,7 +3,7 @@ Copyright SecureKey Technologies Inc. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package create
+package recovery
 
 import (
 	"crypto"
@@ -14,18 +14,18 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
-// Opts create did opts
+// Opts recover did opts
 type Opts struct {
-	PublicKeys        []doc.PublicKey
-	Services          []docdid.Service
-	SidetreeEndpoints []*models.Endpoint
-	RecoveryPublicKey crypto.PublicKey
-	UpdatePublicKey   crypto.PublicKey
-	SigningKey        crypto.PrivateKey
-	SigningKeyID      string
+	PublicKeys            []doc.PublicKey
+	Services              []docdid.Service
+	SidetreeEndpoints     []*models.Endpoint
+	NextRecoveryPublicKey crypto.PublicKey
+	NextUpdatePublicKey   crypto.PublicKey
+	SigningKey            crypto.PrivateKey
+	SigningKeyID          string
 }
 
-// Option is a create DID option
+// Option is a recover DID option
 type Option func(opts *Opts)
 
 // WithPublicKey add DID public key
@@ -50,16 +50,30 @@ func WithSidetreeEndpoint(sidetreeEndpoint string) Option {
 	}
 }
 
-// WithRecoveryPublicKey set recovery public key
-func WithRecoveryPublicKey(recoveryPublicKey crypto.PublicKey) Option {
+// WithNextRecoveryPublicKey set next recovery public key
+func WithNextRecoveryPublicKey(nextRecoveryPublicKey crypto.PublicKey) Option {
 	return func(opts *Opts) {
-		opts.RecoveryPublicKey = recoveryPublicKey
+		opts.NextRecoveryPublicKey = nextRecoveryPublicKey
 	}
 }
 
-// WithUpdatePublicKey set update public key
-func WithUpdatePublicKey(updatePublicKey crypto.PublicKey) Option {
+// WithNextUpdatePublicKey set next update public key
+func WithNextUpdatePublicKey(nextUpdatePublicKey crypto.PublicKey) Option {
 	return func(opts *Opts) {
-		opts.UpdatePublicKey = updatePublicKey
+		opts.NextUpdatePublicKey = nextUpdatePublicKey
+	}
+}
+
+// WithSigningKey set signing key
+func WithSigningKey(signingKey crypto.PrivateKey) Option {
+	return func(opts *Opts) {
+		opts.SigningKey = signingKey
+	}
+}
+
+// WithSigningKeyID set signing key id
+func WithSigningKeyID(id string) Option {
+	return func(opts *Opts) {
+		opts.SigningKeyID = id
 	}
 }

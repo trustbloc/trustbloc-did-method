@@ -32,6 +32,7 @@ import (
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
+	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/recovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
@@ -162,6 +163,53 @@ func (c *Client) UpdateDID(did, domain string, opts ...update.Option) error {
 	_, err = c.sendRequest(req, sidetreeEndpoint)
 	if err != nil {
 		return fmt.Errorf("failed to send create sidetree request: %w", err)
+	}
+
+	return nil
+}
+
+// RecoverDID recover did doc
+func (c *Client) RecoverDID(did, domain string, opts ...recovery.Option) error {
+	recoverDIDOpts := &recovery.Opts{}
+	// Apply options
+	for _, opt := range opts {
+		opt(recoverDIDOpts)
+	}
+
+	err := validateRecoverReq(recoverDIDOpts)
+	if err != nil {
+		return err
+	}
+
+	sidetreeEndpoint, err := c.getEndpoint(domain, recoverDIDOpts.SidetreeEndpoints)
+	if err != nil {
+		return err
+	}
+
+	req, err := buildRecoverRequest(did, recoverDIDOpts)
+	if err != nil {
+		return fmt.Errorf("failed to build sidetree request: %w", err)
+	}
+
+	_, err = c.sendRequest(req, sidetreeEndpoint)
+	if err != nil {
+		return fmt.Errorf("failed to send recover sidetree request: %w", err)
+	}
+
+	return err
+}
+
+func validateRecoverReq(recoverDIDOpts *recovery.Opts) error {
+	if recoverDIDOpts.NextRecoveryPublicKey == nil {
+		return fmt.Errorf("next recovery public key is required")
+	}
+
+	if recoverDIDOpts.NextUpdatePublicKey == nil {
+		return fmt.Errorf("next update public key is required")
+	}
+
+	if recoverDIDOpts.SigningKey == nil {
+		return fmt.Errorf("signing key is required")
 	}
 
 	return nil
@@ -419,6 +467,79 @@ func buildCreateRequest(createDIDOpts *create.Opts) ([]byte, error) {
 	}
 
 	return req, nil
+}
+
+// buildRecoverRequest request builder for sidetree public DID recovery
+func buildRecoverRequest(did string, recoverDIDOpts *recovery.Opts) ([]byte, error) {
+	publicKeys := recoverDIDOpts.PublicKeys
+
+	var parsedKeys []doc.PublicKey
+
+	for _, key := range publicKeys {
+		parsedKey, err := unwrapPubKeyJWK(key)
+		if err != nil {
+			return nil, err
+		}
+
+		parsedKeys = append(parsedKeys, *parsedKey)
+	}
+
+	didDoc := &doc.Doc{PublicKey: parsedKeys, Service: recoverDIDOpts.Services}
+
+	docBytes, err := didDoc.JSONBytes()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get document bytes : %s", err)
+	}
+
+	nextRecoveryCommitment, nextUpdateCommitment, err := getCommitment(recoverDIDOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, recoveryKey, err := getSigner(recoverDIDOpts.SigningKey, recoverDIDOpts.SigningKeyID)
+	if err != nil {
+		return nil, err
+	}
+
+	didSuffix, err := getUniqueSuffix(did)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := client.NewRecoverRequest(&client.RecoverRequestInfo{
+		DidSuffix: didSuffix, OpaqueDocument: string(docBytes),
+		RecoveryCommitment: nextRecoveryCommitment, UpdateCommitment: nextUpdateCommitment,
+		MultihashCode: sha2_256, Signer: signer, RecoveryKey: recoveryKey,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sidetree request: %w", err)
+	}
+
+	return req, nil
+}
+
+func getCommitment(recoverDIDOpts *recovery.Opts) (string, string, error) {
+	nextRecoveryKey, err := pubkey.GetPublicKeyJWK(recoverDIDOpts.NextRecoveryPublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get next recovery key : %s", err)
+	}
+
+	nextUpdateKey, err := pubkey.GetPublicKeyJWK(recoverDIDOpts.NextUpdatePublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get next update key : %s", err)
+	}
+
+	nextRecoveryCommitment, err := commitment.Calculate(nextRecoveryKey, sha2_256, sha256)
+	if err != nil {
+		return "", "", err
+	}
+
+	nextUpdateCommitment, err := commitment.Calculate(nextUpdateKey, sha2_256, sha256)
+	if err != nil {
+		return "", "", err
+	}
+
+	return nextRecoveryCommitment, nextUpdateCommitment, nil
 }
 
 func (c *Client) sendRequest(req []byte, endpointURL string) ([]byte, error) {
