@@ -163,8 +163,8 @@ func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {
 }
 
 func validatePublicKey(didDoc *ariesdid.Doc, keyType, signatureSuite string) error {
-	if len(didDoc.PublicKey) != 1 {
-		return fmt.Errorf("public key size not equal one")
+	if len(didDoc.VerificationMethod) != 1 {
+		return fmt.Errorf("veification method size not equal one")
 	}
 
 	expectedJwkKeyType := ""
@@ -181,13 +181,13 @@ func validatePublicKey(didDoc *ariesdid.Doc, keyType, signatureSuite string) err
 	}
 
 	if signatureSuite == doc.JWSVerificationKey2020 &&
-		expectedJwkKeyType != didDoc.PublicKey[0].JSONWebKey().Kty {
+		expectedJwkKeyType != didDoc.VerificationMethod[0].JSONWebKey().Kty {
 		return fmt.Errorf("jwk key type : expected=%s actual=%s", expectedJwkKeyType,
-			didDoc.PublicKey[0].JSONWebKey().Kty)
+			didDoc.VerificationMethod[0].JSONWebKey().Kty)
 	}
 
 	if signatureSuite == doc.Ed25519VerificationKey2018 &&
-		didDoc.PublicKey[0].JSONWebKey() != nil {
+		didDoc.VerificationMethod[0].JSONWebKey() != nil {
 		return fmt.Errorf("jwk is not nil for %s", signatureSuite)
 	}
 
@@ -195,19 +195,19 @@ func validatePublicKey(didDoc *ariesdid.Doc, keyType, signatureSuite string) err
 }
 
 func verifyPublicKeyAndType(didDoc *ariesdid.Doc, kt kms.KeyType, signatureSuite string) error {
-	pubKeyID, err := localkms.CreateKID(didDoc.PublicKey[0].Value, kt)
+	pubKeyID, err := localkms.CreateKID(didDoc.VerificationMethod[0].Value, kt)
 	if err != nil {
 		return err
 	}
 
-	if didDoc.PublicKey[0].ID != didDoc.ID+"#"+pubKeyID {
+	if didDoc.VerificationMethod[0].ID != didDoc.ID+"#"+pubKeyID {
 		return fmt.Errorf("resolved did public key ID %s not equal to %s",
-			didDoc.PublicKey[0].ID, didDoc.ID+"#"+pubKeyID)
+			didDoc.VerificationMethod[0].ID, didDoc.ID+"#"+pubKeyID)
 	}
 
-	if didDoc.PublicKey[0].Type != signatureSuite {
+	if didDoc.VerificationMethod[0].Type != signatureSuite {
 		return fmt.Errorf("resolved did public key type %s not equal to %s",
-			didDoc.PublicKey[0].Type, signatureSuite)
+			didDoc.VerificationMethod[0].Type, signatureSuite)
 	}
 
 	return nil

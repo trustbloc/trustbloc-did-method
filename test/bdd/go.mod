@@ -6,9 +6,7 @@ module github.com/trustbloc/trustbloc-did-method/test/bdd
 
 replace github.com/trustbloc/trustbloc-did-method => ../..
 
-replace github.com/phoreproject/bls => github.com/trustbloc/bls v0.0.0-20201023141329-a1e218beb89e
-
-replace github.com/kilic/bls12-381 => github.com/trustbloc/bls12-381 v0.0.0-20201008080608-ba2e87ef05ef
+replace github.com/kilic/bls12-381 => github.com/trustbloc/bls12-381 v0.0.0-20201104214312-31de2a204df8
 
 go 1.15
 
@@ -16,7 +14,7 @@ require (
 	github.com/cucumber/godog v0.9.0
 	github.com/fsouza/go-dockerclient v1.6.0
 	github.com/google/uuid v1.1.2
-	github.com/hyperledger/aries-framework-go v0.1.5-0.20201030222504-2f5e96e162b3
+	github.com/hyperledger/aries-framework-go v0.1.5-0.20201110161050-249e1c428734
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tidwall/gjson v1.6.0
 	github.com/trustbloc/edge-core v0.1.5-0.20201106164919-76ecfeca954f

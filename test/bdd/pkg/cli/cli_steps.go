@@ -68,7 +68,7 @@ func (e *Steps) resolveDID(did string) (*ariesdid.Doc, error) {
 }
 
 func (e *Steps) checkCreatedDID() error {
-	const numberOfPublicKeys = 2
+	const numberOfVerificationMethods = 2
 
 	const numberOfServices = 2
 
@@ -82,8 +82,8 @@ func (e *Steps) checkCreatedDID() error {
 		return err
 	}
 
-	if len(doc.PublicKey) != numberOfPublicKeys {
-		return fmt.Errorf("did doc public key is not equal to %d", numberOfPublicKeys)
+	if len(doc.VerificationMethod) != numberOfVerificationMethods {
+		return fmt.Errorf("did doc verification method is not equal to %d", numberOfVerificationMethods)
 	}
 
 	if len(doc.Service) != numberOfServices {
@@ -96,7 +96,7 @@ func (e *Steps) checkCreatedDID() error {
 }
 
 func (e *Steps) checkRecoveredDID() error {
-	const numberOfPublicKeys = 1
+	const numberOfVerificationMethods = 1
 
 	const numberOfServices = 1
 
@@ -105,16 +105,16 @@ func (e *Steps) checkRecoveredDID() error {
 		return err
 	}
 
-	if len(doc.PublicKey) != numberOfPublicKeys {
-		return fmt.Errorf("did doc public key is not equal to %d", numberOfPublicKeys)
+	if len(doc.VerificationMethod) != numberOfVerificationMethods {
+		return fmt.Errorf("did doc verification method is not equal to %d", numberOfVerificationMethods)
 	}
 
 	if len(doc.Service) != numberOfServices {
 		return fmt.Errorf("did doc services is not equal to %d", numberOfServices)
 	}
 
-	if !strings.Contains(doc.PublicKey[0].ID, "key-recover-id") {
-		return fmt.Errorf("wrong recoverd public key")
+	if !strings.Contains(doc.VerificationMethod[0].ID, "key-recover-id") {
+		return fmt.Errorf("wrong recoverd verification method")
 	}
 
 	if !strings.Contains(doc.Service[0].ID, "svc-recover-id") {
@@ -141,7 +141,7 @@ func (e *Steps) checkDeactivatedDID() error {
 }
 
 func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
-	const numberOfPublicKeys = 2
+	const numberOfVerificationMethods = 2
 
 	const numberOfServices = 1
 
@@ -150,8 +150,8 @@ func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
 		return err
 	}
 
-	if len(doc.PublicKey) != numberOfPublicKeys {
-		return fmt.Errorf("did doc public key is not equal to %d", numberOfPublicKeys)
+	if len(doc.VerificationMethod) != numberOfVerificationMethods {
+		return fmt.Errorf("did doc verification method is not equal to %d", numberOfVerificationMethods)
 	}
 
 	key2ID := "key2"
@@ -165,11 +165,11 @@ func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
 		return fmt.Errorf("did capability invocation is not equal to 1")
 	}
 
-	if !strings.Contains(doc.CapabilityInvocation[0].PublicKey.ID, key2ID) {
+	if !strings.Contains(doc.CapabilityInvocation[0].VerificationMethod.ID, key2ID) {
 		return fmt.Errorf("wrong capability invocation key")
 	}
 
-	for _, v := range doc.PublicKey {
+	for _, v := range doc.VerificationMethod {
 		if strings.Contains(v.ID, key2ID) {
 			key2Exist = true
 			continue
@@ -182,7 +182,7 @@ func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
 	}
 
 	if !key2Exist || !key3Exist {
-		return fmt.Errorf("wrong updated public key")
+		return fmt.Errorf("wrong updated verification method")
 	}
 
 	if len(doc.Service) != numberOfServices {
