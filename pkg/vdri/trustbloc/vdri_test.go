@@ -13,7 +13,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
@@ -968,45 +967,4 @@ func TestOpts(t *testing.T) {
 
 		require.Equal(t, true, v.enableSignatureVerification)
 	})
-}
-
-//nolint:deadcode,unused
-func generateDIDDoc(id string) *did.Doc {
-	t := time.Unix(0, 0)
-
-	return &did.Doc{
-		Context: nil,
-		ID:      id,
-		PublicKey: []did.PublicKey{{
-			ID:         "",
-			Type:       "",
-			Controller: "",
-			Value:      []byte{0},
-		}},
-		Service: []did.Service{{
-			ID:              "",
-			Type:            "",
-			Priority:        0,
-			RecipientKeys:   []string{""},
-			RoutingKeys:     []string{""},
-			ServiceEndpoint: "",
-			Properties:      map[string]interface{}{},
-		}},
-		Authentication: []did.VerificationMethod{{PublicKey: did.PublicKey{
-			ID:         "",
-			Type:       "",
-			Controller: "",
-			Value:      []byte{0},
-		}}},
-		Created: nil,
-		Updated: nil,
-		Proof: []did.Proof{{
-			Type:       "",
-			Created:    &t,
-			Creator:    "",
-			ProofValue: nil,
-			Domain:     "",
-			Nonce:      nil,
-		}},
-	}
 }

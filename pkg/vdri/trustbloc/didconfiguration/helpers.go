@@ -188,7 +188,7 @@ func VerifyDIDSignature(jws *jose.JSONWebSignature, doc *did.Doc) ([]byte, error
 func getJWKs(doc *did.Doc) []*jose2.JWK {
 	var jwkList []*jose2.JWK
 
-	for _, pk := range doc.PublicKey {
+	for _, pk := range doc.VerificationMethod {
 		jwk := pk.JSONWebKey()
 		if jwk == nil || jwk.Key == nil {
 			continue
@@ -198,7 +198,7 @@ func getJWKs(doc *did.Doc) []*jose2.JWK {
 	}
 
 	for _, method := range doc.Authentication {
-		jwk := method.PublicKey.JSONWebKey()
+		jwk := method.VerificationMethod.JSONWebKey()
 		if jwk == nil || jwk.Key == nil {
 			continue
 		}
