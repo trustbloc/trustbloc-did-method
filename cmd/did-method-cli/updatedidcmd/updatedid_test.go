@@ -26,12 +26,12 @@ const (
 [
  {
   "type": "Ed25519VerificationKey2018",
-  "purposes": ["verificationMethod"],
+  "purposes": ["authentication"],
   "jwkPath": "%s"
  },
  {
   "type": "JwsVerificationKey2020",
-  "purposes": ["verificationMethod"],
+  "purposes": ["authentication"],
   "jwkPath": "%s"
  }
 ]`
