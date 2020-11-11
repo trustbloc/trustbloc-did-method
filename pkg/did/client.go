@@ -45,7 +45,6 @@ import (
 const (
 	// default hashes for sidetree
 	sha2_256 = 18 // multihash
-	sha256   = 5  // hash
 )
 
 type endpointService interface {
@@ -298,7 +297,7 @@ func (c *Client) buildUpdateRequest(did string, updateDIDOpts *update.Opts) ([]b
 		return nil, fmt.Errorf("failed to get next update key : %s", err)
 	}
 
-	nextUpdateCommitment, err := commitment.Calculate(nextUpdateKey, sha2_256, sha256)
+	nextUpdateCommitment, err := commitment.Calculate(nextUpdateKey, sha2_256)
 	if err != nil {
 		return nil, err
 	}
@@ -495,12 +494,12 @@ func buildCreateRequest(createDIDOpts *create.Opts) ([]byte, error) {
 		return nil, fmt.Errorf("failed to get update key : %s", err)
 	}
 
-	recoveryCommitment, err := commitment.Calculate(recoveryKey, sha2_256, sha256)
+	recoveryCommitment, err := commitment.Calculate(recoveryKey, sha2_256)
 	if err != nil {
 		return nil, err
 	}
 
-	updateCommitment, err := commitment.Calculate(updateKey, sha2_256, sha256)
+	updateCommitment, err := commitment.Calculate(updateKey, sha2_256)
 	if err != nil {
 		return nil, err
 	}
@@ -579,12 +578,12 @@ func getCommitment(recoverDIDOpts *recovery.Opts) (string, string, error) {
 		return "", "", fmt.Errorf("failed to get next update key : %s", err)
 	}
 
-	nextRecoveryCommitment, err := commitment.Calculate(nextRecoveryKey, sha2_256, sha256)
+	nextRecoveryCommitment, err := commitment.Calculate(nextRecoveryKey, sha2_256)
 	if err != nil {
 		return "", "", err
 	}
 
-	nextUpdateCommitment, err := commitment.Calculate(nextUpdateKey, sha2_256, sha256)
+	nextUpdateCommitment, err := commitment.Calculate(nextUpdateKey, sha2_256)
 	if err != nil {
 		return "", "", err
 	}

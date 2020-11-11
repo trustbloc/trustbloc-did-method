@@ -471,7 +471,7 @@ func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey, 
 		Encoding: doc.PublicKeyEncodingJwk,
 		KeyType:  doc.Ed25519KeyType,
 		Value:    pkBytes,
-		Purposes: []string{doc.KeyPurposeVerificationMethod},
+		Purposes: []string{doc.KeyPurposeAuthentication},
 	}
 
 	return didClient.CreateDID("", create.WithSidetreeEndpoint(sidetreeURL),

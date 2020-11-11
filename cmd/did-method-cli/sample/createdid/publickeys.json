@@ -1,12 +1,12 @@
 [
  {
   "type": "Ed25519VerificationKey2018",
-  "purposes": ["verificationMethod"],
+  "purposes": ["authentication"],
   "jwkPath": "./key1_jwk.json"
  },
  {
   "type": "JwsVerificationKey2020",
-  "purposes": ["verificationMethod"],
+  "purposes": ["authentication"],
   "jwkPath": "./key2_jwk.json"
  }
 ]

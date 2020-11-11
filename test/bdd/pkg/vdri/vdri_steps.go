@@ -66,7 +66,7 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error {
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID, DIDDocument: operation.DIDDocument{
 		PublicKey: []*operation.PublicKey{
 			{ID: kid, Type: signatureSuite, Value: base64.StdEncoding.EncodeToString(pubKey),
-				Encoding: doc.PublicKeyEncodingJwk, KeyType: keyType, Purposes: []string{doc.KeyPurposeVerificationMethod}},
+				Encoding: doc.PublicKeyEncodingJwk, KeyType: keyType, Purposes: []string{doc.KeyPurposeAuthentication}},
 			{ID: recoveryKeyID, Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
 				KeyType: keyType, Encoding: doc.PublicKeyEncodingJwk, Recovery: true},
 			{ID: updateKeyID, Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),

@@ -42,8 +42,6 @@ const (
 	KeyPurposeCapabilityDelegation = "capabilityDelegation"
 	// KeyPurposeCapabilityInvocation defines key purpose as invocation key.
 	KeyPurposeCapabilityInvocation = "capabilityInvocation"
-	// KeyPurposeVerificationMethod defines key purpose as verification(general key).
-	KeyPurposeVerificationMethod = "verificationMethod"
 
 	// JWSVerificationKey2020 defines key type signature
 	JWSVerificationKey2020 = "JwsVerificationKey2020"
