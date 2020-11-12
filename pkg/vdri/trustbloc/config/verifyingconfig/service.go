@@ -18,6 +18,7 @@ import (
 type config interface {
 	GetConsortium(string, string) (*models.ConsortiumFileData, error)
 	GetStakeholder(string, string) (*models.StakeholderFileData, error)
+	GetSidetreeConfig(url string) (*models.SidetreeConfig, error)
 }
 
 // ConfigService fetches consortium and stakeholder configs over http
@@ -92,4 +93,9 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 // GetStakeholder returns the stakeholder config file fetched by the wrapped config service
 func (cs *ConfigService) GetStakeholder(url, domain string) (*models.StakeholderFileData, error) {
 	return cs.config.GetStakeholder(url, domain)
+}
+
+// GetSidetreeConfig returns the sidetree config
+func (cs *ConfigService) GetSidetreeConfig(url string) (*models.SidetreeConfig, error) {
+	return cs.config.GetSidetreeConfig(url)
 }

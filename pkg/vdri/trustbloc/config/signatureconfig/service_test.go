@@ -322,13 +322,37 @@ func TestConfigService_GetStakeholder(t *testing.T) {
 		require.Equal(t, "foo.bar", sh.Config.Domain)
 	})
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("test error", func(t *testing.T) {
 		cs := NewService(&mockconfig.MockConfigService{
 			GetStakeholderFunc: func(u string, d string) (*models.StakeholderFileData, error) {
 				return nil, fmt.Errorf("error error")
 			}})
 
 		_, err := cs.GetStakeholder("foo", "foo")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "error error")
+	})
+}
+
+func TestConfigService_GetSidetreeConfig(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		cs := NewService(&mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(u string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}})
+
+		c, err := cs.GetSidetreeConfig("foo")
+		require.NoError(t, err)
+		require.Equal(t, uint(18), c.MultiHashAlgorithm)
+	})
+
+	t.Run("test error", func(t *testing.T) {
+		cs := NewService(&mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(u string) (*models.SidetreeConfig, error) {
+				return nil, fmt.Errorf("error error")
+			}})
+
+		_, err := cs.GetSidetreeConfig("foo")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "error error")
 	})

@@ -17,13 +17,15 @@ import (
 type config interface {
 	GetConsortium(string, string) (*models.ConsortiumFileData, error)
 	GetStakeholder(string, string) (*models.StakeholderFileData, error)
+	GetSidetreeConfig(url string) (*models.SidetreeConfig, error)
 }
 
 // ConfigService fetches consortium and stakeholder configs using a wrapped config service, caching results in-memory
 type ConfigService struct {
-	config config
-	cCache gcache.Cache
-	sCache gcache.Cache
+	config              config
+	cCache              gcache.Cache
+	sCache              gcache.Cache
+	sidetreeConfigCache gcache.Cache
 }
 
 // NewService create new ConfigService
@@ -40,6 +42,11 @@ func NewService(config config) *ConfigService {
 	configService.sCache = makeCache(
 		configService.getNewCacheable(func(url, domain string) (cacheable, error) {
 			return configService.config.GetStakeholder(url, domain)
+		}))
+
+	configService.sidetreeConfigCache = makeCache(
+		configService.getNewCacheable(func(url, domain string) (cacheable, error) {
+			return configService.config.GetSidetreeConfig(url)
 		}))
 
 	return configService
@@ -115,4 +122,16 @@ func (cs *ConfigService) GetStakeholder(url, domain string) (*models.Stakeholder
 	}
 
 	return stakeholderDataInterface.(*models.StakeholderFileData), nil
+}
+
+// GetSidetreeConfig returns the sidetree config
+func (cs *ConfigService) GetSidetreeConfig(url string) (*models.SidetreeConfig, error) {
+	sidetreeConfigDataInterface, err := getEntryHelper(cs.sidetreeConfigCache, stringPair{
+		url: url,
+	}, "sidetreeconfig")
+	if err != nil {
+		return nil, err
+	}
+
+	return sidetreeConfigDataInterface.(*models.SidetreeConfig), nil
 }

@@ -35,13 +35,7 @@ ho+LGIVUXDNaduiNfpLmk5MXS5Q7WQAMgaJBRyRldIvbrNWqph4DH2gdKQ==
         "max_age": 2419200
       },
       "num_queries": 2,
-      "history_hash": "SHA256",
-      "sidetree": {
-        "hash_algorithm": "SHA256",
-        "key_algorithm": "NotARealAlg2018",
-        "max_encoded_hash_length": 100,
-        "max_operation_size": 8192
-      }
+      "history_hash": "SHA256"
     }
   },
   "members_data": [
@@ -284,7 +278,7 @@ func TestCreateConfigCmd(t *testing.T) {
 
 		err = cmd.Execute()
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to send create sidetree request")
+		require.Contains(t, err.Error(), "getting sidetreeconfig from cache")
 	})
 
 	t.Run("test create config and write them to file", func(t *testing.T) {

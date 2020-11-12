@@ -7,18 +7,29 @@ package httpconfig
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
+)
+
+const (
+	// default hashes for sidetree
+	sha2_256 = 18 // multihash
+	maxAge   = 3600
 )
 
 // ConfigService fetches consortium and stakeholder configs over http
 type ConfigService struct {
 	httpClient *http.Client
 	tlsConfig  *tls.Config
+	authToken  string
 }
 
 // NewService create new ConfigService
@@ -69,6 +80,48 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 	return models.ParseConsortium(body)
 }
 
+// GetSidetreeConfig get sidetree config
+func (cs *ConfigService) GetSidetreeConfig(url string) (*models.SidetreeConfig, error) {
+	url = fmt.Sprintf("%s/%s", url, "version")
+
+	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	if cs.authToken != "" {
+		httpReq.Header.Add("Authorization", cs.authToken)
+	}
+
+	resp, err := cs.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+
+	defer closeResponseBody(resp.Body)
+
+	responseBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response : %s", err)
+	}
+
+	config := models.SidetreeConfig{MultiHashAlgorithm: sha2_256, MaxAge: maxAge}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Warnf("return unexpected response from %s status '%d' body %s, will return default sidetree config",
+			url, resp.StatusCode, responseBytes)
+		return &config, nil
+	}
+
+	if err := json.Unmarshal(responseBytes, &config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
+}
+
 // GetStakeholder fetches and parses a stakeholder file under the given url with the given domain
 func (cs *ConfigService) GetStakeholder(url, domain string) (*models.StakeholderFileData, error) {
 	res, err := cs.httpClient.Get(configURL(url, domain))
@@ -99,5 +152,19 @@ type Option func(opts *ConfigService)
 func WithTLSConfig(tlsConfig *tls.Config) Option {
 	return func(opts *ConfigService) {
 		opts.tlsConfig = tlsConfig
+	}
+}
+
+// WithAuthToken add auth token
+func WithAuthToken(authToken string) Option {
+	return func(opts *ConfigService) {
+		opts.authToken = "Bearer " + authToken
+	}
+}
+
+func closeResponseBody(respBody io.Closer) {
+	e := respBody.Close()
+	if e != nil {
+		log.Errorf("Failed to close response body: %v", e)
 	}
 }

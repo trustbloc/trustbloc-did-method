@@ -283,7 +283,7 @@ func TestService(t *testing.T) {
 
 	t.Run("test services success", func(t *testing.T) {
 		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "{}")
 		}))
 		defer serv.Close()
 
