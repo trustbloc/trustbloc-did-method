@@ -11,8 +11,9 @@ import (
 
 // MockConfigService implements a mock config service
 type MockConfigService struct {
-	GetConsortiumFunc  func(string, string) (*models.ConsortiumFileData, error)
-	GetStakeholderFunc func(string, string) (*models.StakeholderFileData, error)
+	GetConsortiumFunc     func(string, string) (*models.ConsortiumFileData, error)
+	GetStakeholderFunc    func(string, string) (*models.StakeholderFileData, error)
+	GetSidetreeConfigFunc func(string) (*models.SidetreeConfig, error)
 }
 
 // GetConsortium get the consortium config file for a given domain from the given url
@@ -28,6 +29,15 @@ func (m *MockConfigService) GetConsortium(url, domain string) (*models.Consortiu
 func (m *MockConfigService) GetStakeholder(url, domain string) (*models.StakeholderFileData, error) {
 	if m.GetStakeholderFunc != nil {
 		return m.GetStakeholderFunc(url, domain)
+	}
+
+	return nil, nil
+}
+
+// GetSidetreeConfig get the sidetree config
+func (m *MockConfigService) GetSidetreeConfig(url string) (*models.SidetreeConfig, error) {
+	if m.GetSidetreeConfigFunc != nil {
+		return m.GetSidetreeConfigFunc(url)
 	}
 
 	return nil, nil

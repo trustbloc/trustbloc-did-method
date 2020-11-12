@@ -103,7 +103,7 @@ func TestMissingArg(t *testing.T) {
 
 func TestRecoverDID(t *testing.T) {
 	serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "{}")
 	}))
 	defer serv.Close()
 

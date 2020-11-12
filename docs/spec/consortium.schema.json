@@ -28,18 +28,6 @@
         },
         "history_hash": {
           "type": "string"
-        },
-        "sidetree": {
-          "type": "object",
-          "properties" : {
-            "hash_algorithm": {"type": "string"},
-            "key_algorithm": {"type": "string"},
-            "max_encoded_hash_length": {"type": "integer"},
-            "max_operation_size": {"type": "integer"},
-            "genesis_time": {"type": "integer"},
-            "max_operations_per_batch": {"type": "integer"}
-          },
-          "required": ["hash_algorithm", "key_algorithm", "max_encoded_hash_length", "max_operation_size"]
         }
       }
     },

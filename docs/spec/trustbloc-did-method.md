@@ -189,25 +189,6 @@ If this element is not present in the consortium policy, the default value of `n
 
 The hash algorithm used for identifying history files. Defaults to the value `"SHA256"`.
 
-##### Sidetree Parameters
-`"sidetree": {[parameters]}`
-
-This object holds parameters which the client needs for Sidetree requests. The keys it must contain, with value types and example values, are as follows:
-
-**Key** | **Value Type** | **Description** | **Example Value**
---- | --- | --- | ---
-`"hash_algorithm"` | `string` | The hash algorithm used for Sidetree operation requests |  `"SHA256"`
-`"key_algorithm"` | `string` | The key algorithm used for signing Sidetree operation requests | `"ES256"`
-`"max_encoded_hash_length"` | `uint64` | The maximum string length of the hash created for the operation request | `100`
-`"max_operation_size"` | `uint64` | The maximum size of the Sidetree operation request, in bytes | `8192`
-
-The following keys are used for validating the backing datastructures used by Sidetree, and can be ignored by clients that don't intend to validate:
-
-**Key** | **Value Type** | **Description** | **Example Value**
---- | --- | --- | ---
-`"genesis_time"` | `uint` | The block in the blockchain's history where Sidetree is first activated | `0`
-`"max_operations_per_batch"` | `unit` | The maximum number of sidetree operations per batch | `10000`
-
 ### Stakeholder Policy
 The `policy` element of a stakeholder config object is a JSON object. Each key-value pair is a rule for the client to follow when processing this specific stakeholder config file, or for resolving DIDs using endpoints listed within this stakeholder config file.
 
@@ -311,13 +292,7 @@ The consortium has a config JWS file at `consortium.net/.well-known/did-trustblo
     "policy": {
         "cache": {"max_age": 2419200},
         "num_queries": 2,
-        "history_hash": "SHA256",
-        "sidetree": {
-            "hash_algorithm": "SHA256",
-            "key_algorithm": "NotARealAlg2018",
-            "max_encoded_hash_length": 100,
-            "max_operation_size": 8192
-        }
+        "history_hash": "SHA256"
     },
     "members": [
         {

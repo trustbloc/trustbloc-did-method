@@ -222,3 +222,66 @@ func TestConfigService_GetStakeholder(t *testing.T) {
 		require.Contains(t, err.Error(), "key must be stringPair")
 	})
 }
+
+func TestConfigService_GetSidetreeConfig(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		cs := NewService(&mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(u string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}})
+
+		conf, err := cs.GetSidetreeConfig("foo.bar")
+		require.NoError(t, err)
+
+		require.Equal(t, uint(18), conf.MultiHashAlgorithm)
+	})
+
+	t.Run("success - demonstrate caching", func(t *testing.T) {
+		callCount := 0
+
+		cs := NewService(&mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(u string) (*models.SidetreeConfig, error) {
+				callCount++
+				if callCount > 1 {
+					return nil, fmt.Errorf("double-call")
+				}
+
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18, MaxAge: 1000}, nil
+			}})
+
+		// Call multiple times, which should fail if the wrapped service is called multiple times
+		// indicating that there's no caching
+		for i := 0; i < 5; i++ {
+			conf, err := cs.GetSidetreeConfig("foo.bar")
+			require.NoError(t, err)
+
+			require.Equal(t, uint(18), conf.MultiHashAlgorithm)
+		}
+	})
+
+	t.Run("success - re-call wrapped service when cache times out", func(t *testing.T) {
+		callCount := 0
+
+		cs := NewService(&mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(u string) (*models.SidetreeConfig, error) {
+				callCount++
+				if callCount > 1 {
+					return nil, fmt.Errorf("double-call")
+				}
+
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18, MaxAge: 0}, nil
+			}})
+
+		// Call multiple times, which should fail if the wrapped service is called multiple times
+		// indicating that there's no caching
+		conf, err := cs.GetSidetreeConfig("foo.bar")
+		require.NoError(t, err)
+
+		require.Equal(t, uint(18), conf.MultiHashAlgorithm)
+
+		_, err = cs.GetSidetreeConfig("foo.bar")
+		require.Error(t, err)
+
+		require.Contains(t, err.Error(), "double-call")
+	})
+}

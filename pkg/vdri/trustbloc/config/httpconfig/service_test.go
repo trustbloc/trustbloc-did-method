@@ -7,6 +7,7 @@ package httpconfig
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -76,6 +77,51 @@ func TestConfigService_GetConsortium(t *testing.T) {
 		require.Error(t, err)
 
 		require.Contains(t, err.Error(), "consortium config data should be a JWS")
+	})
+}
+
+func TestConfigService_GetSidetreeConfig(t *testing.T) {
+	t.Run("test get default values", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer serv.Close()
+
+		cs := NewService(WithAuthToken("tk1"))
+
+		c, err := cs.GetSidetreeConfig(serv.URL)
+		require.NoError(t, err)
+		require.Equal(t, uint(sha2_256), c.MultiHashAlgorithm)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bytes, err := json.Marshal(models.SidetreeConfig{MultiHashAlgorithm: 10})
+			require.NoError(t, err)
+
+			fmt.Fprint(w, string(bytes))
+		}))
+		defer serv.Close()
+
+		cs := NewService(WithAuthToken("tk1"))
+
+		c, err := cs.GetSidetreeConfig(serv.URL)
+		require.NoError(t, err)
+		require.Equal(t, uint(10), c.MultiHashAlgorithm)
+	})
+
+	t.Run("test failed to unmarshal response", func(t *testing.T) {
+		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, "{{")
+		}))
+		defer serv.Close()
+
+		cs := NewService(WithAuthToken("tk1"))
+
+		c, err := cs.GetSidetreeConfig(serv.URL)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid character")
+		require.Nil(t, c)
 	})
 }
 

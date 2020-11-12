@@ -24,6 +24,7 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/deactivate"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/recovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
+	mockconfig "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/config"
 	mockdiscovery "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/discovery"
 	mockendpoint "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/endpoint"
 	mockselection "github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/selection"
@@ -151,6 +152,28 @@ func TestClient_RecoverDID(t *testing.T) {
 		require.Contains(t, err.Error(), "domain is empty")
 	})
 
+	t.Run("test failed to get sidetree config", func(t *testing.T) {
+		v := New()
+
+		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return nil, fmt.Errorf("failed to get sidetree config")
+			}}
+
+		err = v.RecoverDID("did:ex:123", "testnet", recovery.WithNextUpdatePublicKey(pubKey),
+			recovery.WithNextRecoveryPublicKey(pubKey), recovery.WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get sidetree config")
+	})
+
 	t.Run("test next recovery key empty", func(t *testing.T) {
 		v := New()
 
@@ -206,6 +229,11 @@ func TestClient_RecoverDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
 		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
@@ -221,6 +249,11 @@ func TestClient_RecoverDID(t *testing.T) {
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
 			}}
 
 		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
@@ -240,6 +273,11 @@ func TestClient_RecoverDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
@@ -257,6 +295,11 @@ func TestClient_RecoverDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
 		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
@@ -272,6 +315,11 @@ func TestClient_RecoverDID(t *testing.T) {
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
 			}}
 
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
@@ -371,6 +419,28 @@ func TestClient_UpdateDID(t *testing.T) {
 		require.Contains(t, err.Error(), "domain is empty")
 	})
 
+	t.Run("test failed to get sidetree config", func(t *testing.T) {
+		v := New()
+
+		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return nil, fmt.Errorf("failed to get sidetree config")
+			}}
+
+		err = v.UpdateDID("did:ex:123", "testnet", update.WithNextUpdatePublicKey(pubKey),
+			update.WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get sidetree config")
+	})
+
 	t.Run("test signing key empty", func(t *testing.T) {
 		v := New()
 
@@ -432,6 +502,11 @@ func TestClient_UpdateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
 		_, privKey, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
@@ -449,6 +524,11 @@ func TestClient_UpdateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: "url"}}, nil
 			}}
 
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
@@ -464,6 +544,11 @@ func TestClient_UpdateDID(t *testing.T) {
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
 			}}
 
 		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
@@ -486,6 +571,11 @@ func TestClient_UpdateDID(t *testing.T) {
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
 			}}
 
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
@@ -515,6 +605,29 @@ func TestClient_CreateDID(t *testing.T) {
 		createDID, err := v.CreateDID("", create.WithUpdatePublicKey(pubKey), create.WithRecoveryPublicKey(pubKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "domain is empty")
+		require.Nil(t, createDID)
+	})
+
+	t.Run("test failed to get sidetree config", func(t *testing.T) {
+		v := New()
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return nil, fmt.Errorf("failed to get sidetree config")
+			}}
+
+		createDID, err := v.CreateDID("testnet", create.WithUpdatePublicKey(pubKey),
+			create.WithRecoveryPublicKey(pubKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get sidetree config")
 		require.Nil(t, createDID)
 	})
 
@@ -567,6 +680,11 @@ func TestClient_CreateDID(t *testing.T) {
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return []*models.Endpoint{{URL: "http://[]%20%/"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
 			}}
 
 		createDID, err := v.CreateDID("testnet", create.WithRecoveryPublicKey(ed25519RecoveryPubKey),
