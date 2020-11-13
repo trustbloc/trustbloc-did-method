@@ -89,13 +89,13 @@ Example of the format of the configuration data wrapped within the JWS:
 {
     "domain": "[consortium domain]",
     "policy": {
-        "cache": {"max_age": 604800}
+        "cache": {"maxAge": 604800}
     },
     "members": [
         {
             "domain": "stakeholder.one",
             "did": "[stakeholder one's DID]",
-            "public_key": {
+            "publicKey": {
                 "id": "[stakeholder one's verification public key DID URL]",
                 "jwk": {stakeholder one's verification public key in JWK format},
             }
@@ -103,7 +103,7 @@ Example of the format of the configuration data wrapped within the JWS:
         {
             "domain": "stakeholder.two",
             "did": "[stakeholder two's DID]",
-            "public_key": {
+            "publicKey": {
                 "id": "[stakeholder two's verification public key DID URL]",
                 "jwk": {stakeholder two's verification public key in JWK format},
             }
@@ -124,7 +124,7 @@ The `"members"` element of a consortium config object is a JSON array, where eac
 Each element of `"members"` is a JSON object containing the elements:
 - `"domain"`: The web domain where its configuration can be found
 - `"did"`: The `did:trustbloc` DID of the stakeholder, with the associated DID doc in Sidetree on the consortium ledger
-- `"public_key"`: The verification key DID URL and public key in [IETF RFC 7517](https://tools.ietf.org/html/rfc7517) JWK format which can be used to verify this stakeholder's signature. The key should match the verification key in the stakeholder's DID doc. The key is mirrored here in the consortium config so historical signatures can be verified even if the DID doc no longer has the key, or is no longer available.
+- `"publicKey"`: The verification key DID URL and public key in [IETF RFC 7517](https://tools.ietf.org/html/rfc7517) JWK format which can be used to verify this stakeholder's signature. The key should match the verification key in the stakeholder's DID doc. The key is mirrored here in the consortium config so historical signatures can be verified even if the DID doc no longer has the key, or is no longer available.
 
 ##### History
 The `history/` directory contains historical consortium configs. Each such file is named `[hash].json`, where `[hash]` is the SHA-256 hash of the given file.
@@ -158,7 +158,7 @@ A stakeholder's config file is a JWS, signed by the stakeholder, with the payloa
 {
     "domain": "stakeholder.one",
     "did": "[stakeholder one's DID]",
-    "policy": {"cache": {"max_age": 604800}},
+    "policy": {"cache": {"maxAge": 604800}},
     "endpoints": [
         "http://endpoints.stakeholder.one/peer1/",
         "http://endpoints.stakeholder.one/peer2/"
@@ -173,19 +173,19 @@ The stakeholder config object JSON schema is [here](member.schema.json).
 The `policy` element of a consortium config object is a JSON object. Each key-value pair is a specific rule for the client to follow when processing consortium or stakeholder configuration files, or when resolving DIDs within the consortium.
 
 ##### Caching
-`"cache": {"max_age": [number in seconds]}`
+`"cache": {"maxAge": [number in seconds]}`
 
 This 64 bit unsigned integer element specifies the length of time that a client should cache a copy of the consortium config.
 
 ##### Stakeholder Queries
-`"num_queries": [number of queries]`
+`"numQueries": [number of queries]`
 
 This 64 bit unsigned integer element specifies the number of stakeholders that a client should query when verifying a consortium configuration - whether for bootstrapping or for updating.
 
-If this element is not present in the consortium policy, the default value of `num_queries` is the number of stakeholders within the consortium.
+If this element is not present in the consortium policy, the default value of `numQueries` is the number of stakeholders within the consortium.
 
 ##### History Hash
-`"history_hash": [hash ID string]`
+`"historyHash": [hash ID string]`
 
 The hash algorithm used for identifying history files. Defaults to the value `"SHA256"`.
 
@@ -193,7 +193,7 @@ The hash algorithm used for identifying history files. Defaults to the value `"S
 The `policy` element of a stakeholder config object is a JSON object. Each key-value pair is a rule for the client to follow when processing this specific stakeholder config file, or for resolving DIDs using endpoints listed within this stakeholder config file.
 
 ##### Caching
-`"cache": {"max_age": [number in seconds]}`
+`"cache": {"maxAge": [number in seconds]}`
 
 This 64 bit unsigned integer element specifies the length of time that a client should cache a copy of the stakeholder config.
 
@@ -208,12 +208,12 @@ Automatic bootstrapping starts from a consortium domain - for example, the domai
 Automatic bootstrapping verifies that the consortium domain and stakeholder domains are endorsed by the DIDs of the stakeholders, but does not offer any proof of the identity or trust of the consortium or stakeholders. It can be used, for example, for resolving DIDs under the assumption that a DID owner would register a DID under a consortium that *they* trust.
 
 The process is as follows:
-- The client fetches the consortium configuration, and picks N of the listed stakeholders, where N is the value of the `num_queries` consortium policy configuration.
+- The client fetches the consortium configuration, and picks N of the listed stakeholders, where N is the value of the `numQueries` consortium policy configuration.
 - For each of these stakeholders:
   - Fetch the stakeholder's TrustBloc configuration and did-configuration.
   - Use one of the Sidetree endpoints listed within to resolve the stakeholder's DID and retrieve its DID doc.
-  - Verify that the `"public_key"` identified by its `"id"` DID URL value is expressed by the stakeholder's DID document.
-  - Verify that the `"public_key"` JWK value matches the JWK of the key identified by the `"id"` DID URL.
+  - Verify that the `"publicKey"` identified by its `"id"` DID URL value is expressed by the stakeholder's DID document.
+  - Verify that the `"publicKey"` JWK value matches the JWK of the key identified by the `"id"` DID URL.
   - Verify the signature on the stakeholder configuration, the stakeholder's signature on the consortium configuration and the signature on the did-configuration linkage assertions using this key.
   - If any of these steps fail, add another stakeholder to the list to replace this one.
 - If less then N stakeholders have successfully verified (meaning the client has tried all stakeholders), this consortium's configuration is invalid.
@@ -290,15 +290,15 @@ The consortium has a config JWS file at `consortium.net/.well-known/did-trustblo
 {
     "domain": "consortium.net",
     "policy": {
-        "cache": {"max_age": 2419200},
-        "num_queries": 2,
-        "history_hash": "SHA256"
+        "cache": {"maxAge": 2419200},
+        "numQueries": 2,
+        "historyHash": "SHA256"
     },
     "members": [
         {
             "domain": "stakeholder.one",
             "did": "did:trustbloc:consortium.net:s1did12345",
-            "public_key": {
+            "publicKey": {
                 "id": "did:trustbloc:consortium.net:s1did12345#s1VERKEY123456789",
                 "jwk": {"kty":"EC",...}
             }
@@ -306,7 +306,7 @@ The consortium has a config JWS file at `consortium.net/.well-known/did-trustblo
         {
             "domain": "stakeholder.two",
             "did": "did:trustbloc:consortium.net:s2did12345",
-            "public_key": {
+            "publicKey": {
                 "id": "did:trustbloc:consortium.net:s2did12345#s2VERKEY123456789",
                 "jwk": {"kty":"EC",...}
             }
@@ -314,7 +314,7 @@ The consortium has a config JWS file at `consortium.net/.well-known/did-trustblo
         {
             "domain": "stakeholder.three",
             "did": "did:trustbloc:consortium.net:s3did12345",
-            "public_key": {
+            "publicKey": {
                 "id": "did:trustbloc:consortium.net:s3did12345#s3VERKEY123456789",
                 "jwk": {"kty":"EC",...}
             }
@@ -331,7 +331,7 @@ _Stakeholder one:_
 {
     "domain": "stakeholder.one",
     "did": "did:trustbloc:consortium.net:s1did12345",
-    "policy": {"cache": {"max_age": 604800}},
+    "policy": {"cache": {"maxAge": 604800}},
     "endpoints": [
         "http://endpoints.stakeholder.one/peer1/",
         "http://endpoints.stakeholder.one/peer2/"
@@ -352,7 +352,7 @@ _Stakeholder two:_
 {
     "domain": "stakeholder.two",
     "did": "did:trustbloc:consortium.net:s2did12345",
-    "policy": {"cache": {"max_age": 604800}},
+    "policy": {"cache": {"maxAge": 604800}},
     "endpoints": [
         "http://endpoints.stakeholder.two/peer1/",
         "http://endpoints.stakeholder.two/peer2/",
@@ -374,7 +374,7 @@ _Stakeholder three:_
 {
     "domain": "stakeholder.three",
     "did": "did:trustbloc:consortium.net:s3did12345",
-    "policy": {"cache": {"max_age": 604800}},
+    "policy": {"cache": {"maxAge": 604800}},
     "endpoints": [
         "http://endpoints.stakeholder.three/peer1/"
     ]
@@ -424,7 +424,7 @@ At this point, discovery and verification are complete. The client can now execu
 - Consortium `consortium.net` missing from cache
 - Fetch `consortium.net/.well-known/did-trustbloc/consortium.net.json`, validate format, and process as a consortium config file
 - Perform the rest of the [Automatic Bootstrapping](#automatic-bootstrapping) algorithm. In summary:
-  - Fetch and validate sufficiently many stakeholder configs, from the domains listed in the consortium config, to satisfy the `num_queries` policy in the consortium config.
+  - Fetch and validate sufficiently many stakeholder configs, from the domains listed in the consortium config, to satisfy the `numQueries` policy in the consortium config.
   - Retrieve endpoints from these stakeholder configs, use these to retrieve the stakeholders' DID docs, verify stakeholder signatures.
   - Cache validated config files.
   - Present the list of endpoints parsed from said stakeholder configs, to be used for client DID method operations.

@@ -41,13 +41,13 @@ type Consortium struct {
 // ConsortiumPolicy holds consortium policy configuration
 type ConsortiumPolicy struct {
 	Cache      CacheControl `json:"cache"`
-	NumQueries int          `json:"num-queries"`
+	NumQueries int          `json:"numQueries"`
 }
 
 // CacheControl holds cache settings for this file,
 //  indicating to the recipient how long until they should check for a new version of the file.
 type CacheControl struct {
-	MaxAge uint32 `json:"max_age"`
+	MaxAge uint32 `json:"maxAge"`
 }
 
 // StakeholderListElement holds the domain and DID of a stakeholder within the consortium
@@ -57,7 +57,7 @@ type StakeholderListElement struct {
 	// DID is the DID of the stakeholder
 	DID string `json:"did,omitempty"`
 	// PublicKey is the verification key DID URL and public key
-	PublicKey PublicKey `json:"public_key,omitempty"`
+	PublicKey PublicKey `json:"publicKey,omitempty"`
 }
 
 // PublicKey is the verification key DID URL and public key

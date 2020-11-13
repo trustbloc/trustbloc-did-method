@@ -21,7 +21,7 @@ var exampleStakeholders = []string{`{
 	"domain": "bar.baz",
 	"did": "did:trustbloc:foo.bar:zQ1234567890987654321",
 	"policy": {
-		"cache": {"max_age": 123456789}
+		"cache": {"maxAge": 123456789}
 	},
 	"endpoints": [
 		"https://bar.baz/webapi/123456",
@@ -33,7 +33,7 @@ var exampleStakeholders = []string{`{
 	"domain": "baz.qux",
 	"did": "did:trustbloc:foo.bar:zQ0987654321234567890",
 	"policy": {
-		"cache": {"max_age": 123456789}
+		"cache": {"maxAge": 123456789}
 	},
 	"endpoints": [
 		"https://baz.qux/iyoubhlkn/",

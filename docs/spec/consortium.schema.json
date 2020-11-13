@@ -16,17 +16,17 @@
         "cache": {
           "type": "object",
           "properties": {
-            "max_age": {
+            "maxAge": {
               "type": "integer"
             }
           },
-          "required": ["max_age"]
+          "required": ["maxAge"]
         },
-        "num_queries": {
+        "numQueries": {
           "type": "integer",
           "minimum": 0
         },
-        "history_hash": {
+        "historyHash": {
           "type": "string"
         }
       }
@@ -41,7 +41,7 @@
           "domain": "string",
           "did": "string"
         },
-        "public_key": {
+        "publicKey": {
           "type": "object",
           "required": ["id", "jwk"],
           "properties": {
