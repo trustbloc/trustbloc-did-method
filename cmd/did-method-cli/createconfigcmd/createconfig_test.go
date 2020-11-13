@@ -32,16 +32,16 @@ ho+LGIVUXDNaduiNfpLmk5MXS5Q7WQAMgaJBRyRldIvbrNWqph4DH2gdKQ==
     "genesis_block": "6e2f978e16b59df1d6a1dfbacb92e7d3eddeb8b3fd825e573138b3fd77d77264",
     "policy": {
       "cache": {
-        "max_age": 2419200
+        "maxAge": 2419200
       },
-      "num_queries": 2,
-      "history_hash": "SHA256"
+      "numQueries": 2,
+      "historyHash": "SHA256"
     }
   },
   "members_data": [
     {
       "domain": "stakeholder.one",
-      "policy": {"cache": {"max_age": 604800}},
+      "policy": {"cache": {"maxAge": 604800}},
       "endpoints": [
         "http://endpoints.stakeholder.one/peer1/",
         "http://endpoints.stakeholder.one/peer2/"

@@ -284,7 +284,7 @@ func (v *VDRI) verifyStakeholder(cfd *models.ConsortiumFileData, sfd *models.Sta
 	return nil
 }
 
-// select n random stakeholders from the consortium (where n is the consortium's num-queries policy parameter)
+// select n random stakeholders from the consortium (where n is the consortium's numQueries policy parameter)
 func (v *VDRI) selectStakeholders(consortium *models.Consortium) ([]*models.StakeholderFileData, error) {
 	n := consortium.Policy.NumQueries
 	if n == 0 || n > len(consortium.Members) {

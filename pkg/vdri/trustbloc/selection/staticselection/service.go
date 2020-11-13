@@ -30,7 +30,7 @@ func NewService(config config) *SelectionService {
 }
 
 // SelectEndpoints select a random endpoint for each of N random stakeholders in a consortium
-// Where N is the num-queries parameter in the consortium's policy configuration
+// Where N is the numQueries parameter in the consortium's policy configuration
 func (ds *SelectionService) SelectEndpoints(consortiumDomain string, endpoints []*models.Endpoint) ([]*models.Endpoint, error) { // nolint: lll
 	consortiumData, err := ds.config.GetConsortium(consortiumDomain, consortiumDomain)
 	if err != nil {
