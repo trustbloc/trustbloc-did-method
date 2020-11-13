@@ -27,7 +27,7 @@ ho+LGIVUXDNaduiNfpLmk5MXS5Q7WQAMgaJBRyRldIvbrNWqph4DH2gdKQ==
 -----END PUBLIC KEY-----`
 
 	configData = `{
-  "consortium_data": {
+  "consortiumData": {
     "domain": "consortium.net",
     "genesis_block": "6e2f978e16b59df1d6a1dfbacb92e7d3eddeb8b3fd825e573138b3fd77d77264",
     "policy": {
@@ -38,7 +38,7 @@ ho+LGIVUXDNaduiNfpLmk5MXS5Q7WQAMgaJBRyRldIvbrNWqph4DH2gdKQ==
       "historyHash": "SHA256"
     }
   },
-  "members_data": [
+  "membersData": [
     {
       "domain": "stakeholder.one",
       "policy": {"cache": {"maxAge": 604800}},
