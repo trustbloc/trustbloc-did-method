@@ -87,8 +87,8 @@ const (
 )
 
 type config struct {
-	ConsortiumData consortiumData `json:"consortium_data,omitempty"`
-	MembersData    []*memberData  `json:"members_data,omitempty"`
+	ConsortiumData consortiumData `json:"consortiumData,omitempty"`
+	MembersData    []*memberData  `json:"membersData,omitempty"`
 }
 
 type consortiumData struct {
