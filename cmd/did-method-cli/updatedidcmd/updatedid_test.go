@@ -6,10 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package updatedidcmd
 
 import (
-	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -36,14 +32,6 @@ const (
  }
 ]`
 
-	jwkPrivateKeyData = `
-{
-  "kty": "OKP",
-  "kid": "key1",
-  "d": "CSLczqR1ly2lpyBcWne9gFKnsjaKJw0dKfoSQu7lNvg",
-  "crv": "Ed25519",
-  "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
-}`
 	jwk1Data = `
 {
   "kty":"OKP",
@@ -113,38 +101,7 @@ func TestMissingArg(t *testing.T) {
 	})
 }
 
-func TestParseKey(t *testing.T) {
-	t.Run("test failed to parse private key", func(t *testing.T) {
-		_, err := parsePrivateKey([]byte("wrong"))
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to parse private key")
-	})
-
-	t.Run("test parse pkcs8 private key", func(t *testing.T) {
-		_, privateKey, err := ed25519.GenerateKey(rand.Reader)
-		require.NoError(t, err)
-
-		b, err := x509.MarshalPKCS8PrivateKey(privateKey)
-		require.NoError(t, err)
-
-		_, err = parsePrivateKey(b)
-		require.NoError(t, err)
-	})
-
-	t.Run("test found unknown private key type in PKCS#8 wrapping", func(t *testing.T) {
-		pk, err := rsa.GenerateKey(rand.Reader, 2048)
-		require.NoError(t, err)
-
-		b, err := x509.MarshalPKCS8PrivateKey(pk)
-		require.NoError(t, err)
-
-		_, err = parsePrivateKey(b)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "found unknown private key type in PKCS#8 wrapping")
-	})
-}
-
-func TestKey(t *testing.T) {
+func TestKeys(t *testing.T) {
 	t.Run("test signing key empty", func(t *testing.T) {
 		os.Clearenv()
 		cmd := GetUpdateDIDCmd()
@@ -158,39 +115,6 @@ func TestKey(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "either key (--signingkey) or key file (--signingkey-file) is required")
-	})
-
-	t.Run("test both signing key and signing key file exist", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetUpdateDIDCmd()
-
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, domainArg()...)
-		args = append(args, signingKeyFlagNameArg("key")...)
-		args = append(args, signingKeyFileFlagNameArg("./file")...)
-
-		cmd.SetArgs(args)
-		err := cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "only one of key (--signingkey) or key file (--signingkey-file) may be specified")
-	})
-
-	t.Run("test signing key wrong pem", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetUpdateDIDCmd()
-
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, domainArg()...)
-		args = append(args, signingKeyFlagNameArg("w")...)
-
-		cmd.SetArgs(args)
-		err := cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "private key not found in PEM")
 	})
 
 	t.Run("test next update key wrong pem", func(t *testing.T) {
@@ -217,31 +141,6 @@ func TestKey(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "public key not found in PEM")
-	})
-
-	t.Run("test signing key success", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetUpdateDIDCmd()
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(privateKeyPEM)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, domainArg()...)
-		args = append(args, signingKeyFileFlagNameArg(file.Name())...)
-		args = append(args, signingKeyPasswordArg()...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "either key (--nextupdatekey) or key file (--nextupdatekey-file) is required")
 	})
 }
 
@@ -280,39 +179,87 @@ func TestService(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no such file or directory")
 	})
+}
 
-	t.Run("test services success", func(t *testing.T) {
-		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprint(w, "{}")
-		}))
-		defer serv.Close()
+func TestUpdateDID(t *testing.T) {
+	serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "{}")
+	}))
+	defer serv.Close()
 
+	privateKeyFile, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = privateKeyFile.WriteString(privateKeyPEM)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(privateKeyFile.Name())) }()
+
+	publicKeyFile, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = publicKeyFile.WriteString(pkPEM)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(publicKeyFile.Name())) }()
+
+	servicesFile, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = servicesFile.WriteString(servicesData)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(servicesFile.Name())) }()
+
+	jwk1File, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = jwk1File.WriteString(jwk1Data)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(jwk1File.Name())) }()
+
+	jwk2File, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = jwk2File.WriteString(jwk2Data)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(jwk2File.Name())) }()
+
+	file, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = file.WriteString(fmt.Sprintf(publickeyData, jwk1File.Name(), jwk2File.Name()))
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(file.Name())) }()
+
+	t.Run("test failed to update did", func(t *testing.T) {
 		os.Clearenv()
 		cmd := GetUpdateDIDCmd()
 
-		privateKeyFile, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
+		var args []string
+		args = append(args, didURIArg()...)
+		args = append(args, sidetreeURLArg("wrongurl")...)
+		args = append(args, signingKeyFileFlagNameArg(privateKeyFile.Name())...)
+		args = append(args, nextUpdateKeyFileFlagNameArg(publicKeyFile.Name())...)
+		args = append(args, addServicesFileArg(servicesFile.Name())...)
+		args = append(args, removeServiceIDArg("svc1")...)
+		args = append(args, removePublicKeyIDArg("key1")...)
+		args = append(args, signingKeyPasswordArg()...)
+		args = append(args, addPublicKeyFileArg(file.Name())...)
 
-		_, err = privateKeyFile.WriteString(privateKeyPEM)
-		require.NoError(t, err)
+		cmd.SetArgs(args)
+		err = cmd.Execute()
 
-		defer func() { require.NoError(t, os.Remove(privateKeyFile.Name())) }()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to update did")
+	})
 
-		publicKeyFile, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = publicKeyFile.WriteString(pkPEM)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(publicKeyFile.Name())) }()
-
-		servicesFile, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = servicesFile.WriteString(servicesData)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(servicesFile.Name())) }()
+	t.Run("test success", func(t *testing.T) {
+		os.Clearenv()
+		cmd := GetUpdateDIDCmd()
 
 		var args []string
 		args = append(args, didURIArg()...)
@@ -323,6 +270,7 @@ func TestService(t *testing.T) {
 		args = append(args, removeServiceIDArg("svc1")...)
 		args = append(args, removePublicKeyIDArg("key1")...)
 		args = append(args, signingKeyPasswordArg()...)
+		args = append(args, addPublicKeyFileArg(file.Name())...)
 
 		cmd.SetArgs(args)
 		err = cmd.Execute()
@@ -346,106 +294,6 @@ func TestGetPublicKeys(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "open wrongfile: no such file or directory")
-	})
-
-	t.Run("test public key invalid jwk path", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetUpdateDIDCmd()
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(publickeyData)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, domainArg()...)
-		args = append(args, addPublicKeyFileArg(file.Name())...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "no such file or directory")
-	})
-
-	t.Run("test public key type not supported", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetUpdateDIDCmd()
-
-		jwk1File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk1File.WriteString(jwkPrivateKeyData)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(jwk1File.Name())) }()
-
-		jwk2File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk2File.WriteString(jwk2Data)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(jwk2File.Name())) }()
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(fmt.Sprintf(publickeyData, jwk1File.Name(), jwk2File.Name()))
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, domainArg()...)
-		args = append(args, addPublicKeyFileArg(file.Name())...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "key not supported")
-	})
-
-	t.Run("test public key success", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetUpdateDIDCmd()
-
-		jwk1File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk1File.WriteString(jwk1Data)
-		require.NoError(t, err)
-
-		jwk2File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk2File.WriteString(jwk2Data)
-		require.NoError(t, err)
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(fmt.Sprintf(publickeyData, jwk1File.Name(), jwk2File.Name()))
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, domainArg()...)
-		args = append(args, addPublicKeyFileArg(file.Name())...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "either key (--signingkey) or key file (--signingkey-file) is require")
 	})
 }
 
@@ -479,10 +327,6 @@ func didURIArg() []string {
 
 func addPublicKeyFileArg(value string) []string {
 	return []string{flag + addPublicKeyFileFlagName, value}
-}
-
-func signingKeyFlagNameArg(value string) []string {
-	return []string{flag + signingKeyFlagName, value}
 }
 
 func signingKeyFileFlagNameArg(value string) []string {

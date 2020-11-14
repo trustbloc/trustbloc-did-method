@@ -6,29 +6,18 @@ SPDX-License-Identifier: Apache-2.0
 package updatedidcmd
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
-	"encoding/pem"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"strconv"
 
-	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/spf13/cobra"
-	gojose "github.com/square/go-jose/v3"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
+	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/common"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
-	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 )
 
 const (
@@ -111,12 +100,6 @@ const (
 		" Alternatively, this can be set with the following environment variable: " + nextUpdateKeyFileEnvKey
 )
 
-type publicKey struct {
-	Type     string   `json:"type,omitempty"`
-	Purposes []string `json:"purposes,omitempty"`
-	JWKPath  string   `json:"jwkPath,omitempty"`
-}
-
 // GetUpdateDIDCmd returns the Cobra update did command.
 func GetUpdateDIDCmd() *cobra.Command {
 	updateDIDCmd := updateDIDCmd()
@@ -159,7 +142,7 @@ func updateDIDCmd() *cobra.Command {
 
 			err = client.UpdateDID(didURI, domain, opts...)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to update did: %w", err)
 			}
 
 			fmt.Printf("successfully updated DID %s", didURI)
@@ -188,21 +171,22 @@ func updateDIDOption(cmd *cobra.Command) ([]update.Option, error) {
 		return nil, err
 	}
 
-	signingKeyOpts, err := getKey(cmd, signingKeyFlagName, signingKeyEnvKey, signingKeyFileFlagName,
-		signingKeyFileEnvKey, true)
+	signingKey, err := common.GetKey(cmd, signingKeyFlagName, signingKeyEnvKey, signingKeyFileFlagName,
+		signingKeyFileEnvKey, []byte(cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
+			signingKeyPasswordEnvKey)), true)
 	if err != nil {
 		return nil, err
 	}
 
-	opts = append(opts, signingKeyOpts...)
+	opts = append(opts, update.WithSigningKey(signingKey))
 
-	updateKeyOpts, err := getKey(cmd, nextUpdateKeyFlagName, nextUpdateKeyEnvKey, nextUpdateKeyFileFlagName,
-		nextUpdateKeyFileEnvKey, false)
+	nextUpdateKey, err := common.GetKey(cmd, nextUpdateKeyFlagName, nextUpdateKeyEnvKey, nextUpdateKeyFileFlagName,
+		nextUpdateKeyFileEnvKey, nil, false)
 	if err != nil {
 		return nil, err
 	}
 
-	opts = append(opts, updateKeyOpts...)
+	opts = append(opts, update.WithNextUpdatePublicKey(nextUpdateKey))
 
 	serviceOpts, err := getServices(cmd)
 	if err != nil {
@@ -216,6 +200,46 @@ func updateDIDOption(cmd *cobra.Command) ([]update.Option, error) {
 	opts = append(opts, getRemovePublicKeyID(cmd)...)
 
 	opts = append(opts, getRemoveServiceID(cmd)...)
+
+	return opts, nil
+}
+
+func getServices(cmd *cobra.Command) ([]update.Option, error) {
+	serviceFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addServiceFileFlagName,
+		addServiceFileEnvKey)
+
+	var opts []update.Option
+
+	if serviceFile != "" {
+		services, err := common.GetServices(serviceFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get services from file %w", err)
+		}
+
+		for i := range services {
+			opts = append(opts, update.WithAddService(&services[i]))
+		}
+	}
+
+	return opts, nil
+}
+
+func getPublicKeys(cmd *cobra.Command) ([]update.Option, error) {
+	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addPublicKeyFileFlagName,
+		addPublicKeyFileEnvKey)
+
+	var opts []update.Option
+
+	if publicKeyFile != "" {
+		publicKeys, err := common.GetPublicKeysFromFile(publicKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get public keys from file %w", err)
+		}
+
+		for i := range publicKeys {
+			opts = append(opts, update.WithAddPublicKey(&publicKeys[i]))
+		}
+	}
 
 	return opts, nil
 }
@@ -246,151 +270,6 @@ func getRemovePublicKeyID(cmd *cobra.Command) []update.Option {
 	return opts
 }
 
-func getServices(cmd *cobra.Command) ([]update.Option, error) {
-	var opts []update.Option
-
-	serviceFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addServiceFileFlagName,
-		addServiceFileEnvKey)
-
-	if serviceFile != "" {
-		svcData, err := ioutil.ReadFile(filepath.Clean(serviceFile))
-		if err != nil {
-			return nil, fmt.Errorf("failed to service file '%s' : %w", serviceFile, err)
-		}
-
-		var services []operation.Service
-		if err := json.Unmarshal(svcData, &services); err != nil {
-			return nil, err
-		}
-
-		for _, v := range services {
-			opts = append(opts, update.WithAddService(&docdid.Service{ID: v.ID, Type: v.Type,
-				Priority: v.Priority, RecipientKeys: v.RecipientKeys, RoutingKeys: v.RoutingKeys,
-				ServiceEndpoint: v.Endpoint}))
-		}
-	}
-
-	return opts, nil
-}
-
-//nolint: gocyclo,nestif
-func getKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFileEnvKey string,
-	signing bool) ([]update.Option, error) {
-	keyString := cmdutils.GetUserSetOptionalVarFromString(cmd, keyFlagName,
-		keyEnvKey)
-
-	keyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, keyFileFlagName,
-		keyFileEnvKey)
-
-	if keyString == "" && keyFile == "" {
-		return nil, fmt.Errorf("either key (--%s) or key file (--%s) is required", keyFlagName, keyFileFlagName)
-	}
-
-	if keyString != "" && keyFile != "" {
-		return nil, fmt.Errorf("only one of key (--%s) or key file (--%s) may be specified", keyFlagName, keyFileFlagName)
-	}
-
-	var opts []update.Option
-
-	var err error
-
-	if signing {
-		var privKey crypto.PrivateKey
-
-		password := cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
-			signingKeyPasswordEnvKey)
-
-		if keyFile != "" {
-			privKey, err = privateKeyFromFile(keyFile, []byte(password))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			privKey, err = privateKeyFromPEM([]byte(keyString), []byte(password))
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		opts = append(opts, update.WithSigningKey(privKey))
-
-		return opts, nil
-	}
-
-	var pubKey crypto.PublicKey
-	if keyFile != "" {
-		pubKey, err = publicKeyFromFile(keyFile)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		pubKey, err = publicKeyFromPEM([]byte(keyString))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	opts = append(opts, update.WithNextUpdatePublicKey(pubKey))
-
-	return opts, nil
-}
-
-func getPublicKeys(cmd *cobra.Command) ([]update.Option, error) { //nolint: gocyclo
-	var opts []update.Option
-
-	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addPublicKeyFileFlagName,
-		addPublicKeyFileEnvKey)
-
-	if publicKeyFile != "" { //nolint: nestif
-		pkData, err := ioutil.ReadFile(filepath.Clean(publicKeyFile))
-		if err != nil {
-			return nil, fmt.Errorf("failed to public key file '%s' : %w", publicKeyFile, err)
-		}
-
-		var publicKeys []publicKey
-		if err := json.Unmarshal(pkData, &publicKeys); err != nil {
-			return nil, err
-		}
-
-		for _, v := range publicKeys {
-			jwkData, err := ioutil.ReadFile(filepath.Clean(v.JWKPath))
-			if err != nil {
-				return nil, fmt.Errorf("failed to read jwk file '%s' : %w", v.JWKPath, err)
-			}
-
-			var jsonWebKey gojose.JSONWebKey
-			if err := jsonWebKey.UnmarshalJSON(jwkData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal to jwk: %w", err)
-			}
-
-			keyType := ""
-
-			var value []byte
-
-			switch key := jsonWebKey.Key.(type) {
-			case ed25519.PublicKey:
-				keyType = doc.Ed25519KeyType
-				value = []byte(fmt.Sprintf("%v", key))
-			case *ecdsa.PublicKey:
-				if key.Curve.Params().Name != elliptic.P256().Params().Name {
-					return nil, fmt.Errorf("ec cruve %s key not supported", elliptic.P256().Params().Name)
-				}
-
-				keyType = doc.P256KeyType
-
-				value = elliptic.Marshal(key.Curve, key.X, key.Y)
-			default:
-				return nil, fmt.Errorf("key not supported")
-			}
-
-			opts = append(opts, update.WithAddPublicKey(&doc.PublicKey{ID: jsonWebKey.KeyID, Type: v.Type,
-				Value: value, Encoding: doc.PublicKeyEncodingJwk, Purposes: v.Purposes, KeyType: keyType}))
-		}
-	}
-
-	return opts, nil
-}
-
 func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {
 	tlsSystemCertPoolString := cmdutils.GetUserSetOptionalVarFromString(cmd, tlsSystemCertPoolFlagName,
 		tlsSystemCertPoolEnvKey)
@@ -410,85 +289,6 @@ func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {
 		tlsCACertsEnvKey)
 
 	return tlsutils.GetCertPool(tlsSystemCertPool, tlsCACerts)
-}
-
-func publicKeyFromFile(file string) (crypto.PublicKey, error) {
-	keyBytes, err := ioutil.ReadFile(filepath.Clean(file))
-	if err != nil {
-		return nil, err
-	}
-
-	return publicKeyFromPEM(keyBytes)
-}
-
-func publicKeyFromPEM(pubKeyPEM []byte) (crypto.PublicKey, error) {
-	block, _ := pem.Decode(pubKeyPEM)
-	if block == nil {
-		return nil, fmt.Errorf("public key not found in PEM")
-	}
-
-	key, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	publicKey, ok := key.(crypto.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("invalid public key")
-	}
-
-	return publicKey, nil
-}
-
-func privateKeyFromFile(file string, password []byte) (crypto.PrivateKey, error) {
-	keyBytes, err := ioutil.ReadFile(filepath.Clean(file))
-	if err != nil {
-		return nil, err
-	}
-
-	return privateKeyFromPEM(keyBytes, password)
-}
-
-func privateKeyFromPEM(privateKeyPEM, password []byte) (crypto.PrivateKey, error) {
-	privBlock, _ := pem.Decode(privateKeyPEM)
-	if privBlock == nil {
-		return nil, fmt.Errorf("private key not found in PEM")
-	}
-
-	bytes := privBlock.Bytes
-
-	if len(password) != 0 {
-		var err error
-		bytes, err = x509.DecryptPEMBlock(privBlock, password)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	privKey, err := parsePrivateKey(bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return privKey, nil
-}
-
-func parsePrivateKey(der []byte) (crypto.PrivateKey, error) {
-	if key, err := x509.ParsePKCS8PrivateKey(der); err == nil {
-		switch key := key.(type) {
-		case ed25519.PrivateKey, *ecdsa.PrivateKey:
-			return key, nil
-		default:
-			return nil, fmt.Errorf("found unknown private key type in PKCS#8 wrapping")
-		}
-	}
-
-	if key, err := x509.ParseECPrivateKey(der); err == nil {
-		return key, nil
-	}
-
-	return nil, fmt.Errorf("failed to parse private key")
 }
 
 func createFlags(startCmd *cobra.Command) {
