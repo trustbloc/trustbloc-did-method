@@ -34,14 +34,6 @@ const (
  }
 ]`
 
-	jwkPrivateKeyData = `
-{
-  "kty": "OKP",
-  "kid": "key1",
-  "d": "CSLczqR1ly2lpyBcWne9gFKnsjaKJw0dKfoSQu7lNvg",
-  "crv": "Ed25519",
-  "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
-}`
 	jwk1Data = `
 {
   "kty":"OKP",
@@ -84,7 +76,7 @@ ho+LGIVUXDNaduiNfpLmk5MXS5Q7WQAMgaJBRyRldIvbrNWqph4DH2gdKQ==
 ]`
 )
 
-func TestRecoveryKey(t *testing.T) {
+func TestKeys(t *testing.T) {
 	t.Run("test recovery key empty", func(t *testing.T) {
 		os.Clearenv()
 		cmd := GetCreateDIDCmd()
@@ -97,60 +89,6 @@ func TestRecoveryKey(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "either key (--recoverykey) or key file (--recoverykey-file) is required")
-	})
-
-	t.Run("test both recovery key and recovery key file exist", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetCreateDIDCmd()
-
-		var args []string
-		args = append(args, domainArg()...)
-		args = append(args, recoveryKeyFlagNameArg("key")...)
-		args = append(args, recoveryKeyFileFlagNameArg("./file")...)
-
-		cmd.SetArgs(args)
-		err := cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "only one of key (--recoverykey) or key file (--recoverykey-file) may be specified")
-	})
-
-	t.Run("test recovery key wrong pem", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetCreateDIDCmd()
-
-		var args []string
-		args = append(args, domainArg()...)
-		args = append(args, recoveryKeyFlagNameArg("w")...)
-
-		cmd.SetArgs(args)
-		err := cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "public key not found in PEM")
-	})
-
-	t.Run("test recovery key success", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetCreateDIDCmd()
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(pkPEM)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		var args []string
-		args = append(args, domainArg()...)
-		args = append(args, recoveryKeyFileFlagNameArg(file.Name())...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "either key (--updatekey) or key file (--updatekey-file) is required")
 	})
 }
 
@@ -179,49 +117,94 @@ func TestService(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no such file or directory")
 	})
+}
 
-	t.Run("test services success", func(t *testing.T) {
-		type didResolution struct {
-			Context          interface{}     `json:"@context"`
-			DIDDocument      json.RawMessage `json:"didDocument"`
-			ResolverMetadata json.RawMessage `json:"resolverMetadata"`
-			MethodMetadata   json.RawMessage `json:"methodMetadata"`
-		}
+func TestCreateDID(t *testing.T) {
+	type didResolution struct {
+		Context          interface{}     `json:"@context"`
+		DIDDocument      json.RawMessage `json:"didDocument"`
+		ResolverMetadata json.RawMessage `json:"resolverMetadata"`
+		MethodMetadata   json.RawMessage `json:"methodMetadata"`
+	}
 
-		serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
-			require.NoError(t, err)
-			b, err := json.Marshal(didResolution{Context: "https://www.w3.org/ns/did-resolution/v1",
-				DIDDocument: bytes})
-			require.NoError(t, err)
-			_, err = fmt.Fprint(w, string(b))
-			require.NoError(t, err)
-		}))
+	serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+		require.NoError(t, err)
+		b, err := json.Marshal(didResolution{Context: "https://www.w3.org/ns/did-resolution/v1",
+			DIDDocument: bytes})
+		require.NoError(t, err)
+		_, err = fmt.Fprint(w, string(b))
+		require.NoError(t, err)
+	}))
 
+	file, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = file.WriteString(pkPEM)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(file.Name())) }()
+
+	servicesFile, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = servicesFile.WriteString(servicesData)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(servicesFile.Name())) }()
+
+	jwk1File, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = jwk1File.WriteString(jwk1Data)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(jwk1File.Name())) }()
+
+	jwk2File, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = jwk2File.WriteString(jwk2Data)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(jwk2File.Name())) }()
+
+	publicKeyFile, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = publicKeyFile.WriteString(fmt.Sprintf(publickeyData, jwk1File.Name(), jwk2File.Name()))
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, os.Remove(publicKeyFile.Name())) }()
+
+	t.Run("test failed to create did", func(t *testing.T) {
 		os.Clearenv()
 		cmd := GetCreateDIDCmd()
 
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
+		var args []string
+		args = append(args, sidetreeURLArg("wrongurl")...)
+		args = append(args, recoveryKeyFileFlagNameArg(file.Name())...)
+		args = append(args, updateKeyFileFlagNameArg(file.Name())...)
+		args = append(args, servicesFileArg(servicesFile.Name())...)
+		args = append(args, publicKeyFileArg(publicKeyFile.Name())...)
 
-		_, err = file.WriteString(pkPEM)
-		require.NoError(t, err)
+		cmd.SetArgs(args)
+		err = cmd.Execute()
 
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to create did")
+	})
 
-		servicesFile, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = servicesFile.WriteString(servicesData)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(servicesFile.Name())) }()
+	t.Run("success", func(t *testing.T) {
+		os.Clearenv()
+		cmd := GetCreateDIDCmd()
 
 		var args []string
 		args = append(args, sidetreeURLArg(serv.URL)...)
 		args = append(args, recoveryKeyFileFlagNameArg(file.Name())...)
 		args = append(args, updateKeyFileFlagNameArg(file.Name())...)
 		args = append(args, servicesFileArg(servicesFile.Name())...)
+		args = append(args, publicKeyFileArg(publicKeyFile.Name())...)
 
 		cmd.SetArgs(args)
 		err = cmd.Execute()
@@ -245,103 +228,6 @@ func TestGetPublicKeys(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "open wrongfile: no such file or directory")
 	})
-
-	t.Run("test public key invalid jwk path", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetCreateDIDCmd()
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(publickeyData)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		var args []string
-		args = append(args, domainArg()...)
-		args = append(args, publicKeyFileArg(file.Name())...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "no such file or directory")
-	})
-
-	t.Run("test public key type not supported", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetCreateDIDCmd()
-
-		jwk1File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk1File.WriteString(jwkPrivateKeyData)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(jwk1File.Name())) }()
-
-		jwk2File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk2File.WriteString(jwk2Data)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(jwk2File.Name())) }()
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(fmt.Sprintf(publickeyData, jwk1File.Name(), jwk2File.Name()))
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		var args []string
-		args = append(args, domainArg()...)
-		args = append(args, publicKeyFileArg(file.Name())...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "key not supported")
-	})
-
-	t.Run("test public key success", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetCreateDIDCmd()
-
-		jwk1File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk1File.WriteString(jwk1Data)
-		require.NoError(t, err)
-
-		jwk2File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk2File.WriteString(jwk2Data)
-		require.NoError(t, err)
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(fmt.Sprintf(publickeyData, jwk1File.Name(), jwk2File.Name()))
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		var args []string
-		args = append(args, domainArg()...)
-		args = append(args, publicKeyFileArg(file.Name())...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "either key (--recoverykey) or key file (--recoverykey-file) is required")
-	})
 }
 
 func TestTLSSystemCertPoolInvalidArgsEnvVar(t *testing.T) {
@@ -362,10 +248,6 @@ func domainArg() []string {
 
 func publicKeyFileArg(value string) []string {
 	return []string{flag + publicKeyFileFlagName, value}
-}
-
-func recoveryKeyFlagNameArg(value string) []string {
-	return []string{flag + recoveryKeyFlagName, value}
 }
 
 func recoveryKeyFileFlagNameArg(value string) []string {
