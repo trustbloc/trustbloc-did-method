@@ -15,6 +15,14 @@ The TrustBloc DID Method REST server docker image serves requests from the HTTP 
 ## Build
 To build from source see [here](/docs/build.md).
 
+## CLI
+Manage DID's.
+- [Create DID](/docs/cli/create.md)
+- [Update DID](/docs/cli/update.md)
+- [Recover DID](/docs/cli/recover.md)
+- [Deactivate DID](/docs/cli/deactivate.md)
+
+
 ## Contributing
 Thank you for your interest in contributing. Please see our [community contribution guidelines](https://github.com/trustbloc/community/blob/master/CONTRIBUTING.md) for more information.
 

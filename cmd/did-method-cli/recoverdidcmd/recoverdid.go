@@ -80,24 +80,25 @@ const (
 
 	nextUpdateKeyFlagName  = "nextupdatekey"
 	nextUpdateKeyEnvKey    = "DID_METHOD_CLI_NEXTUPDATEKEY"
-	nextUpdateKeyFlagUsage = "The public key PEM used for creating commitment for next update of the did doc." +
+	nextUpdateKeyFlagUsage = "The public key PEM used for validating the signature of the next update of the document." +
 		" Alternatively, this can be set with the following environment variable: " + nextUpdateKeyEnvKey
 
 	nextUpdateKeyFileFlagName  = "nextupdatekey-file"
 	nextUpdateKeyFileEnvKey    = "DID_METHOD_CLI_NEXTUPDATEKEY_FILE"
 	nextUpdateKeyFileFlagUsage = "The file that contains the public key" +
-		" PEM used for creating commitment for next update of the did doc. " +
+		" PEM used for validating the signature of the next update of the document. " +
 		" Alternatively, this can be set with the following environment variable: " + nextUpdateKeyFileEnvKey
 
 	nextRecoveryKeyFlagName  = "nextrecoverykey"
 	nextRecoveryKeyEnvKey    = "DID_METHOD_CLI_NEXTRECOVERYKEY"
-	nextRecoveryKeyFlagUsage = "The public key PEM used for creating commitment for next recover of the did doc." +
+	nextRecoveryKeyFlagUsage = "The public key PEM used for validating the" +
+		" signature of the next recovery of the document." +
 		" Alternatively, this can be set with the following environment variable: " + nextRecoveryKeyEnvKey
 
 	nextRecoveryKeyFileFlagName  = "nextrecoverkey-file"
 	nextRecoveryKeyFileEnvKey    = "DID_METHOD_CLI_NEXTRECOVERYKEY_FILE"
 	nextRecoveryKeyFileFlagUsage = "The file that contains the public key" +
-		" PEM used for creating commitment for next recover of the did doc. " +
+		" PEM used for validating the signature of the next recovery of the document. " +
 		" Alternatively, this can be set with the following environment variable: " + nextRecoveryKeyFileEnvKey
 )
 
