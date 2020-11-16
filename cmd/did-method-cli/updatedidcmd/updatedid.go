@@ -74,13 +74,13 @@ const (
 
 	signingKeyFlagName  = "signingkey"
 	signingKeyEnvKey    = "DID_METHOD_CLI_SIGNINGKEY"
-	signingKeyFlagUsage = "The private key PEM used for signing the update of the index document." +
+	signingKeyFlagUsage = "The private key PEM used for signing the update of the document." +
 		" Alternatively, this can be set with the following environment variable: " + signingKeyEnvKey
 
 	signingKeyFileFlagName  = "signingkey-file"
 	signingKeyFileEnvKey    = "DID_METHOD_CLI_SIGNINGKEY_FILE"
 	signingKeyFileFlagUsage = "The file that contains the private key" +
-		" PEM used for signing the update of the index document" +
+		" PEM used for signing the update of the document." +
 		" Alternatively, this can be set with the following environment variable: " + signingKeyFileEnvKey
 
 	signingKeyPasswordFlagName  = "signingkey-password"
@@ -90,13 +90,13 @@ const (
 
 	nextUpdateKeyFlagName  = "nextupdatekey"
 	nextUpdateKeyEnvKey    = "DID_METHOD_CLI_NEXTUPDATEKEY"
-	nextUpdateKeyFlagUsage = "The public key PEM used for creating commitment for next update of the index document." +
+	nextUpdateKeyFlagUsage = "The public key PEM used for validating the signature of the next update of the document." +
 		" Alternatively, this can be set with the following environment variable: " + nextUpdateKeyEnvKey
 
 	nextUpdateKeyFileFlagName  = "nextupdatekey-file"
 	nextUpdateKeyFileEnvKey    = "DID_METHOD_CLI_NEXTUPDATEKEY_FILE"
 	nextUpdateKeyFileFlagUsage = "The file that contains the public key" +
-		" PEM used for creating commitment for next update of the index document. " +
+		" PEM used for validating the signature of the next update of the document. " +
 		" Alternatively, this can be set with the following environment variable: " + nextUpdateKeyFileEnvKey
 )
 
