@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
+	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/internal/configcommon"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
 )
 
@@ -300,9 +301,9 @@ func TestCreateConfigCmd(t *testing.T) {
 
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()
 
-		require.NoError(t, os.Setenv(configFileEnvKey, file.Name()))
+		require.NoError(t, os.Setenv(configcommon.ConfigFileEnvKey, file.Name()))
 
-		c, err := getConfig(&cobra.Command{})
+		c, err := configcommon.GetConfig(&cobra.Command{})
 		require.NoError(t, err)
 
 		filesData, didConfData, err := createConfig(&parameters{config: c,
@@ -335,7 +336,7 @@ func TestTLSSystemCertPoolInvalidArgsEnvVar(t *testing.T) {
 	startCmd := GetCreateConfigCmd()
 
 	require.NoError(t, os.Setenv(sidetreeURLEnvKey, "localhost:8080"))
-	require.NoError(t, os.Setenv(configFileEnvKey, "domain"))
+	require.NoError(t, os.Setenv(configcommon.ConfigFileEnvKey, "domain"))
 	require.NoError(t, os.Setenv(tlsSystemCertPoolEnvKey, "wrongvalue"))
 
 	err := startCmd.Execute()
@@ -348,7 +349,7 @@ func sidetreeURLArg() []string {
 }
 
 func configFileArg(config string) []string {
-	return []string{flag + configFileFlagName, config}
+	return []string{flag + configcommon.ConfigFileFlagName, config}
 }
 
 func recoveryKeyFileFlagNameArg(value string) []string {
