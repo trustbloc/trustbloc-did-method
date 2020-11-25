@@ -60,7 +60,7 @@ func createUpdateConfigCmd() *cobra.Command {
 				return err
 			}
 
-			hash, err := moveToHistory(parameters.prevConfig, path.Join(parameters.outputDirectory, "history"))
+			hash, err := moveToHistory(parameters.prevConfig, path.Join(parameters.outputDirectory, "did-trustbloc", "history"))
 			if err != nil {
 				return err
 			}

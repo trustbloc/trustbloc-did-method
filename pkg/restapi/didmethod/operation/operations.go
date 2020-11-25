@@ -56,6 +56,12 @@ type Operation struct {
 	blocDomain    string
 }
 
+// GenesisFileConfig defines a genesis file for the trustbloc did method vdri
+type GenesisFileConfig struct {
+	URL  string
+	Data []byte
+}
+
 // Config defines configuration for trustbloc did method operations
 type Config struct {
 	TLSConfig          *tls.Config
@@ -64,6 +70,7 @@ type Config struct {
 	SidetreeReadToken  string
 	SidetreeWriteToken string
 	EnableSignatures   bool
+	GenesisFiles       []GenesisFileConfig
 }
 
 type didBlocClient interface {
@@ -72,14 +79,21 @@ type didBlocClient interface {
 
 // New returns did method operation instance
 func New(config *Config) *Operation {
-	svc := &Operation{blocVDRI: trustbloc.New(trustbloc.WithTLSConfig(config.TLSConfig),
-		trustbloc.WithAuthToken(config.SidetreeReadToken), trustbloc.EnableSignatureVerification(config.EnableSignatures),
-		trustbloc.WithDomain(config.BlocDomain)),
+	var vdriOpts = []trustbloc.Option{
+		trustbloc.WithTLSConfig(config.TLSConfig),
+		trustbloc.WithAuthToken(config.SidetreeReadToken),
+		trustbloc.EnableSignatureVerification(config.EnableSignatures),
+		trustbloc.WithDomain(config.BlocDomain),
+	}
+
+	for _, genesisFile := range config.GenesisFiles {
+		vdriOpts = append(vdriOpts, trustbloc.UseGenesisFile(genesisFile.URL, genesisFile.URL, genesisFile.Data))
+	}
+
+	return &Operation{blocVDRI: trustbloc.New(vdriOpts...),
 		didBlocClient: didclient.New(didclient.WithTLSConfig(config.TLSConfig),
 			didclient.WithAuthToken(config.SidetreeWriteToken)),
 		blocDomain: config.BlocDomain}
-
-	return svc
 }
 
 func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen,gocyclo

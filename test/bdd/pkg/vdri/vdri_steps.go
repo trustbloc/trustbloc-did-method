@@ -12,6 +12,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -39,6 +42,7 @@ type Steps struct {
 	bddContext *context.BDDContext
 	createdDID string
 	httpClient *http.Client
+	blocVDRI   *trustbloc.VDRI
 }
 
 // NewSteps returns new agent from client SDK
@@ -49,8 +53,14 @@ func NewSteps(ctx *context.BDDContext) *Steps {
 // RegisterSteps registers agent steps
 func (e *Steps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^TrustBloc DID is created through registrar "([^"]*)" with key type "([^"]*)" with signature suite "([^"]*)"$`, e.createDIDBloc) //nolint: lll
-	s.Step(`^Resolve created DID through resolver URL "([^"]*)" and validate key type "([^"]*)", signature suite "([^"]*)"$`,                //nolint: lll
+	s.Step(`^Resolve created DID and validate key type "([^"]*)", signature suite "([^"]*)"$`,                                               //nolint: lll
 		e.resolveCreatedDID)
+	s.Step(`^DID resolution fails, containing error "([^"]*)"$`, e.didResolutionError)
+	s.Step(`^Consortium config is updated with config file "([^"]*)"$`, e.updateConfig)
+	s.Step(`^Consortium config is generated with config file "([^"]*)"$`, e.generateConfig)
+	s.Step(`^Consortium config is deleted$`, e.deleteConfig)
+	s.Step(`^Bloc VDRI is initialized with genesis file "([^"]*)"$`, e.initBlocVDRIWithGenesisFile)
+	s.Step(`^Bloc VDRI is initialized with resolver URL "([^"]*)"$`, e.initBlocVDRIWithResolverURL)
 }
 
 func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nolint: funlen,gocyclo
@@ -124,15 +134,64 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 	return nil
 }
 
-func (e *Steps) resolveCreatedDID(url, keyType, signatureSuite string) error {
-	blocVDRI := trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
+func (e *Steps) initBlocVDRIWithResolverURL(url string) error {
+	e.blocVDRI = trustbloc.New(trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
 		trustbloc.WithAuthToken("rw_token"), trustbloc.WithDomain("testnet.trustbloc.local"))
+
+	return nil
+}
+
+func (e *Steps) initBlocVDRIWithGenesisFile(genesisFileName string) error {
+	genesisFile, err := ioutil.ReadFile(filepath.Clean(genesisFileName))
+	if err != nil {
+		return err
+	}
+
+	e.blocVDRI = trustbloc.New(trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
+		trustbloc.WithAuthToken("rw_token"), trustbloc.WithDomain("testnet.trustbloc.local"),
+		trustbloc.UseGenesisFile("testnet.trustbloc.local", "testnet.trustbloc.local", genesisFile))
+
+	return nil
+}
+
+func (e *Steps) didResolutionError(errorMessageContains string) error {
+	if e.blocVDRI == nil {
+		return fmt.Errorf("bloc VDRI must be initialized before this step")
+	}
+
+	var err error
+
+	for i := 1; i <= maxRetry; i++ {
+		_, err = e.blocVDRI.Read(e.createdDID)
+
+		if err != nil && (!strings.Contains(err.Error(), "DID does not exist") || i == maxRetry) {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	if err == nil {
+		return fmt.Errorf("error required but error was nil")
+	}
+
+	if !strings.Contains(err.Error(), errorMessageContains) {
+		return fmt.Errorf("error should contain %s, error is instead: %w", errorMessageContains, err)
+	}
+
+	return nil
+}
+
+func (e *Steps) resolveCreatedDID(keyType, signatureSuite string) error {
+	if e.blocVDRI == nil {
+		return fmt.Errorf("bloc VDRI must be initialized before this step")
+	}
 
 	var didDoc *ariesdid.Doc
 
 	for i := 1; i <= maxRetry; i++ {
 		var err error
-		didDoc, err = blocVDRI.Read(e.createdDID)
+		didDoc, err = e.blocVDRI.Read(e.createdDID)
 
 		if err != nil && (!strings.Contains(err.Error(), "DID does not exist") || i == maxRetry) {
 			return err
@@ -155,6 +214,18 @@ func (e *Steps) resolveCreatedDID(url, keyType, signatureSuite string) error {
 	}
 
 	return nil
+}
+
+func (e *Steps) generateConfig(config string) error {
+	return execCMD("./generate_config.sh", config)
+}
+
+func (e *Steps) updateConfig(config string) error {
+	return execCMD("./update_config.sh", config)
+}
+
+func (e *Steps) deleteConfig() error {
+	return os.RemoveAll("./fixtures/wellknown/jws")
 }
 
 func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {
@@ -216,6 +287,29 @@ func verifyPublicKeyAndType(didDoc *ariesdid.Doc, kt kms.KeyType, signatureSuite
 	if didDoc.VerificationMethod[0].Type != signatureSuite {
 		return fmt.Errorf("resolved did public key type %s not equal to %s",
 			didDoc.VerificationMethod[0].Type, signatureSuite)
+	}
+
+	return nil
+}
+
+func execCMD(command string, args ...string) error {
+	cmd := exec.Command(command, args...) // nolint: gosec
+
+	var out bytes.Buffer
+
+	var er bytes.Buffer
+
+	cmd.Stdout = &out
+	cmd.Stderr = &er
+
+	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf(er.String())
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return fmt.Errorf(er.String())
 	}
 
 	return nil

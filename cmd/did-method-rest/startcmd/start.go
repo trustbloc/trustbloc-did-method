@@ -8,7 +8,9 @@ package startcmd
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -20,6 +22,7 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/healthcheck"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 const (
@@ -66,6 +69,11 @@ const (
 	enableSignaturesEnvKey    = "ENABLE_SIGNATURES"
 	enableSignaturesFlagUsage = "Enable signatures. Possible values [true] [false]. Defaults to true if not set." +
 		" Alternatively, this can be set with the following environment variable: " + enableSignaturesEnvKey
+
+	genesisFileFlagName  = "genesis-files"
+	genesisFileEnvKey    = "GENESIS_FILES"
+	genesisFileFlagUsage = "Comma-separated list of consortium config genesis file paths." +
+		" Alternatively, this can be set with the following environment variable: " + genesisFileEnvKey
 )
 
 // mode in which to run the did-method service
@@ -99,6 +107,7 @@ type parameters struct {
 	sidetreeReadToken  string
 	sidetreeWriteToken string
 	enableSignatures   bool
+	genesisFiles       []string
 }
 
 // GetStartCmd returns the Cobra start command.
@@ -116,59 +125,71 @@ func createStartCmd(srv server) *cobra.Command {
 		Short: "Start did-method",
 		Long:  "Start did-method",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			mode, err := getMode(cmd)
+			parameters, err := getParameters(cmd)
 			if err != nil {
 				return err
 			}
 
-			hostURL, err := cmdutils.GetUserSetVarFromString(cmd, hostURLFlagName, hostURLEnvKey, false)
-			if err != nil {
-				return err
-			}
-
-			tlsSystemCertPool, tlsCACerts, err := getTLS(cmd)
-			if err != nil {
-				return err
-			}
-
-			blocDomain, err := cmdutils.GetUserSetVarFromString(cmd, domainFlagName, domainEnvKey,
-				!isRegistrar(mode))
-			if err != nil {
-				return err
-			}
-
-			sidetreeReadToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeReadTokenFlagName,
-				sidetreeReadTokenEnvKey)
-
-			sidetreeWriteToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeWriteTokenFlagName,
-				sidetreeWriteTokenEnvKey)
-
-			enableSignaturesString := cmdutils.GetUserSetOptionalVarFromString(cmd, enableSignaturesFlagName,
-				enableSignaturesEnvKey)
-
-			enableSignatures := true
-			if enableSignaturesString != "" {
-				enableSignatures, err = strconv.ParseBool(enableSignaturesString)
-				if err != nil {
-					return err
-				}
-			}
-
-			parameters := &parameters{
-				srv:                srv,
-				hostURL:            strings.TrimSpace(hostURL),
-				tlsSystemCertPool:  tlsSystemCertPool,
-				tlsCACerts:         tlsCACerts,
-				blocDomain:         blocDomain,
-				mode:               mode,
-				sidetreeReadToken:  sidetreeReadToken,
-				sidetreeWriteToken: sidetreeWriteToken,
-				enableSignatures:   enableSignatures,
-			}
+			parameters.srv = srv
 
 			return startDidMethod(parameters)
 		},
 	}
+}
+
+func getParameters(cmd *cobra.Command) (*parameters, error) {
+	mode, err := getMode(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	hostURL, err := cmdutils.GetUserSetVarFromString(cmd, hostURLFlagName, hostURLEnvKey, false)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsSystemCertPool, tlsCACerts, err := getTLS(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	genesisFiles := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, genesisFileFlagName,
+		genesisFileEnvKey)
+
+	blocDomain, err := cmdutils.GetUserSetVarFromString(cmd, domainFlagName, domainEnvKey,
+		!isRegistrar(mode))
+	if err != nil {
+		return nil, err
+	}
+
+	sidetreeReadToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeReadTokenFlagName,
+		sidetreeReadTokenEnvKey)
+
+	sidetreeWriteToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeWriteTokenFlagName,
+		sidetreeWriteTokenEnvKey)
+
+	enableSignaturesString := cmdutils.GetUserSetOptionalVarFromString(cmd, enableSignaturesFlagName,
+		enableSignaturesEnvKey)
+
+	enableSignatures := true
+	if enableSignaturesString != "" {
+		enableSignatures, err = strconv.ParseBool(enableSignaturesString)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &parameters{
+		hostURL:            strings.TrimSpace(hostURL),
+		tlsSystemCertPool:  tlsSystemCertPool,
+		tlsCACerts:         tlsCACerts,
+		blocDomain:         blocDomain,
+		mode:               mode,
+		sidetreeReadToken:  sidetreeReadToken,
+		sidetreeWriteToken: sidetreeWriteToken,
+		enableSignatures:   enableSignatures,
+		genesisFiles:       genesisFiles,
+	}, nil
 }
 
 func getTLS(cmd *cobra.Command) (bool, []string, error) {
@@ -216,6 +237,7 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(sidetreeReadTokenFlagName, "", "", sidetreeReadTokenFlagUsage)
 	startCmd.Flags().StringP(sidetreeWriteTokenFlagName, "", "", sidetreeWriteTokenFlagUsage)
 	startCmd.Flags().StringP(enableSignaturesFlagName, "", "", enableSignaturesFlagUsage)
+	startCmd.Flags().StringArray(genesisFileFlagName, nil, genesisFileFlagUsage)
 }
 
 func startDidMethod(parameters *parameters) error {
@@ -224,10 +246,15 @@ func startDidMethod(parameters *parameters) error {
 		return err
 	}
 
+	genesisFiles, err := loadGenesisConfigs(parameters.genesisFiles)
+	if err != nil {
+		return err
+	}
+
 	didMethodService, err := didmethod.New(&operation.Config{TLSConfig: &tls.Config{RootCAs: rootCAs,
 		MinVersion: tls.VersionTLS12}, BlocDomain: parameters.blocDomain, Mode: parameters.mode,
 		SidetreeReadToken: parameters.sidetreeReadToken, SidetreeWriteToken: parameters.sidetreeWriteToken,
-		EnableSignatures: parameters.enableSignatures})
+		EnableSignatures: parameters.enableSignatures, GenesisFiles: genesisFiles})
 	if err != nil {
 		return err
 	}
@@ -249,6 +276,33 @@ func startDidMethod(parameters *parameters) error {
 	}
 
 	return parameters.srv.ListenAndServe(parameters.hostURL, router)
+}
+
+func loadGenesisConfigs(genesisFilePaths []string) ([]operation.GenesisFileConfig, error) {
+	if len(genesisFilePaths) == 0 {
+		return nil, nil
+	}
+
+	var configs []operation.GenesisFileConfig
+
+	for _, path := range genesisFilePaths {
+		genesisFileBytes, err := ioutil.ReadFile(filepath.Clean(path))
+		if err != nil {
+			return nil, fmt.Errorf("reading genesis file: %w", err)
+		}
+
+		genesisFileData, err := models.ParseConsortium(genesisFileBytes)
+		if err != nil {
+			return nil, fmt.Errorf("parsing genesis file: %w", err)
+		}
+
+		configs = append(configs, operation.GenesisFileConfig{
+			URL:  genesisFileData.Config.Domain,
+			Data: genesisFileBytes,
+		})
+	}
+
+	return configs, nil
 }
 
 func supportedMode(mode string) bool {

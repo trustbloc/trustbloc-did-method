@@ -96,7 +96,8 @@ func New(opts ...Option) *VDRI {
 
 	switch {
 	case v.useUpdateValidation:
-		v.updateValidationService = updatevalidationconfig.NewService(verifyingconfig.NewService(configService))
+		verifyingService := signatureconfig.NewService(verifyingconfig.NewService(configService))
+		v.updateValidationService = updatevalidationconfig.NewService(verifyingService)
 		v.configService = memorycacheconfig.NewService(v.updateValidationService)
 	case v.enableSignatureVerification:
 		verifyingService := signatureconfig.NewService(verifyingconfig.NewService(configService))

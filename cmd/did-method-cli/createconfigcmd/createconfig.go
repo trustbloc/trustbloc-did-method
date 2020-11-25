@@ -174,12 +174,7 @@ func getParameters(cmd *cobra.Command) (*parameters, error) {
 }
 
 func writeFiles(outputDirectory string, filesData, didConfData map[string][]byte) error {
-	err := os.RemoveAll(outputDirectory)
-	if err != nil {
-		return fmt.Errorf("remove outputDirectory: %w", err)
-	}
-
-	err = configcommon.WriteConfig(outputDirectory, filesData)
+	err := configcommon.WriteConfig(outputDirectory, filesData)
 	if err != nil {
 		return err
 	}
