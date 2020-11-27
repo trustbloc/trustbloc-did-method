@@ -26,6 +26,7 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/httpconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/memorycacheconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/signatureconfig"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/updatevalidationconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/config/verifyingconfig"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/didconfiguration"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/discovery/staticdiscovery"
@@ -66,6 +67,16 @@ type VDRI struct {
 	validatedConsortium map[string]bool
 
 	enableSignatureVerification bool
+
+	useUpdateValidation     bool
+	updateValidationService *updatevalidationconfig.ConfigService
+	genesisFiles            []genesisFileData
+}
+
+type genesisFileData struct {
+	url      string
+	domain   string
+	fileData []byte
 }
 
 // New creates new bloc vdri
@@ -83,10 +94,14 @@ func New(opts ...Option) *VDRI {
 
 	configService := httpconfig.NewService(httpconfig.WithTLSConfig(v.tlsConfig))
 
-	if v.enableSignatureVerification {
+	switch {
+	case v.useUpdateValidation:
+		v.updateValidationService = updatevalidationconfig.NewService(verifyingconfig.NewService(configService))
+		v.configService = memorycacheconfig.NewService(v.updateValidationService)
+	case v.enableSignatureVerification:
 		verifyingService := signatureconfig.NewService(verifyingconfig.NewService(configService))
 		v.configService = memorycacheconfig.NewService(verifyingService)
-	} else {
+	default:
 		v.configService = memorycacheconfig.NewService(verifyingconfig.NewService(configService))
 	}
 
@@ -121,6 +136,19 @@ func (v *VDRI) Build(pubKey *vdrapi.PubKey, opts ...vdrapi.DocOpts) (*docdid.Doc
 	return nil, fmt.Errorf("build method not supported for did bloc")
 }
 
+func (v *VDRI) loadGenesisFiles() error {
+	for _, genesisFile := range v.genesisFiles {
+		err := v.updateValidationService.AddGenesisFile(genesisFile.url, genesisFile.domain, genesisFile.fileData)
+		if err != nil {
+			return fmt.Errorf("error loading consortium genesis config: %w", err)
+		}
+	}
+
+	v.genesisFiles = nil
+
+	return nil
+}
+
 func (v *VDRI) sidetreeResolve(url, did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error) {
 	resolver, err := v.getHTTPVDRI(url)
 	if err != nil {
@@ -140,7 +168,12 @@ const (
 	domainDIDPart             = 2
 )
 
-func (v *VDRI) Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error) { //nolint: gocyclo
+func (v *VDRI) Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error) { //nolint: gocyclo,funlen
+	err := v.loadGenesisFiles()
+	if err != nil {
+		return nil, fmt.Errorf("invalid genesis file: %w", err)
+	}
+
 	if v.resolverURL != "" {
 		return v.sidetreeResolve(v.resolverURL, did, opts...)
 	}
@@ -158,7 +191,7 @@ func (v *VDRI) Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error)
 
 	if v.enableSignatureVerification {
 		if _, ok := v.validatedConsortium[domain]; !ok {
-			_, err := v.ValidateConsortium(domain)
+			_, err = v.ValidateConsortium(domain)
 			if err != nil {
 				return nil, fmt.Errorf("invalid consortium: %w", err)
 			}
@@ -371,5 +404,17 @@ func WithAuthToken(authToken string) Option {
 func EnableSignatureVerification(enable bool) Option {
 	return func(opts *VDRI) {
 		opts.enableSignatureVerification = enable
+	}
+}
+
+// UseGenesisFile adds a consortium genesis file to the VDRI and enables consortium config update validation
+func UseGenesisFile(url, domain string, genesisFile []byte) Option {
+	return func(opts *VDRI) {
+		opts.genesisFiles = append(opts.genesisFiles, genesisFileData{
+			url:      url,
+			domain:   domain,
+			fileData: genesisFile,
+		})
+		opts.useUpdateValidation = true
 	}
 }

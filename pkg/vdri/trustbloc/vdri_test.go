@@ -311,15 +311,6 @@ func TestVDRI_Read(t *testing.T) {
 	// })
 
 	t.Run("test success", func(t *testing.T) {
-		v := New(WithDomain("domain"))
-
-		v.endpointService = &mockendpoint.MockEndpointService{
-			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
-				return []*models.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
-			}}
-
-		v.getHTTPVDRI = httpVdriFunc(&did.Doc{ID: "did:trustbloc:testnet:123"}, nil)
-
 		sigKey := ed25519SigningKey(t, keyJSON)
 
 		cfd := signedConsortiumFileData(t, &models.Consortium{
@@ -328,6 +319,18 @@ func TestVDRI_Read(t *testing.T) {
 			Members:  nil,
 			Previous: "",
 		}, sigKey)
+
+		v := New(
+			WithDomain("domain"),
+			UseGenesisFile("testnet", "testnet", []byte(cfd.JWS.FullSerialize())),
+		)
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
+			}}
+
+		v.getHTTPVDRI = httpVdriFunc(&did.Doc{ID: "did:trustbloc:testnet:123"}, nil)
 
 		v.configService = &mockconfig.MockConfigService{
 			GetConsortiumFunc: func(u string, d string) (*models.ConsortiumFileData, error) {
@@ -338,6 +341,48 @@ func TestVDRI_Read(t *testing.T) {
 		doc, err := v.Read("did:trustbloc:testnet:123")
 		require.NoError(t, err)
 		require.Equal(t, "did:trustbloc:testnet:123", doc.ID)
+	})
+}
+
+func TestVDRI_loadGenesisFiles(t *testing.T) {
+	sigKey := ed25519SigningKey(t, keyJSON)
+
+	t.Run("success", func(t *testing.T) {
+		conf := models.Consortium{
+			Domain:   "consortium.website",
+			Policy:   models.ConsortiumPolicy{},
+			Members:  nil,
+			Previous: "",
+		}
+
+		confFile, err := signConfig(conf, []jose.SigningKey{*sigKey})
+		require.NoError(t, err)
+
+		v := New(UseGenesisFile("url", "domain", []byte(confFile)))
+
+		err = v.loadGenesisFiles()
+		require.NoError(t, err)
+	})
+
+	t.Run("fail: bad consortium data", func(t *testing.T) {
+		confFile := "this is not a consortium config jws"
+
+		v := New(UseGenesisFile("url", "domain", []byte(confFile)))
+
+		err := v.loadGenesisFiles()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "error loading consortium genesis config")
+	})
+
+	t.Run("fail: try to read using a vdri with a bad genesis file", func(t *testing.T) {
+		confFile := "this is not a consortium config jws"
+
+		v := New(UseGenesisFile("url", "domain", []byte(confFile)))
+
+		doc, err := v.Read("blah blah")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "error loading consortium genesis config")
+		require.Nil(t, doc)
 	})
 }
 

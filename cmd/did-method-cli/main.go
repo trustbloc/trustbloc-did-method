@@ -15,6 +15,7 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/createdidcmd"
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/deactivatedidcmd"
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/recoverdidcmd"
+	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/updateconfigcmd"
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/updatedidcmd"
 )
 
@@ -26,6 +27,7 @@ func main() {
 	}
 
 	rootCmd.AddCommand(createconfigcmd.GetCreateConfigCmd())
+	rootCmd.AddCommand(updateconfigcmd.GetUpdateConfigCmd())
 	rootCmd.AddCommand(confighashcmd.GetConfigHashCmd())
 	rootCmd.AddCommand(createdidcmd.GetCreateDIDCmd())
 	rootCmd.AddCommand(updatedidcmd.GetUpdateDIDCmd())
