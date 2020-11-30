@@ -31,11 +31,13 @@ create-did --domain testnet.trustbloc.local --publickey-file ./publickeys.json -
 ```
 [
  {
+  "id": "key1",
   "type": "Ed25519VerificationKey2018",
   "purposes": ["authentication"],
   "jwkPath": "./key1_jwk.json"
  },
  {
+  "id": "key2",
   "type": "JwsVerificationKey2020",
   "purposes": ["capabilityInvocation"],
   "jwkPath": "./key2_jwk.json"
@@ -47,7 +49,6 @@ create-did --domain testnet.trustbloc.local --publickey-file ./publickeys.json -
 ```
 {
   "kty":"OKP",
-  "kid": "key1",
   "crv":"Ed25519",
   "x":"o1bG1U7G3CNbtALMafUiFOq8ODraTyVTmPtRDO1QUWg",
   "y":""
@@ -58,7 +59,6 @@ create-did --domain testnet.trustbloc.local --publickey-file ./publickeys.json -
 ```
 {
   "kty":"EC",
-  "kid": "key2",
   "crv":"P-256",
   "x":"bGM9aNufpKNPxlkyacU1hGhQXm_aC8hIzSVeKDpwjBw",
   "y":"PfdmCOtIdVY2B6ucR4oQkt6evQddYhOyHoDYCaI2BJA"
