@@ -15,7 +15,7 @@ require (
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.6.1
 	github.com/trustbloc/edge-core v0.1.5-0.20201106164919-76ecfeca954f
-	github.com/trustbloc/sidetree-core-go v0.1.5-0.20201111115036-54dcc46d4ee1
+	github.com/trustbloc/sidetree-core-go v0.1.5-0.20201126220537-656a5c8a3bdf
 	github.com/trustbloc/trustbloc-did-method v0.0.0
 )
 
