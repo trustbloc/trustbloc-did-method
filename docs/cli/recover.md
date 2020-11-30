@@ -37,6 +37,7 @@ recover-did --domain testnet.trustbloc.local --did-uri did:trustbloc:3XvwJ:EiDZT
 ```
 [
  {
+  "id": "key-recover-id",
   "type": "Ed25519VerificationKey2018",
   "purposes": ["authentication"],
   "jwkPath": "./fixtures/did-keys/recover/key1_jwk.json"
@@ -48,7 +49,6 @@ recover-did --domain testnet.trustbloc.local --did-uri did:trustbloc:3XvwJ:EiDZT
 ```
 {
   "kty":"OKP",
-  "kid": "key-recover-id",
   "crv":"Ed25519",
   "x":"o1bG1U7G3CNbtALMafUiFOq8ODraTyVTmPtRDO1QUWg",
   "y":""

@@ -28,6 +28,7 @@ import (
 
 // PublicKey struct
 type PublicKey struct {
+	ID       string   `json:"id,omitempty"`
 	Type     string   `json:"type,omitempty"`
 	Purposes []string `json:"purposes,omitempty"`
 	JWKPath  string   `json:"jwkPath,omitempty"`
@@ -189,7 +190,7 @@ func GetPublicKeysFromFile(publicKeyFilePath string) ([]doc.PublicKey, error) {
 			return nil, fmt.Errorf("key not supported")
 		}
 
-		keys = append(keys, doc.PublicKey{ID: jsonWebKey.KeyID, Type: v.Type,
+		keys = append(keys, doc.PublicKey{ID: v.ID, Type: v.Type,
 			Value: value, Encoding: doc.PublicKeyEncodingJwk, Purposes: v.Purposes, KeyType: keyType})
 	}
 

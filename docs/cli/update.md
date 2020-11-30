@@ -36,11 +36,13 @@ update-did --domain testnet.trustbloc.local --did-uri did:trustbloc:3XvwJ:EiDnJw
 ```
 [
  {
+ "id": "key2",
  "type": "JwsVerificationKey2020",
  "purposes": ["capabilityInvocation"],
  "jwkPath": "./key2_jwk.json"
  },
  {
+  "id": "key3",
   "type": "Ed25519VerificationKey2018",
   "purposes": ["authentication"],
   "jwkPath": "./key3_jwk.json"
@@ -52,7 +54,6 @@ update-did --domain testnet.trustbloc.local --did-uri did:trustbloc:3XvwJ:EiDnJw
 ```
 {
   "kty":"EC",
-  "kid": "key2",
   "crv":"P-256",
   "x":"bGM9aNufpKNPxlkyacU1hGhQXm_aC8hIzSVeKDpwjBw",
   "y":"PfdmCOtIdVY2B6ucR4oQkt6evQddYhOyHoDYCaI2BJA"
@@ -63,7 +64,6 @@ update-did --domain testnet.trustbloc.local --did-uri did:trustbloc:3XvwJ:EiDnJw
 ```
 {
   "kty":"OKP",
-  "kid": "key3",
   "crv":"Ed25519",
   "x":"o1bG1U7G3CNbtALMafUiFOq8ODraTyVTmPtRDO1QUWg",
   "y":""

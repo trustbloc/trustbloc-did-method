@@ -23,11 +23,13 @@ const (
 	publickeyData = `
 [
  {
+  "id": "key1",
   "type": "Ed25519VerificationKey2018",
   "purposes": ["authentication"],
   "jwkPath": "%s"
  },
  {
+  "id": "key2",
   "type": "JwsVerificationKey2020",
   "purposes": ["authentication"],
   "jwkPath": "%s"
@@ -37,7 +39,6 @@ const (
 	jwk1Data = `
 {
   "kty":"OKP",
-  "kid": "key1",
   "crv":"Ed25519",
   "x":"o1bG1U7G3CNbtALMafUiFOq8ODraTyVTmPtRDO1QUWg",
   "y":""
@@ -45,7 +46,6 @@ const (
 	jwk2Data = `
 {
   "kty":"EC",
-  "kid": "key2",
   "crv":"P-256",
   "x":"bGM9aNufpKNPxlkyacU1hGhQXm_aC8hIzSVeKDpwjBw",
   "y":"PfdmCOtIdVY2B6ucR4oQkt6evQddYhOyHoDYCaI2BJA"
