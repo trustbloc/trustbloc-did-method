@@ -28,10 +28,8 @@ import (
 )
 
 const (
-	maxRetry      = 10
-	recoveryKeyID = "recovery"
-	updateKeyID   = "update"
-	serviceID     = "service"
+	maxRetry  = 10
+	serviceID = "service"
 	// P256KeyType EC P-256 key type
 	P256KeyType = "P256"
 )
@@ -55,8 +53,18 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 		e.resolveCreatedDID)
 }
 
-func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error {
+func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nolint: funlen,gocyclo
 	kid, pubKey, err := e.getPublicKey(keyType)
+	if err != nil {
+		return err
+	}
+
+	_, updateKey, err := e.getPublicKey(keyType)
+	if err != nil {
+		return err
+	}
+
+	_, recoveryKey, err := e.getPublicKey(keyType)
 	if err != nil {
 		return err
 	}
@@ -67,9 +75,9 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error {
 		PublicKey: []*operation.PublicKey{
 			{ID: kid, Type: signatureSuite, Value: base64.StdEncoding.EncodeToString(pubKey),
 				Encoding: doc.PublicKeyEncodingJwk, KeyType: keyType, Purposes: []string{doc.KeyPurposeAuthentication}},
-			{ID: recoveryKeyID, Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
+			{Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(recoveryKey),
 				KeyType: keyType, Encoding: doc.PublicKeyEncodingJwk, Recovery: true},
-			{ID: updateKeyID, Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(pubKey),
+			{Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(updateKey),
 				KeyType: keyType, Encoding: doc.PublicKeyEncodingJwk, Update: true},
 		},
 		Service: []*operation.Service{{ID: serviceID, Type: "type", Endpoint: "http://www.example.com/"}}}})

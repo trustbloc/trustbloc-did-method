@@ -51,7 +51,12 @@ const (
   "y":"PfdmCOtIdVY2B6ucR4oQkt6evQddYhOyHoDYCaI2BJA"
 }`
 
-	pkPEM = `-----BEGIN PUBLIC KEY-----
+	recoveryKeyPEM = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErOnEHb7wH+YOYA6XQroWbeNrR18Y
+f4HEGojknkxuXjFKGyI821aUlIO7xT+I6dPlfsWyXRSLYeJoFA9rLLjOjA==
+-----END PUBLIC KEY-----`
+
+	updateKeyPEM = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFoxLiiZZYCh8XOZE0MXUYIgCrwIq
 ho+LGIVUXDNaduiNfpLmk5MXS5Q7WQAMgaJBRyRldIvbrNWqph4DH2gdKQ==
 -----END PUBLIC KEY-----`
@@ -100,15 +105,24 @@ func TestService(t *testing.T) {
 		file, err := ioutil.TempFile("", "*.json")
 		require.NoError(t, err)
 
-		_, err = file.WriteString(pkPEM)
+		recoveryKeyFile, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = recoveryKeyFile.WriteString(recoveryKeyPEM)
+		require.NoError(t, err)
+
+		updateKeyFile, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = updateKeyFile.WriteString(updateKeyPEM)
 		require.NoError(t, err)
 
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()
 
 		var args []string
 		args = append(args, domainArg()...)
-		args = append(args, recoveryKeyFileFlagNameArg(file.Name())...)
-		args = append(args, updateKeyFileFlagNameArg(file.Name())...)
+		args = append(args, recoveryKeyFileFlagNameArg(recoveryKeyFile.Name())...)
+		args = append(args, updateKeyFileFlagNameArg(updateKeyFile.Name())...)
 		args = append(args, servicesFileArg("./wrong")...)
 
 		cmd.SetArgs(args)
@@ -137,13 +151,22 @@ func TestCreateDID(t *testing.T) {
 		require.NoError(t, err)
 	}))
 
-	file, err := ioutil.TempFile("", "*.json")
+	recoveryKeyFile, err := ioutil.TempFile("", "*.json")
 	require.NoError(t, err)
 
-	_, err = file.WriteString(pkPEM)
+	_, err = recoveryKeyFile.WriteString(recoveryKeyPEM)
 	require.NoError(t, err)
 
-	defer func() { require.NoError(t, os.Remove(file.Name())) }()
+	updateKeyFile, err := ioutil.TempFile("", "*.json")
+	require.NoError(t, err)
+
+	_, err = updateKeyFile.WriteString(updateKeyPEM)
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, os.Remove(recoveryKeyFile.Name()))
+		require.NoError(t, os.Remove(updateKeyFile.Name()))
+	}()
 
 	servicesFile, err := ioutil.TempFile("", "*.json")
 	require.NoError(t, err)
@@ -183,8 +206,8 @@ func TestCreateDID(t *testing.T) {
 
 		var args []string
 		args = append(args, sidetreeURLArg("wrongurl")...)
-		args = append(args, recoveryKeyFileFlagNameArg(file.Name())...)
-		args = append(args, updateKeyFileFlagNameArg(file.Name())...)
+		args = append(args, recoveryKeyFileFlagNameArg(recoveryKeyFile.Name())...)
+		args = append(args, updateKeyFileFlagNameArg(updateKeyFile.Name())...)
 		args = append(args, servicesFileArg(servicesFile.Name())...)
 		args = append(args, publicKeyFileArg(publicKeyFile.Name())...)
 
@@ -201,8 +224,8 @@ func TestCreateDID(t *testing.T) {
 
 		var args []string
 		args = append(args, sidetreeURLArg(serv.URL)...)
-		args = append(args, recoveryKeyFileFlagNameArg(file.Name())...)
-		args = append(args, updateKeyFileFlagNameArg(file.Name())...)
+		args = append(args, recoveryKeyFileFlagNameArg(recoveryKeyFile.Name())...)
+		args = append(args, updateKeyFileFlagNameArg(updateKeyFile.Name())...)
 		args = append(args, servicesFileArg(servicesFile.Name())...)
 		args = append(args, publicKeyFileArg(publicKeyFile.Name())...)
 
