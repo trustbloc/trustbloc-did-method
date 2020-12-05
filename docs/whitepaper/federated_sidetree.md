@@ -1,17 +1,17 @@
 # Multitree: Federated Sidetree DID method
 
 Status: concept whitepaper
-Version: Dec 4, 2020
+Version: Dec 5, 2020
 
 ## Introduction
 
-Multitree* is a DID method that enables trusted DID verification over a federation of DID publishers. The method is loosely modelled on the concept of a [Fediverse](https://en.wikipedia.org/wiki/Fediverse), where an operator of a verifiable registry can start with their own instance, and also be able to interconnect with other verifiable registry operators over time. DID controllers may migrate their DIDs over different DID publishers over time. We also introduce the concept of a Multitree Hub, where a group of DID observers/witnesses support resolution over multiple DID registry operators.
+Multitree* is a [decentralized identifier](https://www.w3.org/TR/did-core/) (DID) method that enables trusted DID verification over a federation of DID publishers. The method is loosely modelled on the concept of a [Fediverse](https://en.wikipedia.org/wiki/Fediverse), where an operator of a verifiable registry can start with their own instance, and also be able to interconnect with other verifiable registry operators over time. DID controllers may migrate their DIDs over different DID publishers over time. We also introduce the concept of a Multitree Hub, where a group of DID observers/witnesses support resolution over multiple DID registry operators.
 
 * Note: we may need to consider other names if we want to avoid comparisons to [multiformats](https://multiformats.io).
 
 ## History and motivation
 
-The Multitree DID method is an evolution of the TrustBloc DID method. The [TrustBloc DID](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md) method had the goal of bringing together a group of independent parties, a consortium, to share custody of a DID registry. The DIF Sidetree protocol was leveraged to minimize the needed trust in the ledger – each DID forms its own verifiable hash chain such that only the DID controller can provide proofs of changes.
+The Multitree DID method is an evolution of the TrustBloc DID method. The [TrustBloc DID](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md) method had the goal of bringing together a group of independent parties, a consortium, to share custody of a DID registry. The [DIF Sidetree protocol](https://identity.foundation/sidetree/spec/) was leveraged to minimize the needed trust in the ledger – each DID forms its own verifiable hash chain such that only the DID controller can provide proofs of changes.
 
 To share custody, the TrustBloc DID method defined verifiable policies that defined the membership of these parties and registry policies such as cache time and the number of endorsements (witnesses) that an RP should receive in order to trust the registry results. The method enabled verification via a hash-chain of changes from a genesis point to the latest version. As there can be many such DID registry groups (consortiums), the DID method also defined mechanisms to discover each entity’s endpoints.
 
@@ -53,7 +53,9 @@ graph LR
 
 ### Interconnected instances
 
-In a basic interconnected instance, we have a structure where one operator observes operations from another operator and incorporates those operations into their own Peer. The combined changes from multiple operators are represented in the Peer using another Multitree structure. In this case, the signed tree heads from each observed operator are stored.
+In a basic interconnected instance, we have a structure where one operator observes operations from another operator and incorporates those operations into their own Peer. The combined changes from multiple operators are represented in the Peer using another Multitree structure. In this case, the signed tree heads from each observed operator are stored. 
+
+The operator may also choose to replicate observed Trees and CAS of other operators. By enabling observation and replication, peer-to-peer [gossip protocol network](https://en.wikipedia.org/wiki/Gossip_protocol) can form. These interconnected instances enable greater dissemenation and redundancy of decentralized identifiers.
 
 #### Tree monitoring
 
@@ -92,7 +94,7 @@ Applying patches observed from multiple trees:
 
 Considerations:
 
-* The operator that is observing another operator MAY replicate the tree and CAS into their own peer.
+* The operator that is observing another operator MAY replicate the tree and CAS into their own peer. To enable replication across peers, the trees should be storage-agnostic, protocol-agnostic, and transport-agnostic formats (and be offline-compatible).
 * The usage of a verifiable tree structure between operators enable detection of attempts to change history or rollback. When these attempts occur, an operator can independently determine their appropriate response (e.g., alert, stop observing the other operator, and/or ignore the trees from that operator).
 * The usage of signed tree heads provides additional assurance beyond transport security that an operator intended to publish their tree. Additional metadata is also included (e.g., the operator’s timestamp).
 * When moving a DID to a new tree:
@@ -207,9 +209,9 @@ The DID string MAY contain a hint for the resolver to discover hubs or operators
 
 The concrete specification will provide schema and caching details.
 
-### Well-Known (RFC 8615)
+### Well-Known
 
-As with the TrustBloc DID method, a domain containing a Well-Known configuration for the Multitree DID method MAY be used.
+As with the TrustBloc DID method, a domain containing a Well-Known ([RFC 8615](https://tools.ietf.org/html/rfc8615)) configuration for the Multitree DID method MAY be used.
 
 did:<method name>:<Well-Known domain>:<tree id>:<unique suffix>
 
@@ -242,10 +244,23 @@ The “multitree” name could refer to the idea that there are multiple represe
 
 The next step for this document is to list concrete representations and APIs. As a starting point, here are background implementations that may be applicable.
 
-* IPFS CIDs and representations enable a common encoding for the CAS. As demonstrated in the [Hyperledger Fabric dcas extension (at TrustBloc)](https://github.com/trustbloc/fabric-peer-ext/tree/master/pkg/collections/offledger/dcas), usage of these encodings does not imply usage of the IPFS network. Operators can expose a method-defined API that enables retrieval of documents based on CIDs.
-* Storage agnostic verifiable tree: [Google Trillian Project](https://github.com/google/trillian) (supporting implementation of [Certificate Transparency](https://tools.ietf.org/html/rfc6962) and [Go module checksum database](https://go.googlesource.com/proposal/+/master/design/25530-sumdb.md)). We need to use storage-agnostic and transport-agnostic formats that can be replicated across peers.
-* Multi-organization hubs: The [TrustBloc DID method](https://github.com/trustbloc/trustbloc-did-method/) and [sidetree-fabric](https://github.com/trustbloc/sidetree-fabric) represent a starting point.
-  * The TrustBloc DID method is envisioned to generalize into this common DID method specification. The consortium policy configuration should evolve into the hub policy and the genesis configuration hash concepts should be included in the discovery hints.
-  * The sidetree-fabric implementation is envisioned to support the intermediate tree format and hub features.
-* Multitree Instances
+* CAS
+  * IPFS/[IPLD](https://specs.ipld.io) CIDs and representations enable a common encoding for the CAS.
+  * As demonstrated in the [Hyperledger Fabric dcas extension (at TrustBloc)](https://github.com/trustbloc/fabric-peer-ext/tree/master/pkg/collections/offledger/dcas), usage of these encodings does not imply usage of the IPFS network. Operators can expose a method-defined API that enables retrieval of documents based on CIDs.
+* Verifiable and replicatable trees. Our goal is to use a data model that form its own layer - independent of a protocol or DLT (or vendor). The replicated trees should also work in an offline-compatible manner (see also [SSB](https://github.com/ssbc/ssb-server) as background).
+  * [Google Trillian project](https://github.com/google/trillian) (supporting implementation of [Certificate Transparency](https://tools.ietf.org/html/rfc6962) and [Go module checksum database](https://go.googlesource.com/proposal/+/master/design/25530-sumdb.md)).
+  * [Git](https://git-scm.com)-based structure.
+* Multi-organization hubs
+  * Hub organizations may choose to coordinate by anchoring observed tree heads and hub policy in a distributed ledger such as [Hyperledger Fabric](https://github.com/hyperledger/fabric).
+  * The [TrustBloc DID method](https://github.com/trustbloc/trustbloc-did-method/) and [sidetree-fabric](https://github.com/trustbloc/sidetree-fabric) represent a starting point.
+    * The TrustBloc DID method is envisioned to generalize into this common DID method specification. The consortium policy configuration should evolve into the hub policy and the genesis configuration hash concepts should be included in the discovery hints.
+    * The sidetree-fabric implementation is envisioned to support the intermediate tree format and hub features.
+* Peer protocols
+  * Well-defined APIs to access Sidetree operations, DID resolution, Trees, and CAS. Uses existing Sidetree APIs, where they already exist.
+  * Pull-based mechanism for observers to determine latest Tree heads.
+    * An API to determine the latest tree head (see, for example, [certificate transparency API](https://tools.ietf.org/html/rfc6962#section-4.3)).
+  * Protocol to dissemenate tree updates to subscribed observers, for enhanced immediacy and efficiency of updates.
+    * [WebSub](https://www.w3.org/TR/websub/) provides a PubSub protocol that can provide notifications of new Tree heads.
+    * [ActivityPub](https://www.w3.org/TR/activitypub/) is a protocol in Fediverse implementations for push-based activity notifications.
+* Multitree peer implementation
   * An additional project, leveraging the existing [sidetree-core-go](https://github.com/trustbloc/sidetree-core-go), is envisioned to support the multitree instance features.
