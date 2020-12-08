@@ -14,7 +14,7 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.6.1
-	github.com/trustbloc/edge-core v0.1.5-0.20201106164919-76ecfeca954f
+	github.com/trustbloc/edge-core v0.1.5-0.20201126210935-53388acb41fc
 	github.com/trustbloc/trustbloc-did-method v0.0.0
 )
 
