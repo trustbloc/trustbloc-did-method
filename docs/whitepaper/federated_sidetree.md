@@ -1,27 +1,28 @@
-# Multitree: Federated Sidetree DID method
+# Orbital: Federated Sidetree DID method
 
 Status: concept whitepaper
-Version: Dec 7, 2020
+Version: Dec 14, 2020
+GitHub source: https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/whitepaper/federated_sidetree.md
 
 ## Introduction
 
-Multitree* is a [decentralized identifier](https://www.w3.org/TR/did-core/) (DID) method that enables trusted DID verification over a federation of DID publishers. The method is loosely modelled on the concept of a [Fediverse](https://en.wikipedia.org/wiki/Fediverse), where an operator of a verifiable registry can start with their own instance, and also be able to interconnect with other verifiable registry operators over time. DID controllers may migrate their DIDs over different DID publishers over time. We also introduce the concept of a Multitree Hub, where a group of DID observers/witnesses support resolution over multiple DID registry operators.
+Orbital is a [decentralized identifier](https://www.w3.org/TR/did-core/) (DID) method that enables trusted DID verification over a federation of DID publishers. The method is loosely modelled on the concept of a [Fediverse](https://en.wikipedia.org/wiki/Fediverse), where an operator of a verifiable registry can start with their own instance, and also be able to interconnect with other verifiable registry operators over time. DID controllers may migrate their DIDs over different DID publishers over time. We also introduce the concept of a Registry Hub, where a group of DID observers/witnesses support resolution over multiple DID registry operators.
 
-Multitree is designed to support interoperability across independent registries and be agnostic to implementation choices within these registries. Each independent operator can form their own "Multitree" registry and these registries can be interconnected. We use a data model that is independent of a protocol, database or DLT. In particular, we enable interconnected independent registries without up-front coordination nor a dependency on using the same registry implementation. These registries can independently form over time and then choose to interconnect.
+Orbital is designed to support interoperability across independent registries and be agnostic to implementation choices within these registries. Each independent operator can form their own "Orbital" registry and these registries can be interconnected. We use a data model that is independent of a protocol, database or DLT. In particular, we enable interconnected independent registries without up-front coordination nor a dependency on using the same registry implementation. These registries can independently form over time and then choose to interconnect.
 
-* Note: we may need to consider other names if we want to avoid comparisons to [multiformats](https://multiformats.io).
+The DID method name is `did:orb`. The orbital name is derived from the concept of an [Atomic orbital](https://en.wikipedia.org/wiki/Atomic_orbital) as an analogy to locating the interconnected and replicated registry data.
 
 ## History and motivation
 
-The Multitree DID method is an evolution of the TrustBloc DID method. The [TrustBloc DID](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md) method had the goal of bringing together a group of independent parties, a consortium, to share custody of a DID registry. The [DIF Sidetree protocol](https://identity.foundation/sidetree/spec/) was leveraged to minimize the needed trust in the ledger – each DID forms its own verifiable hash chain such that only the DID controller can provide proofs of changes.
+The Orbital DID method is an evolution of the TrustBloc DID method. The [TrustBloc DID](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md) method had the goal of bringing together a group of independent parties, a consortium, to share custody of a DID registry. The [DIF Sidetree protocol](https://identity.foundation/sidetree/spec/) was leveraged to minimize the needed trust in the ledger – each DID forms its own verifiable hash chain such that only the DID controller can provide proofs of changes.
 
 To share custody, the TrustBloc DID method defined verifiable policies that defined the membership of these parties and registry policies such as cache time and the number of endorsements (witnesses) that a Requesting Party (RP) should receive in order to trust the registry results. The method enabled verification via a hash-chain of changes from a genesis point to the latest version. As there can be many such DID registry groups (consortiums), the DID method also defined mechanisms to discover each entity’s endpoints.
 
-As we will discuss, this DID method shifts the role of the consortium to be witnesses of many independent DID registries (in the form of independent Sidetree-based registries). The witness role enables resolution across multiple "Multitree" registries (as defined in this document) with independent endorsement of the results. Each independent operator can form their own "Multitree" registry and these registries can be interconnected and witnessed.
+As we will discuss, this DID method shifts the role of the consortium to be witnesses of many independent DID registries (in the form of independent Sidetree-based registries). The witness role enables resolution across multiple "Orbital" registries (as defined in this document) with independent endorsement of the results. Each independent operator can form their own "Orbital" registry and these registries can be interconnected and witnessed.
 
 ## Federation structure
 
-The following block diagrams demonstrate how Sidetree components are structured into a federated DID registry. Note: In this document, a "multitree structure" or "tree" is assumed to have the properties of a [Merkle Tree](https://en.wikipedia.org/wiki/Merkle_tree). Please review the [Sidetree protocol](https://identity.foundation/sidetree/spec/) components as background.
+The following block diagrams demonstrate how Sidetree components are structured into a federated DID registry. Note: In this document, a  "tree" is assumed to have the properties of a [Merkle Tree](https://en.wikipedia.org/wiki/Merkle_tree). Please review the [Sidetree protocol](https://identity.foundation/sidetree/spec/) components as background.
 
 ### Single instance
 
@@ -36,7 +37,7 @@ graph LR
         SPAPI
         SPAPI --- BW[Batch writer]
     end
-    BW --- MS[Multitree structure]
+    BW --- MS[Merkle Tree Logs]
     BW --- CAS[CAS using IPFS CIDs]
 ```
 
@@ -49,13 +50,13 @@ graph LR
         SPAPI
         SPAPI --- OBS[Observer]
     end
-    OBS --- MS[Multitree structure]
+    OBS --- MS[Merkle Tree Logs]
     OBS --- CAS[CAS using IPFS CIDs]
 ```
 
 ### Interconnected instances
 
-In a basic interconnected instance, we have a structure where one operator observes operations from another operator and incorporates those operations into their own registry. The combined changes from multiple operators are represented in the registry using another Multitree structure. In this case, the signed tree heads from each observed operator are stored. 
+In a basic interconnected instance, we have a structure where one operator observes operations from another operator and incorporates those operations into their own registry. The combined changes from multiple operators are represented in the registry using another Merkle Tree structure. In this case, the signed tree heads from each observed operator are stored. 
 
 The operator may also choose to replicate observed Trees and CAS of other operators. By enabling observation and replication, peer-to-peer [gossip protocol network](https://en.wikipedia.org/wiki/Gossip_protocol) can form. These interconnected instances enable greater dissemenation and redundancy of decentralized identifiers.
 
@@ -73,7 +74,7 @@ graph LR
         CASA --> CASAPIA[CAS API]
     end
     subgraph Operator B's registry
-        OBS[Multitree Observer]
+        OBS[Tree Observer]
         TC[Tree C]
         OBS -->|Signed Tree Head| TC
         TB[Tree B]
@@ -88,33 +89,16 @@ graph LR
 
 In Sidetree, a particular unique suffix forms its own tree structure independent of the ledger. Each change (operation) to the original unique suffix references the previous which forms its own independent verifiable chain. For interconnected cases (as described above), we must also define rules for a unique suffix that has operations across multiple trees. These rules could, conceptually, either be based on existing Sidetree operations or by defining explicit operations.
 
-To apply patches when observing multiple trees (without defining a new Sidetree operation), we need a rule to determine the currently active tree. The longest observed suffix chain forms the authoritative operation sequence for that suffix. 
+To apply patches when observing multiple trees (without defining a new Sidetree operation), we need a rule to determine the currently active tree. Conceptually this rule is that the longest observed suffix chain forms the authoritative operation sequence for that suffix. Some ambiguities can arise such as choosing between a chain that has a deactivate operation versus another chain that, instead, continues with recovery operations. See appendix for an extended discussion of the nuances.
 
-However, it would seem sensible to have a more explicit operation for moving a DID across trees. This more explicit operation could be envisioned as a signed export/move operation for the old tree and a signed import variation of create for the new tree. An observer with knowledge of both trees would then be able to verify, in many cases, that the export and import are linked. Having export and import variations may also lessen the burden on the DID controller to preserve the suffix chain. Having explicit operations also more explicitly resolves the rules for a chain that has a deactivate operation versus another chain that continues with recovery operations.
+However, it would seem sensible to have a more explicit operation for moving a DID across trees. This more explicit operation could be envisioned as a checkpoint variation of recover for the new tree.  Having such an operation more explicitly resolves ambiguities that can arise between chains.
 
 Considerations:
 
 * The operator that is observing another operator MAY replicate the tree and CAS into their own registry. To enable replication across registries, the trees should be storage-agnostic, protocol-agnostic, and transport-agnostic formats (and be offline-compatible).
 * The usage of a verifiable tree structure between operators enable detection of attempts to change history or rollback. When these attempts occur, an operator can independently determine their appropriate response (e.g., alert, stop observing the other operator, and/or ignore the trees from that operator).
 * The usage of signed tree heads provides additional assurance beyond transport security that an operator intended to publish their tree. Additional metadata is also included (e.g., the operator’s timestamp).
-* It is not always possible to verify that export and import operations are linked. Exceptions occur when the old tree becomes decommissioned or, more generally, when the DID controller becomes unable to push their changes onto the old tree. In these cases, it would still be desirable that they could import into a new tree regardless of the old tree not containing the linked export.
-
-##### Moving between trees using existing Sidetree operations
-
-As a thought experiment, we could attempt to create rules to disambiguate suffix chain length without creating explicit operations. The suffix chain length is based on both the Sidetree recovery and update commitments as follows:
-
-* A suffix chain with a valid deactivate operation wins. The DID is deactivated.
-  * Note: This rule is present as the DID Controller showed their intent to deactivate in some known tree. However, it could be also be argued that the longest chain of recovery commitments always takes precedence.
-* The longest chain of Sidetree recovery commitments wins.
-* In case of a tie between two trees' suffix recovery chain length, the longest chain of update commitments wins.
-* In case of a tie between two trees' suffix chain length with the same operations (no conflict), there is no issue.
-* In the ambiguous case of a tie between two trees' suffix chain length with different final operations, the final ambiguous operation is ignored (and not applied). Note: to properly break the tie, the DID controller should apply an operation to one of the trees.
-
-When moving a DID to a new tree (without defining a new Sidetree operation):
-
-  * The controller MUST publish the existing creation and recovery sequences onto the new tree.
-  * The controller MUST publish a new recovery operation onto the new tree (and not the old tree) with the latest document content.
-  * Note: we should also signal that operations will no longer be on the old tree. However, the existing Sidetree deactivate operation semantics do not completely match the Multitree semantics (despite some similarity). An explicit export operation (as mentioned earlier) would be beneficial for this case.
+* A variation of checkpoint could also be envisioned for the old tree when a suffix is moved to a new tree. However, it is not always possible to make use of such an operation. Exceptions occur when the old tree becomes decommissioned or, more generally, when the DID controller becomes unable to push their changes onto the old tree. In these cases, it would still be desirable that a suffix could move into a new tree (regardless of the old tree).
 
 ### Hub instances
 
@@ -128,7 +112,7 @@ When a single organization is running a hub, we have a structure that resembles 
 graph LR
     RP[Requesting party] ---|DID Resolution| HUB[REST API]
     subgraph Hub trusted by RP
-        HUB[Multitree hub]
+        HUB[Registry hub]
     end
     subgraph Operators' registries
         subgraph Operator 1
@@ -148,7 +132,7 @@ A hub MAY also choose to host replicas of the trees being monitored. By maintain
 ```mermaid
 graph RL
     subgraph Hub
-        HUB[Multitree hub]
+        HUB[Registry hub]
         HUB --> REPLICA[Tree and CAS Replicas]
 
     end
@@ -194,22 +178,75 @@ It is necessary for a logical Hub to have tighter coupling than the interconnect
 
 The multiple organization Hub case is an evolution of the TrustBloc DID, where consortium policy and discovery is defined on top of the [Sidetree REST API](https://identity.foundation/sidetree/api/). The Hub case in this document adds description for enabling multiple external trees to be observed.
 
+## Sidetree anchor encoding
+
+This DID method makes use of two Merkle Tree structures. The first structure provides the graph of how Batch Writers have created Anchors built upon previous anchors. The second structure provides a log of each anchor object. There can be multiple logs that contain each anchor object.
+
+The Merkle Tree anchor graph is stored as links within the CAS objects, and each object has a CID. Each CAS Anchor object contains:
+
+* An anchor string.
+* Proof from each Merkle Tree log where the Batch Writer explicitly submitted the anchor object.
+* Reference to the prior anchor for each unique DID suffix included in the operations referenced by the anchor.
+
+With these CAS anchor objects, a graph can be formed of the anchor relationships from the viewpoint of the batch writer. By having a CAS-based graph, observers are able to apply operations to a suffix if they become aware of a new anchor via mechanisms such as gossip. The following diagram illustrates the structure.
+
+```mermaid
+graph TD
+    NEW_ANCHOR[New Anchor] --- PARENT1[Parent Anchor 1]
+    NEW_ANCHOR --- PARENT2[Parent Anchor 2]
+
+    NEW_ANCHOR --- PARENT3[Parent Anchor 3]
+    PARENT1 --- GRANDPARENT1[Grandparent Anchor 4]
+    PARENT1 --- GRANDPARENT2
+    PARENT2 --- GRANDPARENT2[Grandparent Anchor 5]
+    PARENT2 --- GRANDPARENT3[Grandparent Anchor 6]
+    PARENT3 --- GRANDPARENT4[Grandparent Anchor 7]
+```
+
+The second structure -- the Merkle Tree log -- is created independently of the CAS. Each Merkle Tree log provides an independent witness that an anchor has been published at a certain time. By monitoring these logs, observers are able to discover the history of published anchors. The history is useful for several reason:
+
+* As it is possible for different hash chain for a suffix to be created into the CAS (by a DID controller), a log can be used to disambiguate.
+* An observer might not have received a notification about the anchor, a log can be used to provide history.
+* As anchors could become unavailable in the CAS, a log can be used to alert about the situation.
+* In summary, these additional logs enable monitoring and replication of the complete (and disambiguated) history.
+
+### Suffix checkpointing and logs
+
+The checkpoint operation is an extended form of the Sidetree recovery operation that also enables the DID controller to indicate the Merkle Tree log for a unique suffix.
+
+When a batch writer accepts an operation for a unique suffix, it MUST also obtain a proof from the Merkle Tree log. This proof is written into the CAS along with the anchor. If the batch writer is unwilling to obtain proofs from a particular log, operations for unique suffixes checkpointed to that log MUST not be accepted.
+
+The DID controller should also be able to discover the acceptable logs that the batch writer accepts, along with the recommended (or default) log.
+
+Considerations:
+
+* Operations are ignored for suffixes where a required log proof was not provided.
+* TBD: Handling of multiple tree logs specified per unique suffix.
+
 ## DID strings and resolution
 
-The canonical representation for a DID string is:
+The DID string enables the resolver to determine:
 
-did:<method name>:<tree version><tree id>:<unique suffix>
+* The unique suffix of the DID - the chained operations are applied sequentially to obtain a DID document.
+* Merkle Tree logs that enable the resolver to determine if it has knowledge of the latest chained operations for the unique suffix. 
+* Discovery information to help determine endpoints of the operators or hubs.
 
-* Method Name: The DID method defined in this document (currently did:multitree).
-* Unique Suffix: The unique suffix is defined by the Sidetree protocol specification.
-* Tree version (/type): Enables signaling metadata about the Tree for Multitree processors. This field allows for potential system evolution (future-proofing), similar to [IPFS CIDs](https://docs.ipfs.io/concepts/content-addressing/) or [multiformats](https://multiformats.io).
-* Tree ID: To mitigate against rollbacks, a tree identifier can be provided such that the resolution MUST fail if unique suffix chain does not include the tree. For greater clarity, this does not mean that the DID suffix is locked to that tree – the controller may continue the unique suffix chain onto another tree following the rules described above.
-  * Note: the tree id needs more description based on the concrete implementation. The TrustBloc implementation currently includes a genesis configuration hash in this position. The Tree ID MUST be unique based on some verifiable genesis mechanism.
-  * As mentioned earlier, a more explicit operation to move DIDs between trees is useful. In this case, there is some concern if the original tree disappears but the DID is still in use. An explicit operation could act as a checkpoint of the old tree identifier onto the new tree.
+The canonical representation for an Orbital DID string is:
 
-As will be discussed in the next section, the DID string MAY also include a discovery reference to assist with discovery of hubs or operators.
+`did:orb:<checkpoint cid>:<unique suffix>`
 
-did:<method name>:<discovery reference>:<tree id>:<unique suffix>
+The checkpoint is the CID of the anchor that contains a checkpoint for the unique suffix. The resolver ensure that it using an anchor graph, for the unique suffix, that includes the checkpoint CID. The Merkle Tree log associated to the unique suffix is obtained from the latest checkpoint in the graph rooted by the checkpoint CID.
+
+The resolver MUST provide additional metadata:
+
+* The Merkle Tree log associated to the unique suffix.
+* The latest timestamp when the resolver sucessfully checked the associated Merkle Tree log for updates.
+
+### Discovery reference in the DID string
+
+As will be discussed in the next section, the DID string MAY also include a discovery reference to assist with discovery of hubs or operators. This discovery reference also enables lookups of anchor CIDs without a dependency on the IPFS network. 
+
+`did:orb:<discovery reference>:<checkpoint cid>:<unique suffix>`
 
 Note: the resolver MUST also return the canonical DID string in the resolver metadata (without the discovery reference), as described above.
 
@@ -223,15 +260,15 @@ The concrete specification will provide schema and caching details.
 
 ### Well-Known
 
-As with the TrustBloc DID method, a domain containing a Well-Known ([RFC 8615](https://tools.ietf.org/html/rfc8615)) configuration for the Multitree DID method MAY be used.
+As with the TrustBloc DID method, a domain containing a Well-Known ([RFC 8615](https://tools.ietf.org/html/rfc8615)) configuration for the Orbital DID method MAY be used.
 
-did:<method name>:<Well-Known domain>:<tree id>:<unique suffix>
+`did:orb:<Well-Known domain>:<checkpoint cid>:<unique suffix>`
 
 ### IPNS
 
 When usage of domains is undesirable, a potential additional mechanism is to leverage [IPNS](https://docs.ipfs.io/concepts/ipns/) to hold configuration. It is expected that not all operators nor hubs will support IPNS discovery.
 
-did:<method name>:<IPNS address>:<tree id>:<unique suffix>
+`did:orb:<IPNS address>:<checkpoint cid>:<unique suffix>`
 
 In the above example, it is assumed that the IPNS segment is hosted on the global/default IPFS network. A potential consideration with IPNS is the ability to signal usage of the global IPFS network vs a private IPFS network. Another consideration is a capability similar to [DNSLink](https://docs.ipfs.io/concepts/dnslink/), where a domain provides a reference to IPNS. Both of these considerations may be applicable in the Well-Known configuration.
 
@@ -248,10 +285,6 @@ The ability for discovery of hub membership and policy information is envisioned
 
 This initial concept document represents an introduction to the concepts behind the federated DID method. The DID method document is intended to contain both concrete APIs and representations rather than be an abstract framework like the Sidetree protocol.
 
-### Method naming considerations
-
-The "multitree" name could refer to the idea that there are multiple representations for the tree format OR that we are federating multiple trees OR both. In the context of [multiformats](https://multiformats.io), it is closer to the former.
-
 ### Concrete implementation considerations
 
 The next step for this document is to list concrete representations and APIs. As a starting point, here are background implementations that may be applicable.
@@ -261,6 +294,7 @@ The next step for this document is to list concrete representations and APIs. As
   * As demonstrated in the [Hyperledger Fabric dcas extension (at TrustBloc)](https://github.com/trustbloc/fabric-peer-ext/tree/master/pkg/collections/offledger/dcas), usage of these encodings does not imply usage of the IPFS network. Operators can expose a method-defined API that enables retrieval of documents based on CIDs.
 * Verifiable and replicatable trees. Our goal is to use a data model that form its own layer - independent of a protocol or DLT (or vendor). The replicated trees should also work in an offline-compatible manner (see also [SSB](https://github.com/ssbc/ssb-server) as background).
   * [Google Trillian project](https://github.com/google/trillian) (supporting implementation of [Certificate Transparency](https://tools.ietf.org/html/rfc6962) and [Go module checksum database](https://go.googlesource.com/proposal/+/master/design/25530-sumdb.md)).
+  * Potentially an [IPLD](https://specs.ipld.io)-based structure.
   * Potentially a [Git](https://git-scm.com)-based structure could also be a consideration, but there are benefits to using a more targeted approach.
 * Multi-organization hubs
   * Hub organizations may choose to coordinate by anchoring observed tree heads and hub policy in a distributed ledger such as [Hyperledger Fabric](https://github.com/hyperledger/fabric).
@@ -274,5 +308,84 @@ The next step for this document is to list concrete representations and APIs. As
   * Protocol to dissemenate tree updates to subscribed observers, for enhanced immediacy and efficiency of updates.
     * [WebSub](https://www.w3.org/TR/websub/) provides a PubSub protocol that can provide notifications of new Tree heads.
     * [ActivityPub](https://www.w3.org/TR/activitypub/) is a protocol in Fediverse implementations for push-based activity notifications.
-* Multitree registry implementation
-  * An additional project, leveraging the existing [sidetree-core-go](https://github.com/trustbloc/sidetree-core-go), is envisioned to support the multitree instance features.
+    * Potentially [GossipSub](https://github.com/libp2p/specs/tree/master/pubsub/gossipsub). This is an IPFS protocol for gossiping messages. However we want to be careful not to couple ourselves to IPFS networks.
+* Registry insance implementation
+  * An additional project, leveraging the existing [sidetree-core-go](https://github.com/trustbloc/sidetree-core-go), is envisioned to support the instance features.
+
+# Appendices
+
+## Moving between trees using existing Sidetree operations
+
+As a thought experiment, we could attempt to create rules to disambiguate suffix chain length without creating explicit operations. The suffix chain length is based on both the Sidetree recovery and update commitments as follows:
+
+* A suffix chain with a valid deactivate operation wins. The DID is deactivated.
+  * Note: This rule is present as the DID Controller showed their intent to deactivate in some known tree. However, it could be also be argued that the longest chain of recovery commitments always takes precedence.
+* The longest chain of Sidetree recovery commitments wins.
+* In case of a tie between two trees' suffix recovery chain length, the longest chain of update commitments wins.
+* In case of a tie between two trees' suffix chain length with the same operations (no conflict), there is no issue.
+* In the ambiguous case of a tie between two trees' suffix chain length with different final operations, the final ambiguous operation is ignored (and not applied). Note: to properly break the tie, the DID controller should apply an operation to one of the trees.
+
+When moving a DID to a new tree (without defining a new Sidetree operation):
+
+* The controller MUST publish the existing creation and recovery sequences onto the new tree. Note: the need to preserve the suffix chain may increase the burden on the DID controller.
+* The controller MUST publish a new recovery operation onto the new tree (and not the old tree) with the latest document content.
+* We may also wish to signal that operations will no longer be on the old tree. However, the existing Sidetree deactivate operation semantics do not completely match the semantics in this document (despite some similarity). An explicit export operation could be defined for this case.
+
+## Concrete registry instance design
+
+In this section, we present a design based on existing relevant technologies. Concrete design considerations for the Hubs is a followup task.
+
+### Technologies
+
+This concrete design leverages:
+
+* IPFS and IPLD.
+* Sidetree protocol (assuming extension operation for a signed variation of create, as a checkpoint).
+* Anchor strings as certificates.
+  * Anchor strings stored within X.509 certificates.
+  * Certificate transparency SCTs embedded into the anchor certificate, as proof that the anchor certificate has been submitted to one or more certificate transparency services.
+  * Anchor certificates encoded into IPFS/IPLD.
+
+### Publishing a Sidetree batch
+
+The batch writer performs the following operations:
+
+1. Create a Sidetree anchor string.
+2. Encode anchor string into a new anchor certificate.
+3. Submit to one or more certificate transparency services (as the Trees) and obtain an signed certificate timestamp (SCT) from each.
+4. Encode the SCTs from the certificate transparency services into the anchor certificate.
+5. Write the anchor certificate into the CAS and calculate its CID. See note below on using IPLD to link anchor certificates.
+6. Publish the anchor CID and certificate to subscribers. A Web-based mechanism can be accomplished via WebSub (or activity streams). However, using IPFS GossipSub could also be of interest (and also the best way to handle the topic in GossipSub -- global or localized).
+
+The certificate transparency service (as a Tree), publishes the new signed tree head. The observers of the Tree will also become aware of the new anchor CIDs and certificates.
+
+Note: the batch writer may host one of the Trees. As mentioned earlier, trees may also be replicated. The concrete tree replication mechanism is a followup topic.
+
+#### IPLD anchor linking
+
+As described earlier, the CAS anchor objects enable a graph of the prior anchor objects for each unique DID suffix. We envision that IPLD can hold this structure but this needs more investigation.
+
+Note: with both certificate transparency logs (e.g., based on the Google Trillian project) and IPLD anchor linking, we would have the result of multiple Merkle Tree structures containing the anchor strings.
+
+#### DID String
+
+For the Anchor CID, the DID string contains the CID of an anchor certificate that links to a create or checkpoint operation for the DID.
+
+Additional implications:
+
+* When the global IPFS network is used, the anchor certificates can be located by CID without discovery hints. Of course, when a non-global IPFS network is used, discovery hints are needed.
+
+#### Available Go open source implementations
+
+* [cfssl](https://github.com/cloudflare/cfssl): CloudFlare CA package that supports certificate transparency. Also used in Hyperledger Fabric CA.
+* [certificate-transparency-go](https://github.com/google/certificate-transparency-go/): Google Certificate transparency server and tools. Based on the [Google Trillian](https://github.com/google/trillian) project.
+* [ipfs](github.com/ipfs): IPFS go libraries. Also used in TrustBloc extensions for Hyperledger Fabric.
+* [sidetree-core-go](https://github.com/trustbloc/sidetree-core-go): TrustBloc implementation of the Sidetree protocol.
+
+#### Summary
+
+* A mechanism is provided to supply Merkle Tree Logs of anchors. This mechanism is the existing implementation of certificate transparency.
+* Usage of a CID within the DID string enables discovery of an anchor certificate. The anchor certificate provides proof of the inclusion within Trees and also discovery of those Trees.
+* By discovering trees from the anchor certificate, resolvers are able to implicitly discover recent anchors.
+* Anchor graphs are supplied from the (certificate transparency) Merkle Tree logs, but can also additionally be discovered from the IPLD data structure. The logs also provide witness capability for the latest anchors.
+* A followup task could potentially investigate the implications of using Verifiable Credentials as a substitute for certificates.
