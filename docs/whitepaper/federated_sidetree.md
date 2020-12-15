@@ -1,7 +1,7 @@
 # Orbital: Federated Sidetree DID method
 
 Status: concept whitepaper
-Version: Dec 14, 2020
+Version: Dec 15, 2020
 GitHub source: https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/whitepaper/federated_sidetree.md
 
 ## Introduction
@@ -91,22 +91,18 @@ In Sidetree, a particular unique suffix forms its own tree structure independent
 
 To apply patches when observing multiple trees (without defining a new Sidetree operation), we need a rule to determine the currently active tree. Conceptually this rule is that the longest observed suffix chain forms the authoritative operation sequence for that suffix. Some ambiguities can arise such as choosing between a chain that has a deactivate operation versus another chain that, instead, continues with recovery operations. See appendix for an extended discussion of the nuances.
 
-However, it would seem sensible to have a more explicit operation for moving a DID across trees. This more explicit operation could be envisioned as a checkpoint variation of recover for the new tree.  Having such an operation more explicitly resolves ambiguities that can arise between chains.
+However, it would seem sensible to have a more explicit operation for moving a DID across trees. This more explicit operation is envisioned as a checkpoint variation of recover that states the new tree.  Having such an operation more explicitly resolves ambiguities that can arise between chains.
 
 Considerations:
 
 * The operator that is observing another operator MAY replicate the tree and CAS into their own registry. To enable replication across registries, the trees should be storage-agnostic, protocol-agnostic, and transport-agnostic formats (and be offline-compatible).
 * The usage of a verifiable tree structure between operators enable detection of attempts to change history or rollback. When these attempts occur, an operator can independently determine their appropriate response (e.g., alert, stop observing the other operator, and/or ignore the trees from that operator).
 * The usage of signed tree heads provides additional assurance beyond transport security that an operator intended to publish their tree. Additional metadata is also included (e.g., the operator’s timestamp).
-* A variation of checkpoint could also be envisioned for the old tree when a suffix is moved to a new tree. However, it is not always possible to make use of such an operation. Exceptions occur when the old tree becomes decommissioned or, more generally, when the DID controller becomes unable to push their changes onto the old tree. In these cases, it would still be desirable that a suffix could move into a new tree (regardless of the old tree).
+* It can be useful for the checkpoint to also be published on the old tree, when possible. This enables observers to discover the changed status and potentially monitor the new tree. Publishing the checkpoint must be considered optional since the old tree could become decommissioned or, more generally, unable to accept some updates.
 
 ### Hub instances
 
-A hub instance provides a well-known location where many tree instances are interconnected. The hub also enables policy-driven witnesses such that multiple entities may, together, provide greater assurance about the current state of a DID document. With greater assurance, there is less need for each requesting party to run their own observer instances.
-
-#### Single organization
-
-When a single organization is running a hub, we have a structure that resembles the interconnected case above. An example of a single organization case is where the hub is acting as the resolver for that organization. In the diagram below, we show a single Hub organization that is monitoring Trees from different organizations.
+A hub instance provides a well-known location where many tree instances are interconnected. Hubs act as resolvers across the interconnected registries. In the diagram below, we show a Hub that is monitoring Trees from different organizations.
 
 ```mermaid
 graph LR
@@ -141,42 +137,7 @@ graph RL
     end
 ```
 
-When hub claims to act as a witness for a particular Tree, it is important that the hub understands the operator’s tree structure (and version) and the Sidetree parameters (and version) that are embedded within the tree. This tree and protocol parsing capability is needed so that they can provide endorsements of Tree (and Sidetree protocol) validity.
-
-#### Multiple organizations
-
-For cases where resolution trust should not be with a single organization, we also provide a structure to enable a consortium to run a Hub together. The consortium structure enables a policy-driven approach to [endorsement](https://hyperledger-fabric.readthedocs.io/en/release-2.2/policies/policies.html#chaincode-endorsement-policies) (witnesses) of the history of the Trees being observed.
-
-The following diagram illustrates a case where the Hub policy requires two organizations to endorse/witness the history of the trees. The policy can be scaled as needed.
-
-```mermaid
-graph LR
-    RP[Requesting party] ---|DID Resolution| HUB1[REST API]
-    RP ---|Endorsement validation| HUB2
-    subgraph Hub peers
-        HUB1[Org 1's hub]
-        POLICY[Hub Policy]
-        HUB2[Org 2's hub]
-    end
-    subgraph Operators' registries
-        subgraph Operator 1
-            HUB1 --- OT1[Tree, CAS, API]
-            HUB2 --- OT1
-        end
-        subgraph Operator 2
-            HUB1 --- OT2[Tree, CAS, API]
-            HUB2 --- OT2
-        end
-        subgraph Operator 3
-            HUB1 --- OT3[Tree, CAS, API]
-            HUB2 --- OT3
-        end
-    end
-```
-
-It is necessary for a logical Hub to have tighter coupling than the interconnected instance case described earlier. The Hub must enable peers to coordinate a common verifiable history and define a common policy to be applied and enforced. By coordinating a common verifiable history, we gain replicas of an auditable history across Hub organizations.
-
-The multiple organization Hub case is an evolution of the TrustBloc DID, where consortium policy and discovery is defined on top of the [Sidetree REST API](https://identity.foundation/sidetree/api/). The Hub case in this document adds description for enabling multiple external trees to be observed.
+When hub claims to act as a witness for a particular Tree, it is important that the hub understands the operator’s tree structure (and version) and the Sidetree parameters (and version) that are embedded within the tree. This tree and protocol parsing capability is needed so that they can provide attestations of the Tree (and Sidetree protocol) validity.
 
 ## Sidetree anchor encoding
 
@@ -205,7 +166,7 @@ graph TD
 
 The second structure -- the Merkle Tree log -- is created independently of the CAS. Each Merkle Tree log provides an independent witness that an anchor has been published at a certain time. By monitoring these logs, observers are able to discover the history of published anchors. The history is useful for several reason:
 
-* As it is possible for different hash chain for a suffix to be created into the CAS (by a DID controller), a log can be used to disambiguate.
+* Without a log to disambiguate, it would be possible for different ambiguous hash chains for a suffix to be created into the CAS. Please see the discussion in the tree monitoring section.
 * An observer might not have received a notification about the anchor, a log can be used to provide history.
 * As anchors could become unavailable in the CAS, a log can be used to alert about the situation.
 * In summary, these additional logs enable monitoring and replication of the complete (and disambiguated) history.
@@ -221,6 +182,7 @@ The DID controller should also be able to discover the acceptable logs that the 
 Considerations:
 
 * Operations are ignored for suffixes where a required log proof was not provided.
+* A checkpoint variation of create would also be useful so that the DID can be created and associated to a tree with one operation.
 * TBD: Handling of multiple tree logs specified per unique suffix.
 
 ## DID strings and resolution
@@ -281,6 +243,40 @@ The ability for discovery of hub membership and policy information is envisioned
 * [Boostrapping trust](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md#bootstrapping-trust)
 * [Configuration updates](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md#configuration-updates)
 
+## Using multiple hubs for resolution
+
+For cases where a Requesting Party is unable to host their own resolver, they need to trust a hub to act as their resolver. To increase the RP's confidence, it is also possible for the RP to validate resolution results against multiple hubs that are running at different organizations.
+
+The following diagram illustrates a case where the Requesting Party leverages two organizations to validate the resolution result.
+
+```mermaid
+graph LR
+    RP[Requesting party] ---|DID Resolution| HUB1[REST API]
+    RP ---|Resolution validation| HUB2
+    subgraph Hub peers
+        HUB1[Org 1's hub]
+        HUB2[Org 2's hub]
+    end
+    subgraph Operators' registries
+        subgraph Operator 1
+            HUB1 --- OT1[Tree, CAS, API]
+            HUB2 --- OT1
+        end
+        subgraph Operator 2
+            HUB1 --- OT2[Tree, CAS, API]
+            HUB2 --- OT2
+        end
+        subgraph Operator 3
+            HUB1 --- OT3[Tree, CAS, API]
+            HUB2 --- OT3
+        end
+    end
+```
+
+Is is also possible for some Hubs to have tighter coupling to each other. This form of hub enables multiple entities, collectively, to provide greater assurance about the current state of a DID document. These Hubs enable peers to coordinate a common verifiable history and define a common policy. By coordinating a common verifiable history, we gain replicas of an auditable history across Hub organizations.
+
+The multiple organization Hub case is an evolution of the TrustBloc DID method, where consortium policy and discovery is defined on top of the [Sidetree REST API](https://identity.foundation/sidetree/api/).
+
 ## Next steps
 
 This initial concept document represents an introduction to the concepts behind the federated DID method. The DID method document is intended to contain both concrete APIs and representations rather than be an abstract framework like the Sidetree protocol.
@@ -340,7 +336,7 @@ In this section, we present a design based on existing relevant technologies. Co
 This concrete design leverages:
 
 * IPFS and IPLD.
-* Sidetree protocol (assuming extension operation for a signed variation of create, as a checkpoint).
+* Sidetree protocol (assuming extension checkpoint operation).
 * Anchor strings as certificates.
   * Anchor strings stored within X.509 certificates.
   * Certificate transparency SCTs embedded into the anchor certificate, as proof that the anchor certificate has been submitted to one or more certificate transparency services.
