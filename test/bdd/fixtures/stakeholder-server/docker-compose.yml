@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-version: '3'
+version: '3.2'
 
 services:
 
@@ -21,8 +21,16 @@ services:
     ports:
       - "8088:8088"
     volumes:
-      - ../wellknown/jws/did-trustbloc:/web/.well-known/did-trustbloc
-      - ../wellknown/jws/stakeholder.one/did-configuration.json:/web/.well-known/did-configuration.json
+      - type: bind
+        source: ../wellknown/jws/did-trustbloc
+        target: /web/.well-known/did-trustbloc
+      - type: bind
+        source: ../wellknown/jws/stakeholder.one/did-configuration.json
+        target: /web/.well-known/did-configuration.json
+        volume:
+          nocopy: true
+        bind:
+          propagation: shared
       - ../keys/tls:/etc/tls
     networks:
       - did-method-rest_bdd_net

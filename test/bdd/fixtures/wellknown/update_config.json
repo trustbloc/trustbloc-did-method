@@ -1,0 +1,31 @@
+{
+  "consortiumData": {
+    "domain": "testnet.trustbloc.local",
+    "genesisBlock": "6e2f978e16b59df1d6a1dfbacb92e7d3eddeb8b3fd825e573138b3fd77d77264",
+    "policy": {
+      "cache": {
+        "maxAge": 12345678
+      },
+      "numQueries": 2,
+      "historyHash": "SHA256"
+    }
+  },
+  "membersData": [
+    {
+      "domain": "stakeholder.one:8088",
+      "policy": {"cache": {"maxAge": 604800}},
+      "endpoints": [
+        "https://localhost:48326/sidetree/0.0.1"
+      ],
+      "privateKeyJwkPath": "../../test/bdd/fixtures/wellknown/stakeholderone_jwk.json"
+    },
+    {
+      "domain": "stakeholder.two:8089",
+      "policy": {"cache": {"maxAge": 604800}},
+      "endpoints": [
+        "https://localhost:48326/sidetree/0.0.1"
+      ],
+      "privateKeyJwkPath": "../../test/bdd/fixtures/wellknown/stakeholdertwo_jwk.json"
+    }
+  ]
+}

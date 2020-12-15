@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-version: '3'
+version: '3.2'
 
 services:
 
@@ -21,7 +21,13 @@ services:
     ports:
       - "443:443"
     volumes:
-      - ../wellknown/jws/did-trustbloc:/web/.well-known/did-trustbloc
+      - type: bind
+        source: ../wellknown/jws/did-trustbloc
+        target: /web/.well-known/did-trustbloc
+        volume:
+          nocopy: true
+        bind:
+          propagation: shared
       - ../keys/tls:/etc/tls
     networks:
       - did-method-rest_bdd_net

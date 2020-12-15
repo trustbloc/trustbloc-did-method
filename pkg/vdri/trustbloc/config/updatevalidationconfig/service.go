@@ -67,7 +67,7 @@ func (cs *ConfigService) GetConsortium(url, domain string) (*models.ConsortiumFi
 	// validate new fetched data against old's signatures
 	err = signatureconfig.VerifyConsortiumSignatures(consortiumData, consortium)
 	if err != nil {
-		return nil, fmt.Errorf("signature fails: %w", err)
+		return nil, fmt.Errorf("config update signature does not verify: %w", err)
 	}
 
 	cs.consortia[key] = consortiumData

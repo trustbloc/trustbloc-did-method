@@ -55,12 +55,17 @@ func runBDDTests(tags, format string) int {
 	return godog.RunWithOptions("godogs", func(s *godog.Suite) {
 		var composition []*dockerutil.Composition
 		var composeFiles = []string{"./fixtures/did-method-rest", "./fixtures/universalresolver",
-			"./fixtures/sidetree-mock",
+			"./fixtures/sidetree-mock", "./fixtures/discovery-server", "./fixtures/stakeholder-server",
 			"./fixtures/universal-registrar"}
-		var discoveryServers = []string{"./fixtures/discovery-server", "./fixtures/stakeholder-server"}
 
 		s.BeforeSuite(func() {
 			if os.Getenv("DISABLE_COMPOSITION") != "true" { // nolint: nestif
+				// create dummy config files (that will be overwritten in tests)
+				_, err := execCMD("./generate_stub_config.sh")
+				if err != nil {
+					panic(err.Error())
+				}
+
 				// Need a unique name, but docker does not allow '-' in names
 				composeProjectName := strings.ReplaceAll(generateUUID(), "-", "")
 
@@ -72,7 +77,7 @@ func runBDDTests(tags, format string) int {
 					composition = append(composition, newComposition)
 				}
 				fmt.Println("docker-compose up ... waiting for containers to start ...")
-				testSleep := 20
+				testSleep := 15
 				if os.Getenv("TEST_SLEEP") != "" {
 					var e error
 
@@ -82,23 +87,6 @@ func runBDDTests(tags, format string) int {
 					}
 				}
 				fmt.Printf("*** testSleep=%d \n", testSleep)
-				time.Sleep(time.Second * time.Duration(testSleep))
-
-				// create config files
-				_, err := execCMD("./generate_config.sh")
-				if err != nil {
-					panic(err.Error())
-				}
-
-				for _, v := range discoveryServers {
-					newComposition, err := dockerutil.NewComposition(composeProjectName, "docker-compose.yml", v)
-					if err != nil {
-						panic(fmt.Sprintf("Error composing system in BDD context: %s", err))
-					}
-					composition = append(composition, newComposition)
-				}
-
-				fmt.Printf("*** testSleep=%d", testSleep)
 				time.Sleep(time.Second * time.Duration(testSleep))
 			}
 		})

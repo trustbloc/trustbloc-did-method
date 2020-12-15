@@ -236,7 +236,64 @@ func TestConfigService_GetConsortium(t *testing.T) {
 
 		_, err = cs.GetConsortium("foo", "foo")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "signature fails")
+		require.Contains(t, err.Error(), " signature does not verify")
+	})
+
+	t.Run("failure - derived file isn't signed by a key in genesis file", func(t *testing.T) {
+		rawPubKey := []byte(`{
+  "kty": "OKP",
+  "kid": "key1",
+  "crv": "Ed25519",
+  "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
+}`)
+		config := models.Consortium{
+			Members: []*models.StakeholderListElement{
+				{PublicKey: models.PublicKey{JWK: json.RawMessage(rawPubKey)}},
+			},
+		}
+
+		priv2 := []byte(`{
+  "kty": "OKP",
+  "kid": "key1",
+  "d": "-YawjZSeB9Rkdol9SHeOcT9hIvo_VuH6zM-pgtk3b10",
+  "crv": "Ed25519",
+  "x": "8rfXFZNHZs9GYzGbQLYDasGUAm1brAgTLI0jrD4KheU"
+}`)
+
+		key2 := jose.JSONWebKey{}
+		err := key2.UnmarshalJSON(priv2)
+		require.NoError(t, err)
+
+		sigKey2 := jose.SigningKey{Key: key2.Key, Algorithm: jose.EdDSA}
+
+		sig, err := signConsortium(&config, sigKey2)
+		require.NoError(t, err)
+
+		cs := NewService(&mockconfig.MockConfigService{
+			GetConsortiumFunc: func(u string, d string) (*models.ConsortiumFileData, error) {
+				return &models.ConsortiumFileData{
+					Config: &config,
+					JWS:    sig,
+				}, nil
+			},
+		})
+
+		genesis := &models.Consortium{
+			Members: []*models.StakeholderListElement{
+				{PublicKey: models.PublicKey{JWK: json.RawMessage(rawPubKey)}},
+			},
+			Domain: "beep",
+		}
+
+		sig2, err := signConsortium(genesis, sigKey)
+		require.NoError(t, err)
+
+		err = cs.AddGenesisFile("foo", "foo", []byte(sig2.FullSerialize()))
+		require.NoError(t, err)
+
+		_, err = cs.GetConsortium("foo", "foo")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), " signature does not verify")
 	})
 }
 
