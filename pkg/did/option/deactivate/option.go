@@ -16,6 +16,7 @@ type Opts struct {
 	SidetreeEndpoints []*models.Endpoint
 	SigningKey        crypto.PrivateKey
 	SigningKeyID      string
+	RevealValue       string
 }
 
 // Option is a deactivate DID option
@@ -40,5 +41,12 @@ func WithSigningKey(signingKey crypto.PrivateKey) Option {
 func WithSigningKeyID(id string) Option {
 	return func(opts *Opts) {
 		opts.SigningKeyID = id
+	}
+}
+
+// WithRevealValue sets reveal value
+func WithRevealValue(rv string) Option {
+	return func(opts *Opts) {
+		opts.RevealValue = rv
 	}
 }

@@ -27,6 +27,7 @@ type Opts struct {
 	NextUpdatePublicKey crypto.PublicKey
 	SigningKey          crypto.PrivateKey
 	SigningKeyID        string
+	RevealValue         string
 }
 
 // WithAddPublicKey set public key to be added
@@ -83,5 +84,12 @@ func WithSidetreeEndpoint(sidetreeEndpoint string) Option {
 	return func(opts *Opts) {
 		opts.SidetreeEndpoints = append(opts.SidetreeEndpoints,
 			&models.Endpoint{URL: sidetreeEndpoint})
+	}
+}
+
+// WithRevealValue sets reveal value
+func WithRevealValue(rv string) Option {
+	return func(opts *Opts) {
+		opts.RevealValue = rv
 	}
 }

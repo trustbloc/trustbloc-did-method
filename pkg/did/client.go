@@ -242,7 +242,12 @@ func (c *Client) DeactivateDID(did, domain string, opts ...deactivate.Option) er
 		return err
 	}
 
-	req, err := buildDeactivateRequest(did, deactivateDIDOpts)
+	sidetreeConfig, err := c.configService.GetSidetreeConfig(sidetreeEndpoint)
+	if err != nil {
+		return err
+	}
+
+	req, err := buildDeactivateRequest(did, sidetreeConfig, deactivateDIDOpts)
 	if err != nil {
 		return fmt.Errorf("failed to build sidetree request: %w", err)
 	}
@@ -324,7 +329,7 @@ func (c *Client) buildUpdateRequest(did string, sidetreeConfig *models.SidetreeC
 		return nil, fmt.Errorf("failed to get next update key : %s", err)
 	}
 
-	nextUpdateCommitment, err := commitment.Calculate(nextUpdateKey, sidetreeConfig.MultiHashAlgorithm)
+	nextUpdateCommitment, err := commitment.GetCommitment(nextUpdateKey, sidetreeConfig.MultiHashAlgorithm)
 	if err != nil {
 		return nil, err
 	}
@@ -344,8 +349,16 @@ func (c *Client) buildUpdateRequest(did string, sidetreeConfig *models.SidetreeC
 		return nil, err
 	}
 
+	revealValue := updateDIDOpts.RevealValue
+
+	// TODO: client should be managing reveal value, this defaulting here is just temporary convenience (issue-246)
+	if revealValue == "" {
+		revealValue = defaultRevealValue(updateKey, sidetreeConfig.MultiHashAlgorithm)
+	}
+
 	return client.NewUpdateRequest(&client.UpdateRequestInfo{
 		DidSuffix:        didSuffix,
+		RevealValue:      revealValue,
 		UpdateCommitment: nextUpdateCommitment,
 		UpdateKey:        updateKey,
 		Patches:          patches,
@@ -355,7 +368,8 @@ func (c *Client) buildUpdateRequest(did string, sidetreeConfig *models.SidetreeC
 }
 
 // buildDeactivateRequest request builder for sidetree public DID deactivate
-func buildDeactivateRequest(did string, deactivateDIDOpts *deactivate.Opts) ([]byte, error) {
+func buildDeactivateRequest(did string, sidetreeConfig *models.SidetreeConfig,
+	deactivateDIDOpts *deactivate.Opts) ([]byte, error) {
 	signer, publicKey, err := getSigner(deactivateDIDOpts.SigningKey, deactivateDIDOpts.SigningKeyID)
 	if err != nil {
 		return nil, err
@@ -366,8 +380,16 @@ func buildDeactivateRequest(did string, deactivateDIDOpts *deactivate.Opts) ([]b
 		return nil, err
 	}
 
+	revealValue := deactivateDIDOpts.RevealValue
+
+	// TODO: client should be managing reveal value, this defaulting here is just temporary convenience (issue-246)
+	if revealValue == "" {
+		revealValue = defaultRevealValue(publicKey, sidetreeConfig.MultiHashAlgorithm)
+	}
+
 	return client.NewDeactivateRequest(&client.DeactivateRequestInfo{
 		DidSuffix:   didSuffix,
+		RevealValue: revealValue,
 		RecoveryKey: publicKey,
 		Signer:      signer,
 	})
@@ -521,12 +543,12 @@ func buildCreateRequest(sidetreeConfig *models.SidetreeConfig, createDIDOpts *cr
 		return nil, fmt.Errorf("failed to get update key : %s", err)
 	}
 
-	recoveryCommitment, err := commitment.Calculate(recoveryKey, sidetreeConfig.MultiHashAlgorithm)
+	recoveryCommitment, err := commitment.GetCommitment(recoveryKey, sidetreeConfig.MultiHashAlgorithm)
 	if err != nil {
 		return nil, err
 	}
 
-	updateCommitment, err := commitment.Calculate(updateKey, sidetreeConfig.MultiHashAlgorithm)
+	updateCommitment, err := commitment.GetCommitment(updateKey, sidetreeConfig.MultiHashAlgorithm)
 	if err != nil {
 		return nil, err
 	}
@@ -583,8 +605,16 @@ func buildRecoverRequest(did string, sidetreeConfig *models.SidetreeConfig,
 		return nil, err
 	}
 
+	revealValue := recoverDIDOpts.RevealValue
+
+	// TODO: client should be managing reveal value, this defaulting here is just temporary convenience (issue-246)
+	// part of estimates for 1.6 milestone
+	if revealValue == "" {
+		revealValue = defaultRevealValue(recoveryKey, sidetreeConfig.MultiHashAlgorithm)
+	}
+
 	req, err := client.NewRecoverRequest(&client.RecoverRequestInfo{
-		DidSuffix: didSuffix, OpaqueDocument: string(docBytes),
+		DidSuffix: didSuffix, RevealValue: revealValue, OpaqueDocument: string(docBytes),
 		RecoveryCommitment: nextRecoveryCommitment, UpdateCommitment: nextUpdateCommitment,
 		MultihashCode: sidetreeConfig.MultiHashAlgorithm, Signer: signer, RecoveryKey: recoveryKey,
 	})
@@ -606,12 +636,12 @@ func getCommitment(sidetreeConfig *models.SidetreeConfig, recoverDIDOpts *recove
 		return "", "", fmt.Errorf("failed to get next update key : %s", err)
 	}
 
-	nextRecoveryCommitment, err := commitment.Calculate(nextRecoveryKey, sidetreeConfig.MultiHashAlgorithm)
+	nextRecoveryCommitment, err := commitment.GetCommitment(nextRecoveryKey, sidetreeConfig.MultiHashAlgorithm)
 	if err != nil {
 		return "", "", err
 	}
 
-	nextUpdateCommitment, err := commitment.Calculate(nextUpdateKey, sidetreeConfig.MultiHashAlgorithm)
+	nextUpdateCommitment, err := commitment.GetCommitment(nextUpdateKey, sidetreeConfig.MultiHashAlgorithm)
 	if err != nil {
 		return "", "", err
 	}
@@ -656,4 +686,14 @@ func closeResponseBody(respBody io.Closer) {
 	if e != nil {
 		log.Errorf("Failed to close response body: %v", e)
 	}
+}
+
+func defaultRevealValue(jwk *jws.JWK, multihashCode uint) string {
+	revealValue, err := commitment.GetRevealValue(jwk, multihashCode)
+	if err != nil {
+		log.Errorf("Failed to default reveal value: %v", err)
+		return ""
+	}
+
+	return revealValue
 }
