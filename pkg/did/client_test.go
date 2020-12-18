@@ -18,6 +18,9 @@ import (
 
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/stretchr/testify/require"
+	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
+	"github.com/trustbloc/sidetree-core-go/pkg/jws"
+	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
@@ -67,12 +70,38 @@ func TestClient_DeactivateDID(t *testing.T) {
 		require.Contains(t, err.Error(), "discover error")
 	})
 
+	t.Run("test failed to get sidetree config", func(t *testing.T) {
+		v := New()
+
+		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return nil, fmt.Errorf("failed to get sidetree config")
+			}}
+
+		err = v.DeactivateDID("did:ex:123", "testnet", deactivate.WithSigningKey(privKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get sidetree config")
+	})
+
 	t.Run("test unsupported signing key", func(t *testing.T) {
 		v := New()
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
 			}}
 
 		err := v.DeactivateDID("did:ex:123", "testnet", deactivate.WithSigningKey("www"))
@@ -86,6 +115,11 @@ func TestClient_DeactivateDID(t *testing.T) {
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
 				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
 			}}
 
 		_, privKey, err := ed25519.GenerateKey(rand.Reader)
@@ -130,10 +164,28 @@ func TestClient_DeactivateDID(t *testing.T) {
 				return []*models.Endpoint{{URL: serv.URL}}, nil
 			}}
 
-		_, privKey, err := ed25519.GenerateKey(rand.Reader)
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		err = v.DeactivateDID("did:ex:123", "", deactivate.WithSigningKey(privKey),
+		signingPubKeyJWK, err := pubkey.GetPublicKeyJWK(pubKey)
+		require.NoError(t, err)
+
+		rv, err := commitment.GetRevealValue(signingPubKeyJWK, 18)
+		require.NoError(t, err)
+
+		err = v.DeactivateDID("did:ex:123", "",
+			deactivate.WithSigningKey(privKey), deactivate.WithRevealValue(rv),
+			deactivate.WithSidetreeEndpoint(serv.URL), deactivate.WithSigningKeyID("k1"))
+		require.NoError(t, err)
+
+		// deactivate did without reveal value (issue-246)
+		err = v.DeactivateDID("did:ex:123", "",
+			deactivate.WithSigningKey(privKey),
 			deactivate.WithSidetreeEndpoint(serv.URL), deactivate.WithSigningKeyID("k1"))
 		require.NoError(t, err)
 	})
@@ -393,11 +445,26 @@ func TestClient_RecoverDID(t *testing.T) {
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		signingKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
 
-		err = v.RecoverDID("did:ex:123", "",
-			recovery.WithSidetreeEndpoint(serv.URL), recovery.WithSigningKey(ecPrivKey),
+		signingPubKeyJWK, err := pubkey.GetPublicKeyJWK(&signingKey.PublicKey)
+		require.NoError(t, err)
+
+		rv, err := commitment.GetRevealValue(signingPubKeyJWK, 18)
+		require.NoError(t, err)
+
+		err = v.RecoverDID("did:ex:123", "", recovery.WithSidetreeEndpoint(serv.URL),
+			recovery.WithSigningKey(signingKey), recovery.WithRevealValue(rv),
+			recovery.WithSigningKeyID("k1"), recovery.WithNextRecoveryPublicKey(pubKey),
+			recovery.WithNextUpdatePublicKey(pubKey), recovery.WithPublicKey(&doc.PublicKey{ID: "key3",
+				Encoding: doc.PublicKeyEncodingJwk, KeyType: doc.Ed25519KeyType, Value: pubKey}),
+			recovery.WithService(&did.Service{ID: "svc3"}))
+		require.NoError(t, err)
+
+		// update did without reveal value (issue-246)
+		err = v.RecoverDID("did:ex:123", "", recovery.WithSidetreeEndpoint(serv.URL),
+			recovery.WithSigningKey(signingKey),
 			recovery.WithSigningKeyID("k1"), recovery.WithNextRecoveryPublicKey(pubKey),
 			recovery.WithNextUpdatePublicKey(pubKey), recovery.WithPublicKey(&doc.PublicKey{ID: "key3",
 				Encoding: doc.PublicKeyEncodingJwk, KeyType: doc.Ed25519KeyType, Value: pubKey}),
@@ -581,11 +648,27 @@ func TestClient_UpdateDID(t *testing.T) {
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
-		ecPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		signingKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		signingPubKeyJWK, err := pubkey.GetPublicKeyJWK(&signingKey.PublicKey)
+		require.NoError(t, err)
+
+		rv, err := commitment.GetRevealValue(signingPubKeyJWK, 18)
 		require.NoError(t, err)
 
 		err = v.UpdateDID("did:ex:123", "",
-			update.WithSidetreeEndpoint(serv.URL), update.WithSigningKey(ecPrivKey),
+			update.WithSidetreeEndpoint(serv.URL), update.WithSigningKey(signingKey), update.WithRevealValue(rv),
+			update.WithNextUpdatePublicKey(pubKey), update.WithRemoveService("svc1"),
+			update.WithRemoveService("svc1"), update.WithRemovePublicKey("k1"),
+			update.WithRemovePublicKey("k2"), update.WithAddPublicKey(&doc.PublicKey{ID: "key3",
+				Encoding: doc.PublicKeyEncodingJwk, KeyType: doc.Ed25519KeyType, Value: pubKey}),
+			update.WithAddService(&did.Service{ID: "svc3"}))
+		require.NoError(t, err)
+
+		// update did without reveal value (issue-246)
+		err = v.UpdateDID("did:ex:123", "",
+			update.WithSidetreeEndpoint(serv.URL), update.WithSigningKey(signingKey),
 			update.WithNextUpdatePublicKey(pubKey), update.WithRemoveService("svc1"),
 			update.WithRemoveService("svc1"), update.WithRemovePublicKey("k1"),
 			update.WithRemovePublicKey("k2"), update.WithAddPublicKey(&doc.PublicKey{ID: "key3",
@@ -994,6 +1077,17 @@ func Test_unwrapPubKeyJWK(t *testing.T) {
 		_, err := unwrapPubKeyJWK(key)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "unsupported PublicKey source key type")
+	})
+}
+
+func Test_defaultRevealValue(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		rv := defaultRevealValue(&jws.JWK{}, 18)
+		require.NotEmpty(t, rv)
+	})
+	t.Run("error - invalid multihash code", func(t *testing.T) {
+		rv := defaultRevealValue(&jws.JWK{}, 55)
+		require.Empty(t, rv)
 	})
 }
 

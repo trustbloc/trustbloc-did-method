@@ -23,6 +23,7 @@ type Opts struct {
 	NextUpdatePublicKey   crypto.PublicKey
 	SigningKey            crypto.PrivateKey
 	SigningKeyID          string
+	RevealValue           string
 }
 
 // Option is a recover DID option
@@ -75,5 +76,12 @@ func WithSigningKey(signingKey crypto.PrivateKey) Option {
 func WithSigningKeyID(id string) Option {
 	return func(opts *Opts) {
 		opts.SigningKeyID = id
+	}
+}
+
+// WithRevealValue sets reveal value
+func WithRevealValue(rv string) Option {
+	return func(opts *Opts) {
+		opts.RevealValue = rv
 	}
 }

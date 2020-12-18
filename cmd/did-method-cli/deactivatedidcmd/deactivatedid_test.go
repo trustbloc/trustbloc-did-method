@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package deactivatedidcmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -48,7 +49,7 @@ func TestMissingArg(t *testing.T) {
 
 func TestDeactivateDID(t *testing.T) {
 	serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "{}")
 	}))
 	defer serv.Close()
 
