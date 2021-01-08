@@ -46,19 +46,11 @@ jobs:
       - template: azp-dependencies.yml
       - checkout: self
       - bash: |
-          function logout {
-            docker logout
-          }
-          trap logout EXIT
-          echo $DOCKER_PASSWORD | docker login docker.pkg.github.com --username $DOCKER_USER --password-stdin
           echo '127.0.0.1 testnet.trustbloc.local' | sudo tee -a /etc/hosts
           echo '127.0.0.1 stakeholder.one' | sudo tee -a /etc/hosts
           echo '127.0.0.1 stakeholder.two' | sudo tee -a /etc/hosts
           echo '127.0.0.1 sidetree-mock' | sudo tee -a /etc/hosts
           make bdd-test
-        env:
-          DOCKER_USER: $(DOCKER_USER)
-          DOCKER_PASSWORD: $(DOCKER_PASSWORD)
         displayName: Run BDD tests
 
   - job: Publish
@@ -79,9 +71,9 @@ jobs:
           }
           trap logout EXIT
           source ci/version_var.sh
-          echo $DOCKER_PASSWORD | docker login docker.pkg.github.com --username $DOCKER_USER --password-stdin
+          echo $DOCKER_PASSWORD | docker login ghcr.io --username $DOCKER_USER --password-stdin
           make did-method-rest-docker
-          docker tag docker.pkg.github.com/trustbloc/trustbloc-did-method/did-method-rest:latest ${TRUSTBLOC_DID_METHOD_PKG}:${TRUSTBLOC_DID_METHOD_TAG}
+          docker tag ghcr.io/trustbloc/driver-did-trustbloc:latest ${TRUSTBLOC_DID_METHOD_PKG}:${TRUSTBLOC_DID_METHOD_TAG}
           docker push ${TRUSTBLOC_DID_METHOD_PKG}:${TRUSTBLOC_DID_METHOD_TAG}
         env:
           DOCKER_USER: $(DOCKER_USER)

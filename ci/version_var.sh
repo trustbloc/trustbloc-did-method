@@ -13,8 +13,8 @@ IS_RELEASE=false
 # Project Parameters
 SOURCE_REPO=trustbloc-did-method
 BASE_PKG_NAME=driver-did-trustbloc
-RELEASE_REPO=docker.pkg.github.com/trustbloc/${SOURCE_REPO}
-SNAPSHOT_REPO=docker.pkg.github.com/trustbloc-cicd/snapshot
+RELEASE_REPO=ghcr.io/trustbloc
+SNAPSHOT_REPO=ghcr.io/trustbloc-cicd
 
 if [ ${IS_RELEASE} = false ]
 then
