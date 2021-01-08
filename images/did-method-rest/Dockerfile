@@ -24,6 +24,8 @@ RUN make did-method-rest
 
 
 FROM alpine:${ALPINE_VER} as base
+LABEL org.opencontainers.image.source https://github.com/trustbloc/trustbloc-did-method
+
 COPY --from=trustbloc-did-method /opt/workspace/trustbloc-did-method/.build/bin/did-method /usr/local/bin
 WORKDIR /usr/local/bin
 ENTRYPOINT ["did-method"]

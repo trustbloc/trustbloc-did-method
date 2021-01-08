@@ -10,7 +10,7 @@ services:
 
   trustbloc.did.method.example.com:
     container_name: trustbloc.did.method.example.com
-    image: docker.pkg.github.com/trustbloc/trustbloc-did-method/did-method-rest:latest
+    image: ghcr.io/trustbloc/driver-did-trustbloc:latest
     environment:
       - DID_METHOD_HOST_URL=0.0.0.0:8070
       - DID_METHOD_TLS_CACERTS=/etc/tls/ec-cacert.pem

@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-DOCKER_OUTPUT_NS                 ?= docker.pkg.github.com
+DOCKER_OUTPUT_NS                 ?= ghcr.io
 # Namespace for the did method image
-DID_METHOD_REST_IMAGE_NAME       ?= trustbloc/trustbloc-did-method/did-method-rest
+DID_METHOD_REST_IMAGE_NAME       ?= trustbloc/driver-did-trustbloc
 
 # Tool commands (overridable)
 ALPINE_VER ?= 3.12
