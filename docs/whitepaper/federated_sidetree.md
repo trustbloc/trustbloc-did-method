@@ -2,7 +2,7 @@
 
 Status: concept whitepaper
 Version: Dec 15, 2020
-GitHub source: https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/whitepaper/federated_sidetree.md
+GitHub source: https://github.com/trustbloc/trustbloc-did-method/blob/main/docs/whitepaper/federated_sidetree.md
 
 ## Introduction
 
@@ -14,7 +14,7 @@ The DID method name is `did:orb`. The orbital name is derived from the concept o
 
 ## History and motivation
 
-The Orbital DID method is an evolution of the TrustBloc DID method. The [TrustBloc DID](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md) method had the goal of bringing together a group of independent parties, a consortium, to share custody of a DID registry. The [DIF Sidetree protocol](https://identity.foundation/sidetree/spec/) was leveraged to minimize the needed trust in the ledger – each DID forms its own verifiable hash chain such that only the DID controller can provide proofs of changes.
+The Orbital DID method is an evolution of the TrustBloc DID method. The [TrustBloc DID](https://github.com/trustbloc/trustbloc-did-method/blob/main/docs/spec/trustbloc-did-method.md) method had the goal of bringing together a group of independent parties, a consortium, to share custody of a DID registry. The [DIF Sidetree protocol](https://identity.foundation/sidetree/spec/) was leveraged to minimize the needed trust in the ledger – each DID forms its own verifiable hash chain such that only the DID controller can provide proofs of changes.
 
 To share custody, the TrustBloc DID method defined verifiable policies that defined the membership of these parties and registry policies such as cache time and the number of endorsements (witnesses) that a Requesting Party (RP) should receive in order to trust the registry results. The method enabled verification via a hash-chain of changes from a genesis point to the latest version. As there can be many such DID registry groups (consortiums), the DID method also defined mechanisms to discover each entity’s endpoints.
 
@@ -238,10 +238,10 @@ In the above example, it is assumed that the IPNS segment is hosted on the globa
 
 The ability for discovery of hub membership and policy information is envisioned to be based on the TrustBloc DID method mechanisms. These mechanisms include:
 
-* [Endpoint discovery](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md#endpoint-discovery)
-* [Policy configuration](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md#consortium-policy-configuration)
-* [Boostrapping trust](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md#bootstrapping-trust)
-* [Configuration updates](https://github.com/trustbloc/trustbloc-did-method/blob/master/docs/spec/trustbloc-did-method.md#configuration-updates)
+* [Endpoint discovery](https://github.com/trustbloc/trustbloc-did-method/blob/main/docs/spec/trustbloc-did-method.md#endpoint-discovery)
+* [Policy configuration](https://github.com/trustbloc/trustbloc-did-method/blob/main/docs/spec/trustbloc-did-method.md#consortium-policy-configuration)
+* [Boostrapping trust](https://github.com/trustbloc/trustbloc-did-method/blob/main/docs/spec/trustbloc-did-method.md#bootstrapping-trust)
+* [Configuration updates](https://github.com/trustbloc/trustbloc-did-method/blob/main/docs/spec/trustbloc-did-method.md#configuration-updates)
 
 ## Using multiple hubs for resolution
 
@@ -287,7 +287,7 @@ The next step for this document is to list concrete representations and APIs. As
 
 * CAS
   * IPFS/[IPLD](https://specs.ipld.io) CIDs and representations enable a common encoding for the CAS.
-  * As demonstrated in the [Hyperledger Fabric dcas extension (at TrustBloc)](https://github.com/trustbloc/fabric-peer-ext/tree/master/pkg/collections/offledger/dcas), usage of these encodings does not imply usage of the IPFS network. Operators can expose a method-defined API that enables retrieval of documents based on CIDs.
+  * As demonstrated in the [Hyperledger Fabric dcas extension (at TrustBloc)](https://github.com/trustbloc/fabric-peer-ext/tree/main/pkg/collections/offledger/dcas), usage of these encodings does not imply usage of the IPFS network. Operators can expose a method-defined API that enables retrieval of documents based on CIDs.
 * Verifiable and replicatable trees. Our goal is to use a data model that form its own layer - independent of a protocol or DLT (or vendor). The replicated trees should also work in an offline-compatible manner (see also [SSB](https://github.com/ssbc/ssb-server) as background).
   * [Google Trillian project](https://github.com/google/trillian) (supporting implementation of [Certificate Transparency](https://tools.ietf.org/html/rfc6962) and [Go module checksum database](https://go.googlesource.com/proposal/+/master/design/25530-sumdb.md)).
   * Potentially an [IPLD](https://specs.ipld.io)-based structure.
