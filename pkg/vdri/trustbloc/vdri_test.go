@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/resolve"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/square/go-jose/v3"
 	"github.com/stretchr/testify/require"
@@ -56,10 +56,10 @@ func TestVDRI_Build(t *testing.T) {
 	})
 }
 
-func httpVdriFunc(doc *did.Doc, err error) func(url string) (v vdri, err error) {
+func httpVdriFunc(doc *did.DocResolution, err error) func(url string) (v vdri, err error) {
 	return func(url string) (v vdri, e error) {
 		return &mockvdr.MockVDR{
-			ReadFunc: func(didID string, opts ...vdrapi.ResolveOpts) (*did.Doc, error) {
+			ReadFunc: func(didID string, opts ...resolve.Option) (*did.DocResolution, error) {
 				return doc, err
 			}}, nil
 	}
@@ -192,11 +192,11 @@ func TestVDRI_Read(t *testing.T) {
 	t.Run("test success for resolver url", func(t *testing.T) {
 		v := New(WithResolverURL("url"))
 
-		v.getHTTPVDRI = httpVdriFunc(&did.Doc{ID: "did"}, nil)
+		v.getHTTPVDRI = httpVdriFunc(&did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}, nil)
 
 		doc, err := v.Read("did")
 		require.NoError(t, err)
-		require.Equal(t, "did", doc.ID)
+		require.Equal(t, "did", doc.DIDDocument.ID)
 	})
 
 	t.Run("test error parsing did", func(t *testing.T) {
@@ -330,7 +330,7 @@ func TestVDRI_Read(t *testing.T) {
 				return []*models.Endpoint{{URL: "url"}, {URL: "url.2"}}, nil
 			}}
 
-		v.getHTTPVDRI = httpVdriFunc(&did.Doc{ID: "did:trustbloc:testnet:123"}, nil)
+		v.getHTTPVDRI = httpVdriFunc(&did.DocResolution{DIDDocument: &did.Doc{ID: "did:trustbloc:testnet:123"}}, nil)
 
 		v.configService = &mockconfig.MockConfigService{
 			GetConsortiumFunc: func(u string, d string) (*models.ConsortiumFileData, error) {
@@ -340,7 +340,7 @@ func TestVDRI_Read(t *testing.T) {
 
 		doc, err := v.Read("did:trustbloc:testnet:123")
 		require.NoError(t, err)
-		require.Equal(t, "did:trustbloc:testnet:123", doc.ID)
+		require.Equal(t, "did:trustbloc:testnet:123", doc.DIDDocument.ID)
 	})
 }
 
@@ -567,7 +567,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 		mockDoc, err := did.ParseDocument([]byte(testDoc))
 		require.NoError(t, err)
 
-		v.getHTTPVDRI = httpVdriFunc(mockDoc, nil)
+		v.getHTTPVDRI = httpVdriFunc(&did.DocResolution{DIDDocument: mockDoc}, nil)
 
 		_, err = v.ValidateConsortium(consortiumServer.URL)
 		require.NoError(t, err)
@@ -691,7 +691,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 		mockDoc, err := did.ParseDocument([]byte(testDoc))
 		require.NoError(t, err)
 
-		v.getHTTPVDRI = httpVdriFunc(mockDoc, nil)
+		v.getHTTPVDRI = httpVdriFunc(&did.DocResolution{DIDDocument: mockDoc}, nil)
 
 		v.didConfigService = &mockdidconf.MockDIDConfigService{
 			VerifyStakeholderFunc: func(domain string, doc *did.Doc) error {
@@ -762,7 +762,7 @@ func Test_verifyStakeholder(t *testing.T) {
 
 			v := New()
 
-			v.getHTTPVDRI = httpVdriFunc(mockDoc, nil)
+			v.getHTTPVDRI = httpVdriFunc(&did.DocResolution{DIDDocument: mockDoc}, nil)
 
 			v.didConfigService = &mockdidconf.MockDIDConfigService{
 				VerifyStakeholderFunc: func(domain string, doc *did.Doc) error {

@@ -19,7 +19,10 @@ import (
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/signature/jsonld"
-	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
+	vdrdoc "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/doc"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/resolve"
+	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	"github.com/hyperledger/aries-framework-go/pkg/vdr/httpbinding"
 	log "github.com/sirupsen/logrus"
 
@@ -49,8 +52,8 @@ type didConfigService interface {
 }
 
 type vdri interface {
-	Build(pubKey *vdrapi.PubKey, opts ...vdrapi.DocOpts) (*docdid.Doc, error)
-	Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error)
+	Build(keyManager kms.KeyManager, opts ...create.Option) (*docdid.DocResolution, error)
+	Read(id string, opts ...resolve.Option) (*docdid.DocResolution, error)
 }
 
 // VDRI bloc
@@ -128,12 +131,12 @@ func (v *VDRI) Close() error {
 }
 
 // Store did doc
-func (v *VDRI) Store(doc *docdid.Doc, by *[]vdrapi.ModifiedBy) error {
+func (v *VDRI) Store(doc *docdid.Doc, by *[]vdrdoc.ModifiedBy) error {
 	return nil
 }
 
 // Build did doc
-func (v *VDRI) Build(pubKey *vdrapi.PubKey, opts ...vdrapi.DocOpts) (*docdid.Doc, error) {
+func (v *VDRI) Build(keyManager kms.KeyManager, opts ...create.Option) (*docdid.DocResolution, error) {
 	return nil, fmt.Errorf("build method not supported for did bloc")
 }
 
@@ -150,18 +153,18 @@ func (v *VDRI) loadGenesisFiles() error {
 	return nil
 }
 
-func (v *VDRI) sidetreeResolve(url, did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error) {
+func (v *VDRI) sidetreeResolve(url, did string, opts ...resolve.Option) (*docdid.DocResolution, error) {
 	resolver, err := v.getHTTPVDRI(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new sidetree vdri: %w", err)
 	}
 
-	doc, err := resolver.Read(did, opts...)
+	docResolution, err := resolver.Read(did, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve did: %w", err)
 	}
 
-	return doc, nil
+	return docResolution, nil
 }
 
 const (
@@ -169,7 +172,7 @@ const (
 	domainDIDPart             = 2
 )
 
-func (v *VDRI) Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error) { //nolint: gocyclo,funlen
+func (v *VDRI) Read(did string, opts ...resolve.Option) (*docdid.DocResolution, error) { //nolint: gocyclo,funlen
 	err := v.loadGenesisFiles()
 	if err != nil {
 		return nil, fmt.Errorf("invalid genesis file: %w", err)
@@ -210,7 +213,7 @@ func (v *VDRI) Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error)
 		return nil, errors.New("list of endpoints is empty")
 	}
 
-	var doc *docdid.Doc
+	var docResolution *docdid.DocResolution
 
 	var docBytes []byte
 
@@ -220,21 +223,21 @@ func (v *VDRI) Read(did string, opts ...vdrapi.ResolveOpts) (*docdid.Doc, error)
 			return nil, err
 		}
 
-		respBytes, err := canonicalizeDoc(resp)
+		respBytes, err := canonicalizeDoc(resp.DIDDocument)
 		if err != nil {
 			return nil, fmt.Errorf("cannot canonicalize resolved doc: %w", err)
 		}
 
-		if doc != nil && !bytes.Equal(docBytes, respBytes) {
+		if docResolution != nil && !bytes.Equal(docBytes, respBytes) {
 			log.Debugf("mismatch in document contents for did %s. Doc 1: %s, Doc 2: %s",
 				did, string(docBytes), string(respBytes))
 		}
 
-		doc = resp
+		docResolution = resp
 		docBytes = respBytes
 	}
 
-	return doc, nil
+	return docResolution, nil
 }
 
 // ValidateConsortium validate the config and endorsement of a consortium and its stakeholders
@@ -294,23 +297,23 @@ func (v *VDRI) verifyStakeholder(cfd *models.ConsortiumFileData, sfd *models.Sta
 
 	ep := s.Endpoints[n.Uint64()]
 
-	doc, e := v.sidetreeResolve(ep+"/identifiers", s.DID)
+	docResolution, e := v.sidetreeResolve(ep+"/identifiers", s.DID)
 	if e != nil {
 		return fmt.Errorf("can't resolve stakeholder DID: %w", e)
 	}
 
 	// verify did configuration
-	e = v.didConfigService.VerifyStakeholder(s.Domain, doc)
+	e = v.didConfigService.VerifyStakeholder(s.Domain, docResolution.DIDDocument)
 	if e != nil {
 		return fmt.Errorf("stakeholder did configuration failed to verify: %w", e)
 	}
 
-	_, e = didconfiguration.VerifyDIDSignature(cfd.JWS, doc)
+	_, e = didconfiguration.VerifyDIDSignature(cfd.JWS, docResolution.DIDDocument)
 	if e != nil {
 		return fmt.Errorf("stakeholder does not sign consortium: %w", e)
 	}
 
-	_, e = didconfiguration.VerifyDIDSignature(sfd.JWS, doc)
+	_, e = didconfiguration.VerifyDIDSignature(sfd.JWS, docResolution.DIDDocument)
 	if e != nil {
 		return fmt.Errorf("stakeholder does not sign itself: %w", e)
 	}

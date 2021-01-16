@@ -10,7 +10,7 @@ replace github.com/kilic/bls12-381 => github.com/trustbloc/bls12-381 v0.0.0-2020
 
 require (
 	github.com/btcsuite/btcutil v1.0.1
-	github.com/hyperledger/aries-framework-go v0.1.5
+	github.com/hyperledger/aries-framework-go v0.1.6-0.20210115224010-cf2b2ff61f47
 	github.com/spf13/cobra v1.0.0
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.6.1

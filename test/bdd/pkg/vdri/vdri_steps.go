@@ -187,11 +187,11 @@ func (e *Steps) resolveCreatedDID(keyType, signatureSuite string) error {
 		return fmt.Errorf("bloc VDRI must be initialized before this step")
 	}
 
-	var didDoc *ariesdid.Doc
+	var docResolution *ariesdid.DocResolution
 
 	for i := 1; i <= maxRetry; i++ {
 		var err error
-		didDoc, err = e.blocVDRI.Read(e.createdDID)
+		docResolution, err = e.blocVDRI.Read(e.createdDID)
 
 		if err != nil && (!strings.Contains(err.Error(), "DID does not exist") || i == maxRetry) {
 			return err
@@ -200,16 +200,17 @@ func (e *Steps) resolveCreatedDID(keyType, signatureSuite string) error {
 		time.Sleep(1 * time.Second)
 	}
 
-	if didDoc.ID != e.createdDID {
-		return fmt.Errorf("resolved did %s not equal to created did %s", didDoc.ID, e.createdDID)
+	if docResolution.DIDDocument.ID != e.createdDID {
+		return fmt.Errorf("resolved did %s not equal to created did %s",
+			docResolution.DIDDocument.ID, e.createdDID)
 	}
 
-	if didDoc.Service[0].ID != didDoc.ID+"#"+serviceID {
+	if docResolution.DIDDocument.Service[0].ID != docResolution.DIDDocument.ID+"#"+serviceID {
 		return fmt.Errorf("resolved did service ID %s not equal to %s",
-			didDoc.Service[0].ID, didDoc.ID+"#"+serviceID)
+			docResolution.DIDDocument.Service[0].ID, docResolution.DIDDocument.ID+"#"+serviceID)
 	}
 
-	if err := validatePublicKey(didDoc, keyType, signatureSuite); err != nil {
+	if err := validatePublicKey(docResolution.DIDDocument, keyType, signatureSuite); err != nil {
 		return err
 	}
 

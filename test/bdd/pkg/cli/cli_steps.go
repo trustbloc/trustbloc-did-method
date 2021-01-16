@@ -50,7 +50,7 @@ func (e *Steps) resolveDID(did string) (*ariesdid.Doc, error) {
 	blocVDRI := trustbloc.New(trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
 		trustbloc.WithAuthToken("rw_token"), trustbloc.WithDomain("testnet.trustbloc.local"))
 
-	var doc *ariesdid.Doc
+	var doc *ariesdid.DocResolution
 
 	var err error
 
@@ -64,7 +64,7 @@ func (e *Steps) resolveDID(did string) (*ariesdid.Doc, error) {
 		time.Sleep(1 * time.Second)
 	}
 
-	return doc, nil
+	return doc.DIDDocument, nil
 }
 
 func (e *Steps) checkCreatedDID() error {

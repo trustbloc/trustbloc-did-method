@@ -21,6 +21,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/resolve"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/stretchr/testify/require"
 
@@ -229,7 +230,7 @@ func TestResolveDIDHandler(t *testing.T) {
 
 	t.Run("test error from bloc vdri read", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			ReadFunc: func(didID string, opts ...vdr.ResolveOpts) (doc *did.Doc, err error) {
+			ReadFunc: func(didID string, opts ...resolve.Option) (doc *did.DocResolution, err error) {
 				return nil, fmt.Errorf("read error")
 			}}, nil, resolveDIDEndpoint)
 
@@ -241,8 +242,8 @@ func TestResolveDIDHandler(t *testing.T) {
 
 	t.Run("test success", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			ReadFunc: func(didID string, opts ...vdr.ResolveOpts) (doc *did.Doc, err error) {
-				return &did.Doc{ID: "didID", Context: []string{"context"}}, nil
+			ReadFunc: func(didID string, opts ...resolve.Option) (doc *did.DocResolution, err error) {
+				return &did.DocResolution{DIDDocument: &did.Doc{ID: "didID", Context: []string{"context"}}}, nil
 			}}, nil, resolveDIDEndpoint)
 
 		body, status, err := handleRequest(handler, resolveDIDEndpoint+"?did=123", nil)
