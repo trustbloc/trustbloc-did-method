@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	vdrdoc "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/doc"
 	"github.com/spf13/cobra"
 	gojose "github.com/square/go-jose/v3"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
@@ -150,7 +151,40 @@ func GetKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 	return PublicKeyFromPEM([]byte(keyString))
 }
 
+// GetVDRPublicKeysFromFile get public keys from file
+func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]vdrdoc.PublicKey, error) {
+	pkData, err := ioutil.ReadFile(filepath.Clean(publicKeyFilePath))
+	if err != nil {
+		return nil, fmt.Errorf("failed to public key file '%s' : %w", publicKeyFilePath, err)
+	}
+
+	var publicKeys []PublicKey
+	if err := json.Unmarshal(pkData, &publicKeys); err != nil {
+		return nil, err
+	}
+
+	var keys []vdrdoc.PublicKey
+
+	for _, v := range publicKeys {
+		jwkData, err := ioutil.ReadFile(filepath.Clean(v.JWKPath))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read jwk file '%s' : %w", v.JWKPath, err)
+		}
+
+		var jsonWebKey gojose.JSONWebKey
+		if err := jsonWebKey.UnmarshalJSON(jwkData); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal to jwk: %w", err)
+		}
+
+		keys = append(keys, vdrdoc.PublicKey{ID: v.ID, Type: v.Type,
+			JWK: jsonWebKey, Purposes: v.Purposes})
+	}
+
+	return keys, nil
+}
+
 // GetPublicKeysFromFile get public keys from file
+// TODO after removing did client form trustbloc-did-method
 func GetPublicKeysFromFile(publicKeyFilePath string) ([]doc.PublicKey, error) {
 	pkData, err := ioutil.ReadFile(filepath.Clean(publicKeyFilePath))
 	if err != nil {

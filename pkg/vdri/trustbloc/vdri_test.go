@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/resolve"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/square/go-jose/v3"
@@ -48,11 +49,64 @@ func TestVDRI_Store(t *testing.T) {
 }
 
 func TestVDRI_Build(t *testing.T) {
-	t.Run("test error", func(t *testing.T) {
+	t.Run("test success", func(t *testing.T) {
 		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		docResolution, err := v.Build(nil, create.WithRecoveryPublicKey("key"))
+		require.NoError(t, err)
+		require.Equal(t, "did", docResolution.DIDDocument.ID)
+	})
+
+	t.Run("test error from get endpoints", func(t *testing.T) {
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return nil, fmt.Errorf("failed to get endpoints")
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
 		_, err := v.Build(nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "build method not supported for did bloc")
+		require.Contains(t, err.Error(), "failed to get endpoints")
+	})
+
+	t.Run("test error from get sidetree config", func(t *testing.T) {
+		v := New()
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return nil, fmt.Errorf("failed to get sidetree config")
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		_, err := v.Build(nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get sidetree config")
 	})
 }
 
@@ -1012,4 +1066,12 @@ func TestOpts(t *testing.T) {
 
 		require.Equal(t, true, v.enableSignatureVerification)
 	})
+}
+
+type mockSidetreeClient struct {
+	createDIDValue *did.DocResolution
+}
+
+func (m *mockSidetreeClient) CreateDID(opts ...create.Option) (*did.DocResolution, error) {
+	return m.createDIDValue, nil
 }

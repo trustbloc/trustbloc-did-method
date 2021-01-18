@@ -12,11 +12,13 @@ import (
 	"testing"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
+	"github.com/hyperledger/aries-framework-go/pkg/kms"
+	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/internal/configcommon"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
 )
 
 const (
@@ -307,7 +309,10 @@ func TestCreateConfigCmd(t *testing.T) {
 		require.NoError(t, err)
 
 		filesData, didConfData, err := createConfig(&parameters{config: c,
-			didClient: &mockDIDClient{&docdid.Doc{ID: "did:test:123"}}})
+			vdr: &mockvdr.MockVDR{
+				BuildFunc: func(keyManager kms.KeyManager, opts ...create.Option) (*docdid.DocResolution, error) {
+					return &docdid.DocResolution{DIDDocument: &docdid.Doc{ID: "did1"}}, nil
+				}}})
 		require.NoError(t, err)
 
 		require.Equal(t, 2, len(filesData))
@@ -362,12 +367,4 @@ func recoveryKeyFlagNameArg(value string) []string {
 
 func updateKeyFileFlagNameArg(value string) []string {
 	return []string{flag + updateKeyFileFlagName, value}
-}
-
-type mockDIDClient struct {
-	createDIDValue *docdid.Doc
-}
-
-func (m *mockDIDClient) CreateDID(domain string, opts ...create.Option) (*docdid.Doc, error) {
-	return m.createDIDValue, nil
 }

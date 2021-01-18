@@ -7,6 +7,7 @@ package createconfigcmd
 
 import (
 	"crypto"
+	"crypto/ed25519"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -20,15 +21,17 @@ import (
 	"strings"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
+	vdrdoc "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/doc"
+	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	"github.com/spf13/cobra"
 	gojose "github.com/square/go-jose/v3"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/internal/configcommon"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/didconfiguration"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
@@ -82,13 +85,13 @@ const (
 		" Alternatively, this can be set with the following environment variable: " + updateKeyFileEnvKey
 )
 
-type didClient interface {
-	CreateDID(domain string, opts ...create.Option) (*docdid.Doc, error)
+type vdr interface {
+	Build(keyManager kms.KeyManager, opts ...create.Option) (*docdid.DocResolution, error)
 }
 
 type parameters struct {
 	sidetreeURL     string
-	didClient       didClient
+	vdr             vdr
 	config          *configcommon.Config
 	recoveryKey     crypto.PublicKey
 	updateKey       crypto.PublicKey
@@ -162,8 +165,8 @@ func getParameters(cmd *cobra.Command) (*parameters, error) {
 
 	parameters := &parameters{
 		sidetreeURL: strings.TrimSpace(sidetreeURL),
-		didClient: did.New(did.WithAuthToken(sidetreeWriteToken),
-			did.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12})),
+		vdr: trustbloc.New(trustbloc.WithAuthToken(sidetreeWriteToken),
+			trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12})),
 		config:          config,
 		recoveryKey:     recoveryKey,
 		updateKey:       updateKey,
@@ -309,7 +312,7 @@ func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte,
 		Policy: parameters.config.ConsortiumData.Policy}
 
 	for _, member := range parameters.config.MembersData {
-		didDoc, err := createDID(parameters.didClient, parameters.sidetreeURL, &member.JSONWebKey, parameters.recoveryKey,
+		didDoc, err := createDID(parameters.vdr, parameters.sidetreeURL, &member.JSONWebKey, parameters.recoveryKey,
 			parameters.updateKey)
 		if err != nil {
 			return nil, nil, err
@@ -365,24 +368,30 @@ func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte,
 	return filesData, didConfData, nil
 }
 
-func createDID(didClient didClient, sidetreeURL string, jwk *gojose.JSONWebKey, recoveryKey,
+func createDID(vdr vdr, sidetreeURL string, jwk *gojose.JSONWebKey, recoveryKey,
 	updateKey crypto.PublicKey) (*docdid.Doc, error) {
-	pkBytes, err := jwk.MarshalJSON()
+	edKey, ok := jwk.Public().Key.(ed25519.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("key not ed25519")
+	}
+
+	general := vdrdoc.PublicKey{
+		ID:       jwk.KeyID,
+		Type:     doc.JWSVerificationKey2020,
+		JWK:      gojose.JSONWebKey{Key: edKey},
+		Purposes: []string{doc.KeyPurposeAuthentication},
+	}
+
+	docResolution, err := vdr.Build(nil,
+		create.WithEndpoints(func() ([]string, error) {
+			return []string{sidetreeURL}, nil
+		}),
+		create.WithRecoveryPublicKey(recoveryKey),
+		create.WithUpdatePublicKey(updateKey),
+		create.WithPublicKey(&general))
 	if err != nil {
 		return nil, err
 	}
 
-	general := doc.PublicKey{
-		ID:       jwk.KeyID,
-		Type:     doc.JWSVerificationKey2020,
-		Encoding: doc.PublicKeyEncodingJwk,
-		KeyType:  doc.Ed25519KeyType,
-		Value:    pkBytes,
-		Purposes: []string{doc.KeyPurposeAuthentication},
-	}
-
-	return didClient.CreateDID("", create.WithSidetreeEndpoint(sidetreeURL),
-		create.WithRecoveryPublicKey(recoveryKey),
-		create.WithUpdatePublicKey(updateKey),
-		create.WithPublicKey(&general))
+	return docResolution.DIDDocument, nil
 }

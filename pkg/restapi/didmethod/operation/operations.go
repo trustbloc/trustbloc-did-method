@@ -19,11 +19,12 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
+	vdrdoc "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/doc"
 	log "github.com/sirupsen/logrus"
+	gojose "github.com/square/go-jose/v3"
 
-	didclient "github.com/trustbloc/trustbloc-did-method/pkg/did"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 )
@@ -50,9 +51,8 @@ type Handler interface {
 
 // Operation defines handlers
 type Operation struct {
-	blocVDRI      vdr.VDR
-	didBlocClient didBlocClient
-	blocDomain    string
+	blocVDRI   vdr.VDR
+	blocDomain string
 }
 
 // GenesisFileConfig defines a genesis file for the trustbloc did method vdri
@@ -72,10 +72,6 @@ type Config struct {
 	GenesisFiles       []GenesisFileConfig
 }
 
-type didBlocClient interface {
-	CreateDID(domain string, opts ...create.Option) (*did.Doc, error)
-}
-
 // New returns did method operation instance
 func New(config *Config) *Operation {
 	var vdriOpts = []trustbloc.Option{
@@ -89,13 +85,10 @@ func New(config *Config) *Operation {
 		vdriOpts = append(vdriOpts, trustbloc.UseGenesisFile(genesisFile.URL, genesisFile.URL, genesisFile.Data))
 	}
 
-	return &Operation{blocVDRI: trustbloc.New(vdriOpts...),
-		didBlocClient: didclient.New(didclient.WithTLSConfig(config.TLSConfig),
-			didclient.WithAuthToken(config.SidetreeWriteToken)),
-		blocDomain: config.BlocDomain}
+	return &Operation{blocVDRI: trustbloc.New(vdriOpts...), blocDomain: config.BlocDomain}
 }
 
-func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen,gocyclo
+func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen
 	data := RegisterDIDRequest{}
 
 	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
@@ -110,8 +103,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 	keysID := make(map[string][]byte)
 
 	if len(data.DIDDocument.PublicKey) == 0 {
-		registerResponse.DIDState = DIDState{Reason: "AddPublicKeys is empty",
-			State: RegistrationStateFailure}
+		registerResponse.DIDState = DIDState{Reason: "AddPublicKeys is empty", State: RegistrationStateFailure}
 
 		o.writeResponse(rw, registerResponse)
 
@@ -132,38 +124,29 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			return
 		}
 
+		k, err := getKey(v.KeyType, keyValue)
+		if err != nil {
+			registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
+
+			o.writeResponse(rw, registerResponse)
+
+			return
+		}
+
 		if v.Recovery {
-			k, err := getKey(v.KeyType, keyValue)
-			if err != nil {
-				registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
-
-				o.writeResponse(rw, registerResponse)
-
-				return
-			}
-
 			opts = append(opts, create.WithRecoveryPublicKey(k))
 
 			continue
 		}
 
 		if v.Update {
-			k, err := getKey(v.KeyType, keyValue)
-			if err != nil {
-				registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
-
-				o.writeResponse(rw, registerResponse)
-
-				return
-			}
-
 			opts = append(opts, create.WithUpdatePublicKey(k))
 
 			continue
 		}
 
-		opts = append(opts, create.WithPublicKey(&doc.PublicKey{ID: v.ID, Type: v.Type, Value: keyValue,
-			Encoding: v.Encoding, Purposes: v.Purposes, KeyType: v.KeyType}))
+		opts = append(opts, create.WithPublicKey(&vdrdoc.PublicKey{ID: v.ID, Type: v.Type,
+			JWK: gojose.JSONWebKey{Key: k}, Purposes: v.Purposes}))
 
 		keysID[v.ID] = keyValue
 	}
@@ -175,7 +158,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			ServiceEndpoint: service.Endpoint}))
 	}
 
-	didDoc, err := o.didBlocClient.CreateDID(o.blocDomain, opts...)
+	didDoc, err := o.blocVDRI.Build(nil, opts...)
 	if err != nil {
 		log.Errorf("failed to create did doc : %s", err.Error())
 
@@ -187,8 +170,8 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	registerResponse.DIDState = DIDState{Identifier: didDoc.ID, State: RegistrationStateFinished,
-		Secret: Secret{Keys: createKeys(keysID, didDoc.ID)}}
+	registerResponse.DIDState = DIDState{Identifier: didDoc.DIDDocument.ID, State: RegistrationStateFinished,
+		Secret: Secret{Keys: createKeys(keysID, didDoc.DIDDocument.ID)}}
 
 	o.writeResponse(rw, registerResponse)
 }

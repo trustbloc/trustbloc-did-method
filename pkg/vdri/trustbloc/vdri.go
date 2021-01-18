@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/signature/jsonld"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
@@ -41,6 +42,11 @@ import (
 type configService interface {
 	GetConsortium(string, string) (*models.ConsortiumFileData, error)
 	GetStakeholder(string, string) (*models.StakeholderFileData, error)
+	GetSidetreeConfig(url string) (*models.SidetreeConfig, error)
+}
+
+type sidetreeClient interface {
+	CreateDID(opts ...create.Option) (*docdid.DocResolution, error)
 }
 
 type endpointService interface {
@@ -74,6 +80,7 @@ type VDRI struct {
 	useUpdateValidation     bool
 	updateValidationService *updatevalidationconfig.ConfigService
 	genesisFiles            []genesisFileData
+	sidetreeClient          sidetreeClient
 }
 
 type genesisFileData struct {
@@ -89,6 +96,8 @@ func New(opts ...Option) *VDRI {
 	for _, opt := range opts {
 		opt(v)
 	}
+
+	v.sidetreeClient = sidetree.New(sidetree.WithAuthToken(v.authToken), sidetree.WithTLSConfig(v.tlsConfig))
 
 	v.getHTTPVDRI = func(url string) (vdri, error) {
 		return httpbinding.New(url,
@@ -137,7 +146,47 @@ func (v *VDRI) Store(doc *docdid.Doc, by *[]vdrdoc.ModifiedBy) error {
 
 // Build did doc
 func (v *VDRI) Build(keyManager kms.KeyManager, opts ...create.Option) (*docdid.DocResolution, error) {
-	return nil, fmt.Errorf("build method not supported for did bloc")
+	createDIDOpts := &create.Opts{}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(createDIDOpts)
+	}
+
+	if createDIDOpts.GetEndpoints == nil {
+		createDIDOpts.GetEndpoints = func() ([]string, error) {
+			var result []string
+
+			endpoints, err := v.endpointService.GetEndpoints(v.domain)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get endpoints: %w", err)
+			}
+
+			for _, v := range endpoints {
+				result = append(result, v.URL)
+			}
+
+			return result, err
+		}
+
+		opts = append(opts, create.WithEndpoints(createDIDOpts.GetEndpoints))
+	}
+
+	if createDIDOpts.MultiHashAlgorithm == 0 {
+		endpoints, err := createDIDOpts.GetEndpoints()
+		if err != nil {
+			return nil, err
+		}
+
+		sidetreeConfig, err := v.configService.GetSidetreeConfig(endpoints[0])
+		if err != nil {
+			return nil, err
+		}
+
+		opts = append(opts, create.WithMultiHashAlgorithm(sidetreeConfig.MultiHashAlgorithm))
+	}
+
+	return v.sidetreeClient.CreateDID(opts...)
 }
 
 func (v *VDRI) loadGenesisFiles() error {
