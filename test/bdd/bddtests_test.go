@@ -22,6 +22,7 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/dockerutil"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/cli"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/common"
+	consortium_config "github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/consortium-config"
 	bddctx "github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/vdri"
 )
@@ -165,4 +166,5 @@ func FeatureContext(s *godog.Suite) {
 	vdri.NewSteps(bddContext).RegisterSteps(s)
 	common.NewSteps(bddContext).RegisterSteps(s)
 	cli.NewSteps(bddContext).RegisterSteps(s)
+	consortium_config.NewSteps(bddContext, "").RegisterSteps(s)
 }

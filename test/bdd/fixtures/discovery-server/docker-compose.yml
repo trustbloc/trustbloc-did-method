@@ -21,13 +21,7 @@ services:
     ports:
       - "443:443"
     volumes:
-      - type: bind
-        source: ../wellknown/jws/did-trustbloc
-        target: /web/.well-known/did-trustbloc
-        volume:
-          nocopy: true
-        bind:
-          propagation: shared
+      - ../wellknown/jws/did-trustbloc:/web/.well-known/did-trustbloc
       - ../keys/tls:/etc/tls
     networks:
       - did-method-rest_bdd_net

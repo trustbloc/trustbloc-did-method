@@ -20,5 +20,5 @@ mkdir -p ./fixtures/wellknown/jws/stakeholder.two:8089/
  > ./fixtures/wellknown/jws/stakeholder.two:8089/did-configuration.json
 
 # source directories for docker container bind mounts
-ln -s $PWD/fixtures/wellknown/jws/stakeholder.one:8088 ./fixtures/wellknown/jws/stakeholder.one
-ln -s $PWD/fixtures/wellknown/jws/stakeholder.two:8089 ./fixtures/wellknown/jws/stakeholder.two
+cp -r ./fixtures/wellknown/jws/stakeholder.one:8088 ./fixtures/wellknown/jws/stakeholder.one
+cp -r ./fixtures/wellknown/jws/stakeholder.two:8089 ./fixtures/wellknown/jws/stakeholder.two
