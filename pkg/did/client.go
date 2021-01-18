@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"strings"
 
-	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	log "github.com/sirupsen/logrus"
 	"github.com/square/go-jose/v3"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
@@ -31,7 +30,6 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/deactivate"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/recovery"
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
@@ -84,70 +82,6 @@ func New(opts ...Option) *Client {
 		staticselection.NewService(configService))
 
 	return c
-}
-
-// CreateDID create did doc
-func (c *Client) CreateDID(domain string, opts ...create.Option) (*docdid.Doc, error) { //
-	createDIDOpts := &create.Opts{}
-	// Apply options
-	for _, opt := range opts {
-		opt(createDIDOpts)
-	}
-
-	err := validateCreateReq(createDIDOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	sidetreeEndpoint, err := c.getEndpoint(domain, createDIDOpts.SidetreeEndpoints)
-	if err != nil {
-		return nil, err
-	}
-
-	sidetreeConfig, err := c.configService.GetSidetreeConfig(sidetreeEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := buildCreateRequest(sidetreeConfig, createDIDOpts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build sidetree request: %w", err)
-	}
-
-	responseBytes, err := c.sendRequest(req, sidetreeEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send create sidetree request: %w", err)
-	}
-
-	var r didResolution
-	if errUnmarshal := json.Unmarshal(responseBytes, &r); errUnmarshal != nil {
-		return nil, fmt.Errorf("unmarshal data return from sidtree %w", errUnmarshal)
-	}
-
-	didDocBytes := responseBytes
-	// check if data is did resolution
-	if len(r.DIDDocument) != 0 {
-		didDocBytes = r.DIDDocument
-	}
-
-	didDoc, err := docdid.ParseDocument(didDocBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse public DID document: %s", err)
-	}
-
-	return didDoc, nil
-}
-
-func validateCreateReq(createDIDOpts *create.Opts) error {
-	if createDIDOpts.RecoveryPublicKey == nil {
-		return fmt.Errorf("recovery public key is required")
-	}
-
-	if createDIDOpts.UpdatePublicKey == nil {
-		return fmt.Errorf("update public key is required")
-	}
-
-	return nil
 }
 
 // UpdateDID update did doc
@@ -508,65 +442,6 @@ func createAddPublicKeysPatch(updateDIDOpts *update.Opts) (patch.Patch, error) {
 	return patch.NewAddPublicKeysPatch(string(addPublicKeys))
 }
 
-// buildCreateRequest request builder for sidetree public DID creation
-func buildCreateRequest(sidetreeConfig *models.SidetreeConfig, createDIDOpts *create.Opts) ([]byte, error) {
-	publicKeys := createDIDOpts.PublicKeys
-
-	var parsedKeys []doc.PublicKey
-
-	for _, key := range publicKeys {
-		parsedKey, err := unwrapPubKeyJWK(key)
-		if err != nil {
-			return nil, err
-		}
-
-		parsedKeys = append(parsedKeys, *parsedKey)
-	}
-
-	didDoc := &doc.Doc{
-		PublicKey: parsedKeys,
-		Service:   createDIDOpts.Services,
-	}
-
-	docBytes, err := didDoc.JSONBytes()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get document bytes : %s", err)
-	}
-
-	recoveryKey, err := pubkey.GetPublicKeyJWK(createDIDOpts.RecoveryPublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get recovery key : %s", err)
-	}
-
-	updateKey, err := pubkey.GetPublicKeyJWK(createDIDOpts.UpdatePublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get update key : %s", err)
-	}
-
-	recoveryCommitment, err := commitment.GetCommitment(recoveryKey, sidetreeConfig.MultiHashAlgorithm)
-	if err != nil {
-		return nil, err
-	}
-
-	updateCommitment, err := commitment.GetCommitment(updateKey, sidetreeConfig.MultiHashAlgorithm)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := client.NewCreateRequest(&client.CreateRequestInfo{
-		OpaqueDocument:     string(docBytes),
-		RecoveryCommitment: recoveryCommitment,
-		UpdateCommitment:   updateCommitment,
-		MultihashCode:      sidetreeConfig.MultiHashAlgorithm,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create sidetree request: %w", err)
-	}
-
-	return req, nil
-}
-
 // buildRecoverRequest request builder for sidetree public DID recovery
 func buildRecoverRequest(did string, sidetreeConfig *models.SidetreeConfig,
 	recoverDIDOpts *recovery.Opts) ([]byte, error) {
@@ -649,7 +524,7 @@ func getCommitment(sidetreeConfig *models.SidetreeConfig, recoverDIDOpts *recove
 	return nextRecoveryCommitment, nextUpdateCommitment, nil
 }
 
-func (c *Client) sendRequest(req []byte, endpointURL string) ([]byte, error) {
+func (c *Client) sendRequest(req []byte, endpointURL string) ([]byte, error) { //nolint:unparam
 	httpReq, err := http.NewRequest(http.MethodPost, endpointURL+"/operations", bytes.NewReader(req))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http request: %w", err)

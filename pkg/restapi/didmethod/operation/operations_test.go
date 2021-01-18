@@ -21,12 +21,13 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/resolve"
+	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/stretchr/testify/require"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
-	"github.com/trustbloc/trustbloc-did-method/pkg/internal/mock/didbloc"
 )
 
 func TestNew(t *testing.T) {
@@ -72,7 +73,7 @@ func TestNew(t *testing.T) {
 
 func TestRegisterDIDHandler(t *testing.T) {
 	t.Run("test error bad request", func(t *testing.T) {
-		handler := getHandler(t, nil, nil, registerPath)
+		handler := getHandler(t, nil, registerPath)
 
 		body, status, err := handleRequest(handler, registerPath, nil)
 		require.NoError(t, err)
@@ -81,7 +82,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test empty addPublicKeys", func(t *testing.T) {
-		handler := getHandler(t, nil, nil, registerPath)
+		handler := getHandler(t, nil, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1"})
 		require.NoError(t, err)
@@ -99,7 +100,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test wrong value for public key", func(t *testing.T) {
-		handler := getHandler(t, nil, nil, registerPath)
+		handler := getHandler(t, nil, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
 			PublicKey: []*PublicKey{{ID: "key2",
@@ -119,12 +120,17 @@ func TestRegisterDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test error from create did", func(t *testing.T) {
-		handler := getHandler(t, nil,
-			&didbloc.Client{CreateDIDErr: fmt.Errorf("error create did")}, registerPath)
+		handler := getHandler(t, &mockvdr.MockVDR{
+			BuildFunc: func(keyManager kms.KeyManager, opts ...create.Option) (*did.DocResolution, error) {
+				return nil, fmt.Errorf("error create did")
+			}}, registerPath)
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
-			PublicKey: []*PublicKey{{ID: "key2",
-				Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}}}})
+			PublicKey: []*PublicKey{{ID: "key2", KeyType: doc.Ed25519KeyType,
+				Type: "type", Value: base64.StdEncoding.EncodeToString(pubKey)}}}})
 		require.NoError(t, err)
 
 		body, status, err := handleRequest(handler, registerPath, req)
@@ -140,8 +146,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test unsupported recovery key", func(t *testing.T) {
-		handler := getHandler(t, nil,
-			&didbloc.Client{}, registerPath)
+		handler := getHandler(t, &mockvdr.MockVDR{}, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
 			PublicKey: []*PublicKey{{KeyType: "wrong", Recovery: true},
@@ -161,8 +166,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test unsupported recovery key", func(t *testing.T) {
-		handler := getHandler(t, nil,
-			&didbloc.Client{}, registerPath)
+		handler := getHandler(t, &mockvdr.MockVDR{}, registerPath)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
 			PublicKey: []*PublicKey{{KeyType: "wrong", Update: true},
@@ -182,8 +186,10 @@ func TestRegisterDIDHandler(t *testing.T) {
 	})
 
 	t.Run("test success with provided public key", func(t *testing.T) {
-		handler := getHandler(t, nil,
-			&didbloc.Client{CreateDIDValue: &did.Doc{ID: "did1"}}, registerPath)
+		handler := getHandler(t, &mockvdr.MockVDR{
+			BuildFunc: func(keyManager kms.KeyManager, opts ...create.Option) (*did.DocResolution, error) {
+				return &did.DocResolution{DIDDocument: &did.Doc{ID: "did1"}}, nil
+			}}, registerPath)
 
 		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
@@ -198,7 +204,8 @@ func TestRegisterDIDHandler(t *testing.T) {
 				Value: base64.StdEncoding.EncodeToString(pubKey), Recovery: true},
 				{KeyType: doc.P256KeyType,
 					Value: base64.StdEncoding.EncodeToString(ecPubKeyBytes), Update: true},
-				{ID: "key2", Type: "type", Value: base64.StdEncoding.EncodeToString([]byte("value"))}},
+				{ID: "key2", KeyType: doc.Ed25519KeyType, Type: "type",
+					Value: base64.StdEncoding.EncodeToString(pubKey)}},
 			Service: []*Service{{ID: "serviceID"}}}})
 		require.NoError(t, err)
 
@@ -208,7 +215,6 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 		var registerResponse RegisterResponse
 		require.NoError(t, json.Unmarshal(body.Bytes(), &registerResponse))
-
 		require.Equal(t, "1", registerResponse.JobID)
 		require.Equal(t, RegistrationStateFinished, registerResponse.DIDState.State)
 		require.Empty(t, registerResponse.DIDState.Reason)
@@ -220,7 +226,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 func TestResolveDIDHandler(t *testing.T) {
 	t.Run("test did param missing", func(t *testing.T) {
-		handler := getHandler(t, nil, nil, resolveDIDEndpoint)
+		handler := getHandler(t, nil, resolveDIDEndpoint)
 
 		body, status, err := handleRequest(handler, resolveDIDEndpoint, nil)
 		require.NoError(t, err)
@@ -232,7 +238,7 @@ func TestResolveDIDHandler(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
 			ReadFunc: func(didID string, opts ...resolve.Option) (doc *did.DocResolution, err error) {
 				return nil, fmt.Errorf("read error")
-			}}, nil, resolveDIDEndpoint)
+			}}, resolveDIDEndpoint)
 
 		body, status, err := handleRequest(handler, resolveDIDEndpoint+"?did=123", nil)
 		require.NoError(t, err)
@@ -244,7 +250,7 @@ func TestResolveDIDHandler(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
 			ReadFunc: func(didID string, opts ...resolve.Option) (doc *did.DocResolution, err error) {
 				return &did.DocResolution{DIDDocument: &did.Doc{ID: "didID", Context: []string{"context"}}}, nil
-			}}, nil, resolveDIDEndpoint)
+			}}, resolveDIDEndpoint)
 
 		body, status, err := handleRequest(handler, resolveDIDEndpoint+"?did=123", nil)
 		require.NoError(t, err)
@@ -271,17 +277,12 @@ func handleRequest(handler Handler, path string, body []byte) (*bytes.Buffer, in
 	return rr.Body, rr.Code, nil
 }
 
-func getHandler(t *testing.T, blocVDRI vdr.VDR,
-	didBlocClient didBlocClient, lookup string) Handler {
+func getHandler(t *testing.T, blocVDRI vdr.VDR, lookup string) Handler {
 	svc := New(&Config{})
 	require.NotNil(t, svc)
 
 	if blocVDRI != nil {
 		svc.blocVDRI = blocVDRI
-	}
-
-	if didBlocClient != nil {
-		svc.didBlocClient = didBlocClient
 	}
 
 	return handlerLookup(t, svc, lookup)

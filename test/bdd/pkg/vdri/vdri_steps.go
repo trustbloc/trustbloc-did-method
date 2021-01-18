@@ -22,7 +22,6 @@ import (
 	"github.com/google/uuid"
 	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
-	"github.com/hyperledger/aries-framework-go/pkg/kms/localkms"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
@@ -41,6 +40,7 @@ const (
 type Steps struct {
 	bddContext *context.BDDContext
 	createdDID string
+	kid        string
 	httpClient *http.Client
 	blocVDRI   *trustbloc.VDRI
 }
@@ -130,6 +130,7 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 	}
 
 	e.createdDID = registerResponse.DIDState.Identifier
+	e.kid = kid
 
 	return nil
 }
@@ -210,7 +211,7 @@ func (e *Steps) resolveCreatedDID(keyType, signatureSuite string) error {
 			docResolution.DIDDocument.Service[0].ID, docResolution.DIDDocument.ID+"#"+serviceID)
 	}
 
-	if err := validatePublicKey(docResolution.DIDDocument, keyType, signatureSuite); err != nil {
+	if err := e.validatePublicKey(docResolution.DIDDocument, keyType, signatureSuite); err != nil {
 		return err
 	}
 
@@ -242,22 +243,18 @@ func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {
 	return e.bddContext.LocalKMS.CreateAndExportPubKeyBytes(kt)
 }
 
-func validatePublicKey(didDoc *ariesdid.Doc, keyType, signatureSuite string) error {
+func (e *Steps) validatePublicKey(didDoc *ariesdid.Doc, keyType, signatureSuite string) error {
 	if len(didDoc.VerificationMethod) != 1 {
 		return fmt.Errorf("veification method size not equal one")
 	}
 
 	expectedJwkKeyType := ""
 
-	var kt kms.KeyType
-
 	switch keyType {
 	case doc.Ed25519KeyType:
 		expectedJwkKeyType = "OKP"
-		kt = kms.ED25519Type
 	case P256KeyType:
 		expectedJwkKeyType = "EC"
-		kt = kms.ECDSAP256TypeIEEEP1363
 	}
 
 	if signatureSuite == doc.JWSVerificationKey2020 &&
@@ -271,18 +268,13 @@ func validatePublicKey(didDoc *ariesdid.Doc, keyType, signatureSuite string) err
 		return fmt.Errorf("jwk is not nil for %s", signatureSuite)
 	}
 
-	return verifyPublicKeyAndType(didDoc, kt, signatureSuite)
+	return e.verifyPublicKeyAndType(didDoc, signatureSuite)
 }
 
-func verifyPublicKeyAndType(didDoc *ariesdid.Doc, kt kms.KeyType, signatureSuite string) error {
-	pubKeyID, err := localkms.CreateKID(didDoc.VerificationMethod[0].Value, kt)
-	if err != nil {
-		return err
-	}
-
-	if didDoc.VerificationMethod[0].ID != didDoc.ID+"#"+pubKeyID {
+func (e *Steps) verifyPublicKeyAndType(didDoc *ariesdid.Doc, signatureSuite string) error {
+	if didDoc.VerificationMethod[0].ID != didDoc.ID+"#"+e.kid {
 		return fmt.Errorf("resolved did public key ID %s not equal to %s",
-			didDoc.VerificationMethod[0].ID, didDoc.ID+"#"+pubKeyID)
+			didDoc.VerificationMethod[0].ID, didDoc.ID+"#"+e.kid)
 	}
 
 	if didDoc.VerificationMethod[0].Type != signatureSuite {

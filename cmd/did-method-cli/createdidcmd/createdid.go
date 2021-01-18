@@ -11,13 +11,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/common"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/create"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 )
 
 const (
@@ -105,20 +105,20 @@ func createDIDCmd() *cobra.Command {
 			domain := cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName,
 				domainFileEnvKey)
 
-			client := did.New(did.WithAuthToken(sidetreeWriteToken),
-				did.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+			vdr := trustbloc.New(trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
+				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
 
 			opts, err := createDIDOption(cmd)
 			if err != nil {
 				return err
 			}
 
-			didDoc, err := client.CreateDID(domain, opts...)
+			didDoc, err := vdr.Build(nil, opts...)
 			if err != nil {
 				return fmt.Errorf("failed to create did: %w", err)
 			}
 
-			bytes, err := didDoc.JSONBytes()
+			bytes, err := didDoc.DIDDocument.JSONBytes()
 			if err != nil {
 				return err
 			}
@@ -136,9 +136,9 @@ func getSidetreeURL(cmd *cobra.Command) []create.Option {
 	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
 		sidetreeURLEnvKey)
 
-	for _, v := range sidetreeURL {
-		opts = append(opts, create.WithSidetreeEndpoint(v))
-	}
+	opts = append(opts, create.WithEndpoints(func() ([]string, error) {
+		return sidetreeURL, nil
+	}))
 
 	return opts
 }
@@ -204,7 +204,7 @@ func getPublicKeys(cmd *cobra.Command) ([]create.Option, error) {
 	var opts []create.Option
 
 	if publicKeyFile != "" {
-		publicKeys, err := common.GetPublicKeysFromFile(publicKeyFile)
+		publicKeys, err := common.GetVDRPublicKeysFromFile(publicKeyFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get public keys from file %w", err)
 		}

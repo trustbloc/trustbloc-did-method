@@ -217,10 +217,10 @@ github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKe
 github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/hyperledger/aries-framework-go v0.1.6-0.20210115164048-5d7d2f404914 h1:/n4WazaCVOFh0sjb3zRjjcWVJsHF2hSnIPkJJih9vAs=
-github.com/hyperledger/aries-framework-go v0.1.6-0.20210115164048-5d7d2f404914/go.mod h1:CB1aCGsuCC/U+mJ43aU5Nx7s6iCYOVquO7kCUn8tVhY=
 github.com/hyperledger/aries-framework-go v0.1.6-0.20210115224010-cf2b2ff61f47 h1:6NJyNdq+0KDnADrWIJqxxbrzzwpOM81umCrGDM1zmY4=
 github.com/hyperledger/aries-framework-go v0.1.6-0.20210115224010-cf2b2ff61f47/go.mod h1:CB1aCGsuCC/U+mJ43aU5Nx7s6iCYOVquO7kCUn8tVhY=
+github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210118165138-6441de1a70c8 h1:gmuibYZrXA2EnOEXnO9V3k8LYZnPzUBbJ6f6NpRRjkA=
+github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210118165138-6441de1a70c8/go.mod h1:OzUQHCaaXUFwa+SNzmt56dFXILrWX0DGC6/pecG9Caw=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/jessevdk/go-flags v0.0.0-20141203071132-1679536dcc89/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
@@ -358,8 +358,6 @@ github.com/tidwall/match v1.0.3/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JT
 github.com/tidwall/pretty v1.0.2/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tidwall/sjson v1.1.4/go.mod h1:wXpKXu8CtDjKAZ+3DrKY5ROCorDFahq8l0tey/Lx1fg=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
-github.com/trustbloc/bls12-381 v0.0.0-20201104214312-31de2a204df8 h1:VtbBrpzy6rg4EHKOgGDOhBlFg8WWb0dFTYGz140gtj4=
-github.com/trustbloc/bls12-381 v0.0.0-20201104214312-31de2a204df8/go.mod h1:gcwDl9YLyNc3H3wmPXamu+8evD8TYUa6BjTsWnvdn7A=
 github.com/trustbloc/edge-core v0.1.4-0.20200709143857-e104bb29f6c6 h1:GlzMPygeehW/W8tq2vBiN6DLsTFY5xtvQysu1aqqGoQ=
 github.com/trustbloc/edge-core v0.1.4-0.20200709143857-e104bb29f6c6/go.mod h1:SZg7nAIc9FONS+G7MwEyGkCWCJR3R02bePwTpWxqH5w=
 github.com/trustbloc/json-gold v0.3.1-0.20200414173446-30d742ee949e h1:i+hGa8C1MKGO71j3jIV7e2aKX72/DTrzLjq9R8kc6xk=
