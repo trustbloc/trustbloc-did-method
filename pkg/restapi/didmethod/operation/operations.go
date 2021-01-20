@@ -18,11 +18,9 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
-	vdrdoc "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/doc"
 	log "github.com/sirupsen/logrus"
-	gojose "github.com/square/go-jose/v3"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
@@ -85,10 +83,11 @@ func New(config *Config) *Operation {
 		vdriOpts = append(vdriOpts, trustbloc.UseGenesisFile(genesisFile.URL, genesisFile.URL, genesisFile.Data))
 	}
 
-	return &Operation{blocVDRI: trustbloc.New(vdriOpts...), blocDomain: config.BlocDomain}
+	return &Operation{blocVDRI: trustbloc.New(nil, vdriOpts...),
+		blocDomain: config.BlocDomain}
 }
 
-func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen
+func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen,gocyclo
 	data := RegisterDIDRequest{}
 
 	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
@@ -96,8 +95,6 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 		return
 	}
-
-	var opts []create.Option
 
 	registerResponse := RegisterResponse{JobID: data.JobID}
 	keysID := make(map[string][]byte)
@@ -109,6 +106,10 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 		return
 	}
+
+	didDoc := did.Doc{}
+
+	var didMethodOpt []vdr.DIDMethodOption
 
 	// Add public keys
 	for _, v := range data.DIDDocument.PublicKey {
@@ -134,31 +135,48 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 		}
 
 		if v.Recovery {
-			opts = append(opts, create.WithRecoveryPublicKey(k))
+			didMethodOpt = append(didMethodOpt, vdr.WithOption(trustbloc.RecoveryPublicKeyOpt, k))
 
 			continue
 		}
 
 		if v.Update {
-			opts = append(opts, create.WithUpdatePublicKey(k))
+			didMethodOpt = append(didMethodOpt, vdr.WithOption(trustbloc.UpdatePublicKeyOpt, k))
 
 			continue
 		}
 
-		opts = append(opts, create.WithPublicKey(&vdrdoc.PublicKey{ID: v.ID, Type: v.Type,
-			JWK: gojose.JSONWebKey{Key: k}, Purposes: v.Purposes}))
+		jwk, err := ariesjose.JWKFromPublicKey(k)
+		if err != nil {
+			registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
+
+			o.writeResponse(rw, registerResponse)
+
+			return
+		}
+
+		vm, err := did.NewVerificationMethodFromJWK(v.ID, v.Type, "", jwk)
+		if err != nil {
+			registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
+
+			o.writeResponse(rw, registerResponse)
+
+			return
+		}
+
+		didDoc.VerificationMethod = append(didDoc.VerificationMethod, *vm)
 
 		keysID[v.ID] = keyValue
 	}
 
 	// Add services
 	for _, service := range data.DIDDocument.Service {
-		opts = append(opts, create.WithService(&did.Service{ID: service.ID, Type: service.Type,
+		didDoc.Service = append(didDoc.Service, did.Service{ID: service.ID, Type: service.Type,
 			Priority: service.Priority, RecipientKeys: service.RecipientKeys, RoutingKeys: service.RoutingKeys,
-			ServiceEndpoint: service.Endpoint}))
+			ServiceEndpoint: service.Endpoint})
 	}
 
-	didDoc, err := o.blocVDRI.Build(nil, opts...)
+	docResolution, err := o.blocVDRI.Create(nil, &didDoc, didMethodOpt...)
 	if err != nil {
 		log.Errorf("failed to create did doc : %s", err.Error())
 
@@ -170,8 +188,8 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	registerResponse.DIDState = DIDState{Identifier: didDoc.DIDDocument.ID, State: RegistrationStateFinished,
-		Secret: Secret{Keys: createKeys(keysID, didDoc.DIDDocument.ID)}}
+	registerResponse.DIDState = DIDState{Identifier: docResolution.DIDDocument.ID, State: RegistrationStateFinished,
+		Secret: Secret{Keys: createKeys(keysID, docResolution.DIDDocument.ID)}}
 
 	o.writeResponse(rw, registerResponse)
 }

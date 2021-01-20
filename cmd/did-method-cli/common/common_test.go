@@ -285,6 +285,55 @@ func TestGetServices(t *testing.T) {
 	})
 }
 
+func TestGetVDRPublicKeys(t *testing.T) {
+	t.Run("test public key invalid path", func(t *testing.T) {
+		_, err := GetVDRPublicKeysFromFile("./wrongfile")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "open wrongfile: no such file or directory")
+	})
+
+	t.Run("test public key invalid jwk path", func(t *testing.T) {
+		file, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = file.WriteString(publicKeyData)
+		require.NoError(t, err)
+
+		defer func() { require.NoError(t, os.Remove(file.Name())) }()
+
+		_, err = GetVDRPublicKeysFromFile(file.Name())
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to read jwk file ")
+	})
+
+	t.Run("test public key success", func(t *testing.T) {
+		jwk1File, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = jwk1File.WriteString(jwk1Data)
+		require.NoError(t, err)
+
+		jwk2File, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = jwk2File.WriteString(jwk2Data)
+		require.NoError(t, err)
+
+		file, err := ioutil.TempFile("", "*.json")
+		require.NoError(t, err)
+
+		_, err = file.WriteString(fmt.Sprintf(publicKeyData, jwk1File.Name(), jwk2File.Name()))
+		require.NoError(t, err)
+
+		defer func() { require.NoError(t, os.Remove(file.Name())) }()
+
+		keys, err := GetVDRPublicKeysFromFile(file.Name())
+		require.NoError(t, err)
+		require.Equal(t, len(keys), 2)
+	})
+}
+
 func TestGetPublicKeys(t *testing.T) {
 	t.Run("test public key invalid path", func(t *testing.T) {
 		_, err := GetPublicKeysFromFile("./wrongfile")

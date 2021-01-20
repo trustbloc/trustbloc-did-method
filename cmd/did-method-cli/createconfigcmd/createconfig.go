@@ -7,7 +7,6 @@ package createconfigcmd
 
 import (
 	"crypto"
-	"crypto/ed25519"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -21,8 +20,8 @@ import (
 	"strings"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
-	vdrdoc "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/doc"
+	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	"github.com/spf13/cobra"
 	gojose "github.com/square/go-jose/v3"
@@ -86,7 +85,7 @@ const (
 )
 
 type vdr interface {
-	Build(keyManager kms.KeyManager, opts ...create.Option) (*docdid.DocResolution, error)
+	Create(keyManager kms.KeyManager, didDoc *docdid.Doc, opts ...vdrapi.DIDMethodOption) (*docdid.DocResolution, error)
 }
 
 type parameters struct {
@@ -165,7 +164,7 @@ func getParameters(cmd *cobra.Command) (*parameters, error) {
 
 	parameters := &parameters{
 		sidetreeURL: strings.TrimSpace(sidetreeURL),
-		vdr: trustbloc.New(trustbloc.WithAuthToken(sidetreeWriteToken),
+		vdr: trustbloc.New(nil, trustbloc.WithAuthToken(sidetreeWriteToken),
 			trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12})),
 		config:          config,
 		recoveryKey:     recoveryKey,
@@ -312,8 +311,8 @@ func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte,
 		Policy: parameters.config.ConsortiumData.Policy}
 
 	for _, member := range parameters.config.MembersData {
-		didDoc, err := createDID(parameters.vdr, parameters.sidetreeURL, &member.JSONWebKey, parameters.recoveryKey,
-			parameters.updateKey)
+		didDoc, err := createDID(parameters.vdr, parameters.sidetreeURL, &member.JSONWebKey, parameters.updateKey,
+			parameters.recoveryKey)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -368,27 +367,26 @@ func createConfig(parameters *parameters) (map[string][]byte, map[string][]byte,
 	return filesData, didConfData, nil
 }
 
-func createDID(vdr vdr, sidetreeURL string, jwk *gojose.JSONWebKey, recoveryKey,
-	updateKey crypto.PublicKey) (*docdid.Doc, error) {
-	edKey, ok := jwk.Public().Key.(ed25519.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("key not ed25519")
+func createDID(vdr vdr, sidetreeURL string, jsonWebKey *gojose.JSONWebKey,
+	updateKey, recoveryKey crypto.PublicKey) (*docdid.Doc, error) {
+	var didMethodOpt []vdrapi.DIDMethodOption
+
+	didMethodOpt = append(didMethodOpt, vdrapi.WithOption(trustbloc.RecoveryPublicKeyOpt, recoveryKey),
+		vdrapi.WithOption(trustbloc.UpdatePublicKeyOpt, updateKey),
+		vdrapi.WithOption(trustbloc.EndpointsOpt, []string{sidetreeURL}))
+
+	jwk, err := ariesjose.JWKFromPublicKey(jsonWebKey.Public().Key)
+	if err != nil {
+		return nil, err
 	}
 
-	general := vdrdoc.PublicKey{
-		ID:       jwk.KeyID,
-		Type:     doc.JWSVerificationKey2020,
-		JWK:      gojose.JSONWebKey{Key: edKey},
-		Purposes: []string{doc.KeyPurposeAuthentication},
+	vm, err := docdid.NewVerificationMethodFromJWK(jsonWebKey.KeyID, doc.JWSVerificationKey2020, "", jwk)
+	if err != nil {
+		return nil, err
 	}
 
-	docResolution, err := vdr.Build(nil,
-		create.WithEndpoints(func() ([]string, error) {
-			return []string{sidetreeURL}, nil
-		}),
-		create.WithRecoveryPublicKey(recoveryKey),
-		create.WithUpdatePublicKey(updateKey),
-		create.WithPublicKey(&general))
+	docResolution, err := vdr.Create(nil, &docdid.Doc{VerificationMethod: []docdid.VerificationMethod{*vm}},
+		didMethodOpt...)
 	if err != nil {
 		return nil, err
 	}
