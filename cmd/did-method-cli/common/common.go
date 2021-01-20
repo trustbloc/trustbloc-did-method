@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	vdrdoc "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/doc"
+	"github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	"github.com/spf13/cobra"
 	gojose "github.com/square/go-jose/v3"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
@@ -152,7 +152,7 @@ func GetKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 }
 
 // GetVDRPublicKeysFromFile get public keys from file
-func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]vdrdoc.PublicKey, error) {
+func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]docdid.VerificationMethod, error) {
 	pkData, err := ioutil.ReadFile(filepath.Clean(publicKeyFilePath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to public key file '%s' : %w", publicKeyFilePath, err)
@@ -163,7 +163,7 @@ func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]vdrdoc.PublicKey, err
 		return nil, err
 	}
 
-	var keys []vdrdoc.PublicKey
+	var keys []docdid.VerificationMethod
 
 	for _, v := range publicKeys {
 		jwkData, err := ioutil.ReadFile(filepath.Clean(v.JWKPath))
@@ -172,19 +172,27 @@ func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]vdrdoc.PublicKey, err
 		}
 
 		var jsonWebKey gojose.JSONWebKey
-		if err := jsonWebKey.UnmarshalJSON(jwkData); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal to jwk: %w", err)
+		if errUnmarshal := jsonWebKey.UnmarshalJSON(jwkData); errUnmarshal != nil {
+			return nil, fmt.Errorf("failed to unmarshal to jwk: %w", errUnmarshal)
 		}
 
-		keys = append(keys, vdrdoc.PublicKey{ID: v.ID, Type: v.Type,
-			JWK: jsonWebKey, Purposes: v.Purposes})
+		jwk, err := jose.JWKFromPublicKey(jsonWebKey.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		vm, err := docdid.NewVerificationMethodFromJWK(v.ID, v.Type, "", jwk)
+		if err != nil {
+			return nil, err
+		}
+
+		keys = append(keys, *vm)
 	}
 
 	return keys, nil
 }
 
 // GetPublicKeysFromFile get public keys from file
-// TODO after removing did client form trustbloc-did-method
 func GetPublicKeysFromFile(publicKeyFilePath string) ([]doc.PublicKey, error) {
 	pkData, err := ioutil.ReadFile(filepath.Clean(publicKeyFilePath))
 	if err != nil {
@@ -216,7 +224,7 @@ func GetPublicKeysFromFile(publicKeyFilePath string) ([]doc.PublicKey, error) {
 		switch key := jsonWebKey.Key.(type) {
 		case ed25519.PublicKey:
 			keyType = doc.Ed25519KeyType
-			value = []byte(fmt.Sprintf("%v", key))
+			value = ed25519.PublicKey(fmt.Sprintf("%v", key))
 		case *ecdsa.PublicKey:
 			keyType = doc.P256KeyType
 			value = elliptic.Marshal(key.Curve, key.X, key.Y)

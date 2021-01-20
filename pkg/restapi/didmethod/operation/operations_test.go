@@ -20,9 +20,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/resolve"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/stretchr/testify/require"
@@ -121,7 +119,8 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 	t.Run("test error from create did", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			BuildFunc: func(keyManager kms.KeyManager, opts ...create.Option) (*did.DocResolution, error) {
+			CreateFunc: func(keyManager kms.KeyManager, did *did.Doc,
+				opts ...vdrapi.DIDMethodOption) (*did.DocResolution, error) {
 				return nil, fmt.Errorf("error create did")
 			}}, registerPath)
 
@@ -187,7 +186,8 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 	t.Run("test success with provided public key", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			BuildFunc: func(keyManager kms.KeyManager, opts ...create.Option) (*did.DocResolution, error) {
+			CreateFunc: func(keyManager kms.KeyManager, didDoc *did.Doc,
+				opts ...vdrapi.DIDMethodOption) (*did.DocResolution, error) {
 				return &did.DocResolution{DIDDocument: &did.Doc{ID: "did1"}}, nil
 			}}, registerPath)
 
@@ -236,7 +236,7 @@ func TestResolveDIDHandler(t *testing.T) {
 
 	t.Run("test error from bloc vdri read", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			ReadFunc: func(didID string, opts ...resolve.Option) (doc *did.DocResolution, err error) {
+			ReadFunc: func(didID string, opts ...vdrapi.ResolveOption) (doc *did.DocResolution, err error) {
 				return nil, fmt.Errorf("read error")
 			}}, resolveDIDEndpoint)
 
@@ -248,7 +248,7 @@ func TestResolveDIDHandler(t *testing.T) {
 
 	t.Run("test success", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			ReadFunc: func(didID string, opts ...resolve.Option) (doc *did.DocResolution, err error) {
+			ReadFunc: func(didID string, opts ...vdrapi.ResolveOption) (doc *did.DocResolution, err error) {
 				return &did.DocResolution{DIDDocument: &did.Doc{ID: "didID", Context: []string{"context"}}}, nil
 			}}, resolveDIDEndpoint)
 
@@ -277,7 +277,7 @@ func handleRequest(handler Handler, path string, body []byte) (*bytes.Buffer, in
 	return rr.Body, rr.Code, nil
 }
 
-func getHandler(t *testing.T, blocVDRI vdr.VDR, lookup string) Handler {
+func getHandler(t *testing.T, blocVDRI vdrapi.VDR, lookup string) Handler {
 	svc := New(&Config{})
 	require.NotNil(t, svc)
 

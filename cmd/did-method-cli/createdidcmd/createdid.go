@@ -11,7 +11,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
+	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
@@ -105,20 +106,20 @@ func createDIDCmd() *cobra.Command {
 			domain := cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName,
 				domainFileEnvKey)
 
-			vdr := trustbloc.New(trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
+			vdr := trustbloc.New(nil, trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
 				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
 
-			opts, err := createDIDOption(cmd)
+			didDoc, opts, err := createDIDOption(cmd)
 			if err != nil {
 				return err
 			}
 
-			didDoc, err := vdr.Build(nil, opts...)
+			docResolution, err := vdr.Create(nil, didDoc, opts...)
 			if err != nil {
 				return fmt.Errorf("failed to create did: %w", err)
 			}
 
-			bytes, err := didDoc.DIDDocument.JSONBytes()
+			bytes, err := docResolution.DIDDocument.JSONBytes()
 			if err != nil {
 				return err
 			}
@@ -130,58 +131,54 @@ func createDIDCmd() *cobra.Command {
 	}
 }
 
-func getSidetreeURL(cmd *cobra.Command) []create.Option {
-	var opts []create.Option
+func getSidetreeURL(cmd *cobra.Command) []vdrapi.DIDMethodOption {
+	var opts []vdrapi.DIDMethodOption
 
 	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
 		sidetreeURLEnvKey)
 
-	opts = append(opts, create.WithEndpoints(func() ([]string, error) {
-		return sidetreeURL, nil
-	}))
+	opts = append(opts, vdrapi.WithOption(trustbloc.EndpointsOpt, sidetreeURL))
 
 	return opts
 }
 
-func createDIDOption(cmd *cobra.Command) ([]create.Option, error) {
-	opts, err := getPublicKeys(cmd)
+func createDIDOption(cmd *cobra.Command) (*did.Doc, []vdrapi.DIDMethodOption, error) {
+	opts := getSidetreeURL(cmd)
+
+	pks, err := getPublicKeys(cmd)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	recoveryKey, err := common.GetKey(cmd, recoveryKeyFlagName, recoveryKeyEnvKey, recoveryKeyFileFlagName,
 		recoveryKeyFileEnvKey, nil, false)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	opts = append(opts, create.WithRecoveryPublicKey(recoveryKey))
+	opts = append(opts, vdrapi.WithOption(trustbloc.RecoveryPublicKeyOpt, recoveryKey))
 
 	updateKey, err := common.GetKey(cmd, updateKeyFlagName, updateKeyEnvKey, updateKeyFileFlagName,
 		updateKeyFileEnvKey, nil, false)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	opts = append(opts, create.WithUpdatePublicKey(updateKey))
+	opts = append(opts, vdrapi.WithOption(trustbloc.UpdatePublicKeyOpt, updateKey))
 
-	serviceOpts, err := getServices(cmd)
+	services, err := getServices(cmd)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	opts = append(opts, serviceOpts...)
-
-	opts = append(opts, getSidetreeURL(cmd)...)
-
-	return opts, nil
+	return &did.Doc{VerificationMethod: pks, Service: services}, opts, nil
 }
 
-func getServices(cmd *cobra.Command) ([]create.Option, error) {
+func getServices(cmd *cobra.Command) ([]did.Service, error) {
 	serviceFile := cmdutils.GetUserSetOptionalVarFromString(cmd, serviceFileFlagName,
 		serviceFileEnvKey)
 
-	var opts []create.Option
+	var svc []did.Service
 
 	if serviceFile != "" {
 		services, err := common.GetServices(serviceFile)
@@ -190,31 +187,22 @@ func getServices(cmd *cobra.Command) ([]create.Option, error) {
 		}
 
 		for i := range services {
-			opts = append(opts, create.WithService(&services[i]))
+			svc = append(svc, services[i])
 		}
 	}
 
-	return opts, nil
+	return svc, nil
 }
 
-func getPublicKeys(cmd *cobra.Command) ([]create.Option, error) {
+func getPublicKeys(cmd *cobra.Command) ([]did.VerificationMethod, error) {
 	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, publicKeyFileFlagName,
 		publicKeyFileEnvKey)
 
-	var opts []create.Option
-
 	if publicKeyFile != "" {
-		publicKeys, err := common.GetVDRPublicKeysFromFile(publicKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get public keys from file %w", err)
-		}
-
-		for i := range publicKeys {
-			opts = append(opts, create.WithPublicKey(&publicKeys[i]))
-		}
+		return common.GetVDRPublicKeysFromFile(publicKeyFile)
 	}
 
-	return opts, nil
+	return nil, nil
 }
 
 func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {

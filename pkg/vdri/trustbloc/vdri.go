@@ -7,6 +7,7 @@ package trustbloc
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
@@ -18,11 +19,11 @@ import (
 	"time"
 
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/create"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/signature/jsonld"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
-	vdrdoc "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/doc"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/resolve"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	"github.com/hyperledger/aries-framework-go/pkg/vdr/httpbinding"
 	log "github.com/sirupsen/logrus"
@@ -37,6 +38,17 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/endpoint"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/selection/staticselection"
+)
+
+const (
+	// DIDMethod did method
+	DIDMethod = "trustbloc"
+	// EndpointsOpt endpoints opt
+	EndpointsOpt = "endpoints"
+	// UpdatePublicKeyOpt update public key opt
+	UpdatePublicKeyOpt = "updatePublicKey"
+	// RecoveryPublicKeyOpt recovery public key opt
+	RecoveryPublicKeyOpt = "recoveryPublicKey"
 )
 
 type configService interface {
@@ -58,29 +70,27 @@ type didConfigService interface {
 }
 
 type vdri interface {
-	Build(keyManager kms.KeyManager, opts ...create.Option) (*docdid.DocResolution, error)
-	Read(id string, opts ...resolve.Option) (*docdid.DocResolution, error)
+	Create(keyManager kms.KeyManager, did *docdid.Doc, opts ...vdrapi.DIDMethodOption) (*docdid.DocResolution, error)
+	Read(id string, opts ...vdrapi.ResolveOption) (*docdid.DocResolution, error)
 }
 
 // VDRI bloc
 type VDRI struct {
-	resolverURL      string
-	domain           string
-	configService    configService
-	endpointService  endpointService
-	didConfigService didConfigService
-	getHTTPVDRI      func(url string) (vdri, error) // needed for unit test
-	tlsConfig        *tls.Config
-	authToken        string
-
-	validatedConsortium map[string]bool
-
+	resolverURL                 string
+	domain                      string
+	configService               configService
+	endpointService             endpointService
+	didConfigService            didConfigService
+	getHTTPVDRI                 func(url string) (vdri, error) // needed for unit test
+	tlsConfig                   *tls.Config
+	authToken                   string
+	validatedConsortium         map[string]bool
 	enableSignatureVerification bool
-
-	useUpdateValidation     bool
-	updateValidationService *updatevalidationconfig.ConfigService
-	genesisFiles            []genesisFileData
-	sidetreeClient          sidetreeClient
+	useUpdateValidation         bool
+	updateValidationService     *updatevalidationconfig.ConfigService
+	genesisFiles                []genesisFileData
+	sidetreeClient              sidetreeClient
+	keyRetriever                KeyRetriever
 }
 
 type genesisFileData struct {
@@ -89,8 +99,13 @@ type genesisFileData struct {
 	fileData []byte
 }
 
+// KeyRetriever key retriever
+type KeyRetriever interface {
+	// TODO add did operation keys
+}
+
 // New creates new bloc vdri
-func New(opts ...Option) *VDRI {
+func New(keyRetriever KeyRetriever, opts ...Option) *VDRI {
 	v := &VDRI{}
 
 	for _, opt := range opts {
@@ -126,12 +141,14 @@ func New(opts ...Option) *VDRI {
 
 	v.validatedConsortium = map[string]bool{}
 
+	v.keyRetriever = keyRetriever
+
 	return v
 }
 
 // Accept did method
 func (v *VDRI) Accept(method string) bool {
-	return method == "trustbloc"
+	return method == DIDMethod
 }
 
 // Close vdri
@@ -139,22 +156,23 @@ func (v *VDRI) Close() error {
 	return nil
 }
 
-// Store did doc
-func (v *VDRI) Store(doc *docdid.Doc, by *[]vdrdoc.ModifiedBy) error {
-	return nil
-}
-
-// Build did doc
-func (v *VDRI) Build(keyManager kms.KeyManager, opts ...create.Option) (*docdid.DocResolution, error) {
-	createDIDOpts := &create.Opts{}
+// Create did doc
+// nolint: funlen,gocyclo
+func (v *VDRI) Create(keyManager kms.KeyManager, did *docdid.Doc,
+	opts ...vdrapi.DIDMethodOption) (*docdid.DocResolution, error) {
+	didMethodOpts := &vdrapi.DIDMethodOpts{Values: make(map[string]interface{})}
 
 	// Apply options
 	for _, opt := range opts {
-		opt(createDIDOpts)
+		opt(didMethodOpts)
 	}
 
-	if createDIDOpts.GetEndpoints == nil {
-		createDIDOpts.GetEndpoints = func() ([]string, error) {
+	var createOpt []create.Option
+
+	var getEndpoints func() ([]string, error)
+
+	if didMethodOpts.Values[EndpointsOpt] == nil {
+		getEndpoints = func() ([]string, error) {
 			var result []string
 
 			endpoints, err := v.endpointService.GetEndpoints(v.domain)
@@ -168,25 +186,71 @@ func (v *VDRI) Build(keyManager kms.KeyManager, opts ...create.Option) (*docdid.
 
 			return result, err
 		}
+	} else {
+		getEndpoints = func() ([]string, error) {
+			v, ok := didMethodOpts.Values[EndpointsOpt].([]string)
+			if !ok {
+				return nil, fmt.Errorf("endpointsOpt not array of string")
+			}
 
-		opts = append(opts, create.WithEndpoints(createDIDOpts.GetEndpoints))
+			return v, nil
+		}
 	}
 
-	if createDIDOpts.MultiHashAlgorithm == 0 {
-		endpoints, err := createDIDOpts.GetEndpoints()
-		if err != nil {
-			return nil, err
-		}
-
-		sidetreeConfig, err := v.configService.GetSidetreeConfig(endpoints[0])
-		if err != nil {
-			return nil, err
-		}
-
-		opts = append(opts, create.WithMultiHashAlgorithm(sidetreeConfig.MultiHashAlgorithm))
+	// get sidetree config
+	endpoints, err := getEndpoints()
+	if err != nil {
+		return nil, err
 	}
 
-	return v.sidetreeClient.CreateDID(opts...)
+	sidetreeConfig, err := v.configService.GetSidetreeConfig(endpoints[0])
+	if err != nil {
+		return nil, err
+	}
+
+	// get keys
+	if didMethodOpts.Values[UpdatePublicKeyOpt] == nil {
+		return nil, fmt.Errorf("updatePublicKey opt is empty")
+	}
+
+	updatePublicKey, ok := didMethodOpts.Values[UpdatePublicKeyOpt].(crypto.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("upatePublicKey is not  crypto.PublicKey")
+	}
+
+	if didMethodOpts.Values[RecoveryPublicKeyOpt] == nil {
+		return nil, fmt.Errorf("recoveryPublicKey opt is empty")
+	}
+
+	recoveryPublicKey, ok := didMethodOpts.Values[RecoveryPublicKeyOpt].(crypto.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("recoveryPublicKey is not  crypto.PublicKey")
+	}
+
+	// get services
+	for i := range did.Service {
+		createOpt = append(createOpt, create.WithService(&did.Service[i]))
+	}
+
+	// get ver
+	for _, vm := range did.VerificationMethod {
+		if vm.JSONWebKey() == nil {
+			return nil, fmt.Errorf("verificationMethod JSONWebKey is nil")
+		}
+
+		createOpt = append(createOpt, create.WithPublicKey(&doc.PublicKey{
+			ID:       vm.ID,
+			Type:     vm.Type,
+			Purposes: []string{doc.KeyPurposeAuthentication}, // TODO add did method option for Purposes
+			JWK:      vm.JSONWebKey().JSONWebKey,
+		}))
+	}
+
+	createOpt = append(createOpt, create.WithSidetreeEndpoint(getEndpoints),
+		create.WithMultiHashAlgorithm(sidetreeConfig.MultiHashAlgorithm), create.WithUpdatePublicKey(updatePublicKey),
+		create.WithRecoveryPublicKey(recoveryPublicKey))
+
+	return v.sidetreeClient.CreateDID(createOpt...)
 }
 
 func (v *VDRI) loadGenesisFiles() error {
@@ -202,7 +266,7 @@ func (v *VDRI) loadGenesisFiles() error {
 	return nil
 }
 
-func (v *VDRI) sidetreeResolve(url, did string, opts ...resolve.Option) (*docdid.DocResolution, error) {
+func (v *VDRI) sidetreeResolve(url, did string, opts ...vdrapi.ResolveOption) (*docdid.DocResolution, error) {
 	resolver, err := v.getHTTPVDRI(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new sidetree vdri: %w", err)
@@ -221,7 +285,7 @@ const (
 	domainDIDPart             = 2
 )
 
-func (v *VDRI) Read(did string, opts ...resolve.Option) (*docdid.DocResolution, error) { //nolint: gocyclo,funlen
+func (v *VDRI) Read(did string, opts ...vdrapi.ResolveOption) (*docdid.DocResolution, error) { //nolint: gocyclo,funlen
 	err := v.loadGenesisFiles()
 	if err != nil {
 		return nil, fmt.Errorf("invalid genesis file: %w", err)
@@ -404,8 +468,8 @@ func (v *VDRI) selectStakeholders(consortium *models.Consortium) ([]*models.Stak
 }
 
 // canonicalizeDoc canonicalizes a DID doc using json-ld canonicalization
-func canonicalizeDoc(doc *docdid.Doc) ([]byte, error) {
-	marshaled, err := doc.JSONBytes()
+func canonicalizeDoc(didDoc *docdid.Doc) ([]byte, error) {
+	marshaled, err := didDoc.JSONBytes()
 	if err != nil {
 		return nil, err
 	}

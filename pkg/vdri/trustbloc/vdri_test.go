@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 package trustbloc
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -14,9 +16,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/create"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/create"
-	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr/resolve"
+	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/square/go-jose/v3"
 	"github.com/stretchr/testify/require"
@@ -30,27 +33,19 @@ import (
 
 func TestVDRI_Accept(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
-		v := New()
-		require.True(t, v.Accept("trustbloc"))
+		v := New(&mockKeyRetriever{})
+		require.True(t, v.Accept(DIDMethod))
 	})
 
 	t.Run("test return false", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 		require.False(t, v.Accept("bloc1"))
 	})
 }
 
-func TestVDRI_Store(t *testing.T) {
-	t.Run("test error", func(t *testing.T) {
-		v := New()
-		err := v.Store(nil, nil)
-		require.NoError(t, err)
-	})
-}
-
-func TestVDRI_Build(t *testing.T) {
+func TestVDRI_Create(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
@@ -64,13 +59,86 @@ func TestVDRI_Build(t *testing.T) {
 
 		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
 
-		docResolution, err := v.Build(nil, create.WithRecoveryPublicKey("key"))
+		_, pk, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		jwk, err := ariesjose.JWKFromPublicKey(pk)
+		require.NoError(t, err)
+
+		vm, err := did.NewVerificationMethodFromJWK("id", "", "", jwk)
+		require.NoError(t, err)
+
+		docResolution, err := v.Create(nil, &did.Doc{Service: []did.Service{{ID: "svc"}},
+			VerificationMethod: []did.VerificationMethod{*vm}}, vdrapi.WithOption(UpdatePublicKeyOpt, []byte{}),
+			vdrapi.WithOption(RecoveryPublicKeyOpt, []byte{}))
 		require.NoError(t, err)
 		require.Equal(t, "did", docResolution.DIDDocument.ID)
 	})
 
+	t.Run("test update public key opt is empty", func(t *testing.T) {
+		v := New(&mockKeyRetriever{})
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		_, pk, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		jwk, err := ariesjose.JWKFromPublicKey(pk)
+		require.NoError(t, err)
+
+		vm, err := did.NewVerificationMethodFromJWK("id", "", "", jwk)
+		require.NoError(t, err)
+
+		_, err = v.Create(nil, &did.Doc{Service: []did.Service{{ID: "svc"}},
+			VerificationMethod: []did.VerificationMethod{*vm}}, vdrapi.WithOption(EndpointsOpt, []string{"url"}),
+			vdrapi.WithOption(RecoveryPublicKeyOpt, []byte{}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "updatePublicKey opt is empty")
+	})
+
+	t.Run("test recovery public key opt is empty", func(t *testing.T) {
+		v := New(&mockKeyRetriever{})
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		_, pk, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		jwk, err := ariesjose.JWKFromPublicKey(pk)
+		require.NoError(t, err)
+
+		vm, err := did.NewVerificationMethodFromJWK("id", "", "", jwk)
+		require.NoError(t, err)
+
+		_, err = v.Create(nil, &did.Doc{Service: []did.Service{{ID: "svc"}},
+			VerificationMethod: []did.VerificationMethod{*vm}}, vdrapi.WithOption(EndpointsOpt, []string{"url"}),
+			vdrapi.WithOption(UpdatePublicKeyOpt, []byte{}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "recoveryPublicKey opt is empty")
+	})
+
 	t.Run("test error from get endpoints", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
@@ -84,13 +152,13 @@ func TestVDRI_Build(t *testing.T) {
 
 		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
 
-		_, err := v.Build(nil)
+		_, err := v.Create(nil, &did.Doc{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get endpoints")
 	})
 
 	t.Run("test error from get sidetree config", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
@@ -104,7 +172,7 @@ func TestVDRI_Build(t *testing.T) {
 
 		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
 
-		_, err := v.Build(nil)
+		_, err := v.Create(nil, &did.Doc{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get sidetree config")
 	})
@@ -113,7 +181,7 @@ func TestVDRI_Build(t *testing.T) {
 func httpVdriFunc(doc *did.DocResolution, err error) func(url string) (v vdri, err error) {
 	return func(url string) (v vdri, e error) {
 		return &mockvdr.MockVDR{
-			ReadFunc: func(didID string, opts ...resolve.Option) (*did.DocResolution, error) {
+			ReadFunc: func(didID string, opts ...vdrapi.ResolveOption) (*did.DocResolution, error) {
 				return doc, err
 			}}, nil
 	}
@@ -216,7 +284,7 @@ func signedStakeholderFileData(t *testing.T, stakeholder *models.Stakeholder, ke
 
 func TestVDRI_Read(t *testing.T) {
 	t.Run("test error from get http vdri for resolver url", func(t *testing.T) {
-		v := New(WithResolverURL("url"))
+		v := New(&mockKeyRetriever{}, WithResolverURL("url"))
 
 		_, err := v.getHTTPVDRI("")
 		require.Error(t, err)
@@ -233,7 +301,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error from http vdri build for resolver url", func(t *testing.T) {
-		v := New(WithResolverURL("url"))
+		v := New(&mockKeyRetriever{}, WithResolverURL("url"))
 
 		v.getHTTPVDRI = httpVdriFunc(nil, fmt.Errorf("read error"))
 
@@ -244,7 +312,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test success for resolver url", func(t *testing.T) {
-		v := New(WithResolverURL("url"))
+		v := New(&mockKeyRetriever{}, WithResolverURL("url"))
 
 		v.getHTTPVDRI = httpVdriFunc(&did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}, nil)
 
@@ -254,7 +322,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error parsing did", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		v.getHTTPVDRI = func(url string) (v vdri, err error) {
 			return nil, nil
@@ -267,7 +335,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error from get endpoints", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
@@ -303,7 +371,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error from get http vdri", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
@@ -323,7 +391,7 @@ func TestVDRI_Read(t *testing.T) {
 	})
 
 	t.Run("test error from http vdri read", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		v.endpointService = &mockendpoint.MockEndpointService{
 			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
@@ -374,7 +442,7 @@ func TestVDRI_Read(t *testing.T) {
 			Previous: "",
 		}, sigKey)
 
-		v := New(
+		v := New(&mockKeyRetriever{},
 			WithDomain("domain"),
 			UseGenesisFile("testnet", "testnet", []byte(cfd.JWS.FullSerialize())),
 		)
@@ -412,7 +480,7 @@ func TestVDRI_loadGenesisFiles(t *testing.T) {
 		confFile, err := signConfig(conf, []jose.SigningKey{*sigKey})
 		require.NoError(t, err)
 
-		v := New(UseGenesisFile("url", "domain", []byte(confFile)))
+		v := New(&mockKeyRetriever{}, UseGenesisFile("url", "domain", []byte(confFile)))
 
 		err = v.loadGenesisFiles()
 		require.NoError(t, err)
@@ -421,7 +489,7 @@ func TestVDRI_loadGenesisFiles(t *testing.T) {
 	t.Run("fail: bad consortium data", func(t *testing.T) {
 		confFile := "this is not a consortium config jws"
 
-		v := New(UseGenesisFile("url", "domain", []byte(confFile)))
+		v := New(&mockKeyRetriever{}, UseGenesisFile("url", "domain", []byte(confFile)))
 
 		err := v.loadGenesisFiles()
 		require.Error(t, err)
@@ -431,7 +499,7 @@ func TestVDRI_loadGenesisFiles(t *testing.T) {
 	t.Run("fail: try to read using a vdri with a bad genesis file", func(t *testing.T) {
 		confFile := "this is not a consortium config jws"
 
-		v := New(UseGenesisFile("url", "domain", []byte(confFile)))
+		v := New(&mockKeyRetriever{}, UseGenesisFile("url", "domain", []byte(confFile)))
 
 		doc, err := v.Read("blah blah")
 		require.Error(t, err)
@@ -489,7 +557,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 	sigKey := ed25519SigningKey(t, keyJSON)
 
 	t.Run("success - no stakeholders to verify", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		var confFile string
 
@@ -514,7 +582,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 	})
 
 	t.Run("failure - consortium invalid", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		confFile := `RU^&I*&*&OH`
 
@@ -529,7 +597,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 	})
 
 	t.Run("failure - stakeholders don't sign consortium config", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		var consortiumFile, stakeholderFile, didConfFile string
 
@@ -578,7 +646,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 	})
 
 	t.Run("success - verify with one stakeholder", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		var consortiumFile, stakeholderFile, didConfFile string
 
@@ -628,7 +696,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 	})
 
 	t.Run("failure - can't resolve stakeholder DID", func(t *testing.T) {
-		v := New()
+		v := New(&mockKeyRetriever{})
 
 		var consortiumFile, stakeholderFile, didConfFile string
 
@@ -725,7 +793,7 @@ func TestVDRI_ValidateConsortium(t *testing.T) {
 
 		didConfFile = string(didConfBytes)
 
-		v := New(EnableSignatureVerification(true))
+		v := New(&mockKeyRetriever{}, EnableSignatureVerification(true))
 
 		v.configService = &mockconfig.MockConfigService{
 			GetConsortiumFunc: func(u string, d string) (*models.ConsortiumFileData, error) {
@@ -814,7 +882,7 @@ func Test_verifyStakeholder(t *testing.T) {
 				test.consortiumKey)
 			sfd := signedStakeholderFileData(t, dummyStakeholder(test.stakeholderDomain), test.stakeholderKey)
 
-			v := New()
+			v := New(&mockKeyRetriever{})
 
 			v.getHTTPVDRI = httpVdriFunc(&did.DocResolution{DIDDocument: mockDoc}, nil)
 
@@ -837,7 +905,7 @@ func Test_verifyStakeholder(t *testing.T) {
 }
 
 func TestVDRI_Close(t *testing.T) {
-	v := New()
+	v := New(&mockKeyRetriever{})
 	require.NoError(t, v.Close())
 }
 
@@ -1074,4 +1142,7 @@ type mockSidetreeClient struct {
 
 func (m *mockSidetreeClient) CreateDID(opts ...create.Option) (*did.DocResolution, error) {
 	return m.createDIDValue, nil
+}
+
+type mockKeyRetriever struct {
 }
