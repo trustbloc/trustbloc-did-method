@@ -137,7 +137,9 @@ func getSidetreeURL(cmd *cobra.Command) []vdrapi.DIDMethodOption {
 	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
 		sidetreeURLEnvKey)
 
-	opts = append(opts, vdrapi.WithOption(trustbloc.EndpointsOpt, sidetreeURL))
+	if len(sidetreeURL) > 0 {
+		opts = append(opts, vdrapi.WithOption(trustbloc.EndpointsOpt, sidetreeURL))
+	}
 
 	return opts
 }

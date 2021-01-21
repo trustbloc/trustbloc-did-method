@@ -6,18 +6,20 @@ SPDX-License-Identifier: Apache-2.0
 package recoverdidcmd
 
 import (
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"strconv"
 
+	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/common"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/recovery"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 )
 
 const (
@@ -131,18 +133,36 @@ func recoverDIDCmd() *cobra.Command {
 			sidetreeWriteToken := cmdutils.GetUserSetOptionalVarFromString(cmd, sidetreeWriteTokenFlagName,
 				sidetreeWriteTokenEnvKey)
 
-			domain := cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName,
-				domainFileEnvKey)
-
-			client := did.New(did.WithAuthToken(sidetreeWriteToken),
-				did.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
-
-			opts, err := recoverDIDOption(cmd)
+			didDoc, opts, err := recoverDIDOption(didURI, cmd)
 			if err != nil {
 				return err
 			}
 
-			err = client.RecoverDID(didURI, domain, opts...)
+			signingKey, err := common.GetKey(cmd, signingKeyFlagName, signingKeyEnvKey, signingKeyFileFlagName,
+				signingKeyFileEnvKey, []byte(cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
+					signingKeyPasswordEnvKey)), true)
+			if err != nil {
+				return err
+			}
+
+			nextUpdateKey, err := common.GetKey(cmd, nextUpdateKeyFlagName, nextUpdateKeyEnvKey, nextUpdateKeyFileFlagName,
+				nextUpdateKeyFileEnvKey, nil, false)
+			if err != nil {
+				return err
+			}
+
+			nextRecoveryKey, err := common.GetKey(cmd, nextRecoveryKeyFlagName, nextRecoveryKeyEnvKey,
+				nextRecoveryKeyFileFlagName, nextUpdateKeyFileEnvKey, nil, false)
+			if err != nil {
+				return err
+			}
+
+			vdr := trustbloc.New(&keyRetriever{nextUpdateKey: nextUpdateKey, signingKey: signingKey,
+				nextRecoveryKey: nextRecoveryKey}, trustbloc.WithAuthToken(sidetreeWriteToken),
+				trustbloc.WithDomain(cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName, domainFileEnvKey)),
+				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+
+			err = vdr.Update(didDoc, opts...)
 			if err != nil {
 				return fmt.Errorf("failed to recover did: %w", err)
 			}
@@ -154,67 +174,42 @@ func recoverDIDCmd() *cobra.Command {
 	}
 }
 
-func getSidetreeURL(cmd *cobra.Command) []recovery.Option {
-	var opts []recovery.Option
+func getSidetreeURL(cmd *cobra.Command) []vdrapi.DIDMethodOption {
+	var opts []vdrapi.DIDMethodOption
 
 	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
 		sidetreeURLEnvKey)
 
-	for _, v := range sidetreeURL {
-		opts = append(opts, recovery.WithSidetreeEndpoint(v))
+	if len(sidetreeURL) > 0 {
+		opts = append(opts, vdrapi.WithOption(trustbloc.EndpointsOpt, sidetreeURL))
 	}
 
 	return opts
 }
 
-func recoverDIDOption(cmd *cobra.Command) ([]recovery.Option, error) {
-	opts, err := getPublicKeys(cmd)
+func recoverDIDOption(didID string, cmd *cobra.Command) (*ariesdid.Doc, []vdrapi.DIDMethodOption, error) {
+	opts := getSidetreeURL(cmd)
+
+	opts = append(opts, vdrapi.WithOption(trustbloc.RecoverOpt, true))
+
+	pks, err := getPublicKeys(cmd)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	signingKey, err := common.GetKey(cmd, signingKeyFlagName, signingKeyEnvKey, signingKeyFileFlagName,
-		signingKeyFileEnvKey, []byte(cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
-			signingKeyPasswordEnvKey)), true)
+	services, err := getServices(cmd)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	opts = append(opts, recovery.WithSigningKey(signingKey))
-
-	nextUpdateKey, err := common.GetKey(cmd, nextUpdateKeyFlagName, nextUpdateKeyEnvKey, nextUpdateKeyFileFlagName,
-		nextUpdateKeyFileEnvKey, nil, false)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = append(opts, recovery.WithNextUpdatePublicKey(nextUpdateKey))
-
-	nextRecoveryKey, err := common.GetKey(cmd, nextRecoveryKeyFlagName, nextRecoveryKeyEnvKey,
-		nextRecoveryKeyFileFlagName, nextUpdateKeyFileEnvKey, nil, false)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = append(opts, recovery.WithNextRecoveryPublicKey(nextRecoveryKey))
-
-	serviceOpts, err := getServices(cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = append(opts, serviceOpts...)
-
-	opts = append(opts, getSidetreeURL(cmd)...)
-
-	return opts, nil
+	return &ariesdid.Doc{ID: didID, VerificationMethod: pks, Service: services}, opts, nil
 }
 
-func getServices(cmd *cobra.Command) ([]recovery.Option, error) {
+func getServices(cmd *cobra.Command) ([]ariesdid.Service, error) {
 	serviceFile := cmdutils.GetUserSetOptionalVarFromString(cmd, serviceFileFlagName,
 		serviceFileEnvKey)
 
-	var opts []recovery.Option
+	var svc []ariesdid.Service
 
 	if serviceFile != "" {
 		services, err := common.GetServices(serviceFile)
@@ -223,31 +218,22 @@ func getServices(cmd *cobra.Command) ([]recovery.Option, error) {
 		}
 
 		for i := range services {
-			opts = append(opts, recovery.WithService(&services[i]))
+			svc = append(svc, services[i])
 		}
 	}
 
-	return opts, nil
+	return svc, nil
 }
 
-func getPublicKeys(cmd *cobra.Command) ([]recovery.Option, error) {
+func getPublicKeys(cmd *cobra.Command) ([]ariesdid.VerificationMethod, error) {
 	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, publicKeyFileFlagName,
 		publicKeyFileEnvKey)
 
-	var opts []recovery.Option
-
 	if publicKeyFile != "" {
-		publicKeys, err := common.GetPublicKeysFromFile(publicKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get public keys from file %w", err)
-		}
-
-		for i := range publicKeys {
-			opts = append(opts, recovery.WithPublicKey(&publicKeys[i]))
-		}
+		return common.GetVDRPublicKeysFromFile(publicKeyFile)
 	}
 
-	return opts, nil
+	return nil, nil
 }
 
 func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {
@@ -288,4 +274,22 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(signingKeyPasswordFlagName, "", "", signingKeyPasswordFlagUsage)
 	startCmd.Flags().StringP(nextRecoveryKeyFlagName, "", "", nextRecoveryKeyFlagUsage)
 	startCmd.Flags().StringP(nextRecoveryKeyFileFlagName, "", "", nextRecoveryKeyFileFlagUsage)
+}
+
+type keyRetriever struct {
+	nextUpdateKey   crypto.PublicKey
+	nextRecoveryKey crypto.PublicKey
+	signingKey      crypto.PublicKey
+}
+
+func (k *keyRetriever) GetNextRecoveryPublicKey(didID string) (crypto.PublicKey, error) {
+	return k.nextRecoveryKey, nil
+}
+
+func (k *keyRetriever) GetNextUpdatePublicKey(didID string) (crypto.PublicKey, error) {
+	return k.nextUpdateKey, nil
+}
+
+func (k *keyRetriever) GetSigningKey(didID string, ot trustbloc.OperationType) (crypto.PrivateKey, error) {
+	return k.signingKey, nil
 }

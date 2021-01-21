@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package trustbloc
 
 import (
+	"crypto"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/tls"
@@ -17,6 +18,8 @@ import (
 	"testing"
 
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/create"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/recovery"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/update"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
@@ -30,6 +33,70 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/didconfiguration"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
+
+const validDocResolution = `
+{
+   "@context":"https://w3id.org/did-resolution/v1",
+   "didDocument": ` + validDoc + `,
+   "didDocumentMetadata":{
+      "canonicalId":"did:ex:123333",
+      "method":{
+         "published":true,
+         "recoveryCommitment":"EiB1u5HnTYKVHrmemOpZtrGlc6BoaWWHwNAd-k7CrLKHOg",
+         "updateCommitment":"EiAiTB0QR_Skh3i-fzDSeFgjVoMEDsXYoVIsA56-GUsKjg"
+      }
+   }
+}
+`
+
+//nolint:lll
+const validDoc = `{
+  "@context": ["https://w3id.org/did/v1"],
+  "id": "did:example:21tDAKCERh95uGgKbJNHYp",
+  "verificationMethod": [
+    {
+      "id": "did:example:123456789abcdefghi#keys-1",
+      "type": "Secp256k1VerificationKey2018",
+      "controller": "did:example:123456789abcdefghi",
+      "publicKeyBase58": "H3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
+    },
+    {
+      "id": "did:example:123456789abcdefghw#key2",
+      "type": "RsaVerificationKey2018",
+      "controller": "did:example:123456789abcdefghw",
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAryQICCl6NZ5gDKrnSztO\n3Hy8PEUcuyvg/ikC+VcIo2SFFSf18a3IMYldIugqqqZCs4/4uVW3sbdLs/6PfgdX\n7O9D22ZiFWHPYA2k2N744MNiCD1UE+tJyllUhSblK48bn+v1oZHCM0nYQ2NqUkvS\nj+hwUU3RiWl7x3D2s9wSdNt7XUtW05a/FXehsPSiJfKvHJJnGOX0BgTvkLnkAOTd\nOrUZ/wK69Dzu4IvrN4vs9Nes8vbwPa/ddZEzGR0cQMt0JBkhk9kU/qwqUseP1QRJ\n5I1jR4g8aYPL/ke9K35PxZWuDp3U0UPAZ3PjFAh+5T+fc7gzCs9dPzSHloruU+gl\nFQIDAQAB\n-----END PUBLIC KEY-----"
+    }
+  ],
+  "authentication": [
+    "did:example:123456789abcdefghi#keys-1",
+    {
+      "id": "did:example:123456789abcdefghs#key3",
+      "type": "RsaVerificationKey2018",
+      "controller": "did:example:123456789abcdefghs",
+      "publicKeyHex": "02b97c30de767f084ce3080168ee293053ba33b235d7116a3263d29f1450936b71"
+    }
+  ],
+  "service": [
+    {
+      "id": "did:example:123456789abcdefghi#inbox",
+      "type": "SocialWebInboxService",
+      "serviceEndpoint": "https://social.example.com/83hfh37dj",
+      "spamCost": {
+        "amount": "0.50",
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "did:example:123456789abcdefghi#did-communication",
+      "type": "did-communication",
+      "serviceEndpoint": "https://agent.example.com/",
+      "priority" : 0,
+      "recipientKeys" : ["did:example:123456789abcdefghi#key2"],
+      "routingKeys" : ["did:example:123456789abcdefghi#key2"]
+    }
+  ],
+  "created": "2002-10-10T17:00:00Z"
+}`
 
 func TestVDRI_Accept(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
@@ -175,6 +242,163 @@ func TestVDRI_Create(t *testing.T) {
 		_, err := v.Create(nil, &did.Doc{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get sidetree config")
+	})
+}
+
+func TestVDRI_Update(t *testing.T) {
+	t.Run("test success", func(t *testing.T) {
+		cServ := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-type", "application/did+ld+json")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, validDocResolution)
+		}))
+		defer cServ.Close()
+
+		v := New(&mockKeyRetriever{})
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		_, pk, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		jwk, err := ariesjose.JWKFromPublicKey(pk)
+		require.NoError(t, err)
+
+		vm, err := did.NewVerificationMethodFromJWK("id", "", "", jwk)
+		require.NoError(t, err)
+
+		err = v.Update(&did.Doc{Service: []did.Service{{ID: "svc"}},
+			VerificationMethod: []did.VerificationMethod{*vm}}, vdrapi.WithOption(EndpointsOpt, []string{cServ.URL}))
+		require.NoError(t, err)
+	})
+
+	t.Run("test error from get endpoints", func(t *testing.T) {
+		v := New(&mockKeyRetriever{})
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return nil, fmt.Errorf("failed to get endpoints")
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		err := v.Update(&did.Doc{})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get endpoints")
+	})
+
+	t.Run("test error from get sidetree config", func(t *testing.T) {
+		v := New(&mockKeyRetriever{})
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: "url"}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return nil, fmt.Errorf("failed to get sidetree config")
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		err := v.Update(&did.Doc{})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get sidetree config")
+	})
+
+	t.Run("test error from get did doc", func(t *testing.T) {
+		cServ := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer cServ.Close()
+
+		v := New(&mockKeyRetriever{})
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: cServ.URL}}, nil
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		err := v.Update(&did.Doc{})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to resolve did")
+	})
+}
+
+func TestVDRI_Recover(t *testing.T) {
+	t.Run("test success", func(t *testing.T) {
+		cServ := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-type", "application/did+ld+json")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, validDocResolution)
+		}))
+		defer cServ.Close()
+
+		v := New(&mockKeyRetriever{})
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		_, pk, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		jwk, err := ariesjose.JWKFromPublicKey(pk)
+		require.NoError(t, err)
+
+		vm, err := did.NewVerificationMethodFromJWK("id", "", "", jwk)
+		require.NoError(t, err)
+
+		err = v.Update(&did.Doc{Service: []did.Service{{ID: "svc"}},
+			VerificationMethod: []did.VerificationMethod{*vm}}, vdrapi.WithOption(EndpointsOpt, []string{cServ.URL}),
+			vdrapi.WithOption(RecoverOpt, true))
+		require.NoError(t, err)
+	})
+
+	t.Run("test error get sidetree public keys", func(t *testing.T) {
+		cServ := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-type", "application/did+ld+json")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, validDocResolution)
+		}))
+		defer cServ.Close()
+
+		v := New(&mockKeyRetriever{})
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{createDIDValue: &did.DocResolution{DIDDocument: &did.Doc{ID: "did"}}}
+
+		err := v.Update(&did.Doc{Service: []did.Service{{ID: "svc"}},
+			VerificationMethod: []did.VerificationMethod{{ID: "id"}}},
+			vdrapi.WithOption(EndpointsOpt, []string{cServ.URL}),
+			vdrapi.WithOption(RecoverOpt, true))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "verificationMethod JSONWebKey is nil")
 	})
 }
 
@@ -1144,5 +1368,40 @@ func (m *mockSidetreeClient) CreateDID(opts ...create.Option) (*did.DocResolutio
 	return m.createDIDValue, nil
 }
 
+func (m *mockSidetreeClient) UpdateDID(didID string, opts ...update.Option) error {
+	return nil
+}
+
+func (m *mockSidetreeClient) RecoverDID(didID string, opts ...recovery.Option) error {
+	return nil
+}
+
 type mockKeyRetriever struct {
+	getNextRecoveryPublicKeyFunc func(didID string) (crypto.PublicKey, error)
+	getNextUpdatePublicKey       func(didID string) (crypto.PublicKey, error)
+	getSigningKey                func(didID string, ot OperationType) (crypto.PrivateKey, error)
+}
+
+func (m *mockKeyRetriever) GetNextRecoveryPublicKey(didID string) (crypto.PublicKey, error) {
+	if m.getNextRecoveryPublicKeyFunc != nil {
+		return m.getNextRecoveryPublicKeyFunc(didID)
+	}
+
+	return nil, nil
+}
+
+func (m *mockKeyRetriever) GetNextUpdatePublicKey(didID string) (crypto.PublicKey, error) {
+	if m.getNextUpdatePublicKey != nil {
+		return m.getNextUpdatePublicKey(didID)
+	}
+
+	return nil, nil
+}
+
+func (m *mockKeyRetriever) GetSigningKey(didID string, ot OperationType) (crypto.PrivateKey, error) {
+	if m.getSigningKey != nil {
+		return m.getSigningKey(didID, ot)
+	}
+
+	return nil, nil
 }

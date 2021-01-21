@@ -21,6 +21,8 @@ import (
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/create"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/recovery"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/update"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/signature/jsonld"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
@@ -49,6 +51,18 @@ const (
 	UpdatePublicKeyOpt = "updatePublicKey"
 	// RecoveryPublicKeyOpt recovery public key opt
 	RecoveryPublicKeyOpt = "recoveryPublicKey"
+	// RecoverOpt recover opt,
+	RecoverOpt = "recover"
+)
+
+// OperationType operation type
+type OperationType int
+
+const (
+	// Update operation
+	Update OperationType = iota
+	// Recover operation
+	Recover
 )
 
 type configService interface {
@@ -59,6 +73,8 @@ type configService interface {
 
 type sidetreeClient interface {
 	CreateDID(opts ...create.Option) (*docdid.DocResolution, error)
+	UpdateDID(didID string, opts ...update.Option) error
+	RecoverDID(did string, opts ...recovery.Option) error
 }
 
 type endpointService interface {
@@ -101,7 +117,9 @@ type genesisFileData struct {
 
 // KeyRetriever key retriever
 type KeyRetriever interface {
-	// TODO add did operation keys
+	GetNextRecoveryPublicKey(didID string) (crypto.PublicKey, error)
+	GetNextUpdatePublicKey(didID string) (crypto.PublicKey, error)
+	GetSigningKey(didID string, ot OperationType) (crypto.PrivateKey, error)
 }
 
 // New creates new bloc vdri
@@ -169,33 +187,7 @@ func (v *VDRI) Create(keyManager kms.KeyManager, did *docdid.Doc,
 
 	var createOpt []create.Option
 
-	var getEndpoints func() ([]string, error)
-
-	if didMethodOpts.Values[EndpointsOpt] == nil {
-		getEndpoints = func() ([]string, error) {
-			var result []string
-
-			endpoints, err := v.endpointService.GetEndpoints(v.domain)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get endpoints: %w", err)
-			}
-
-			for _, v := range endpoints {
-				result = append(result, v.URL)
-			}
-
-			return result, err
-		}
-	} else {
-		getEndpoints = func() ([]string, error) {
-			v, ok := didMethodOpts.Values[EndpointsOpt].([]string)
-			if !ok {
-				return nil, fmt.Errorf("endpointsOpt not array of string")
-			}
-
-			return v, nil
-		}
-	}
+	getEndpoints := v.getSidetreeEndpoints(didMethodOpts)
 
 	// get sidetree config
 	endpoints, err := getEndpoints()
@@ -232,18 +224,14 @@ func (v *VDRI) Create(keyManager kms.KeyManager, did *docdid.Doc,
 		createOpt = append(createOpt, create.WithService(&did.Service[i]))
 	}
 
-	// get ver
-	for _, vm := range did.VerificationMethod {
-		if vm.JSONWebKey() == nil {
-			return nil, fmt.Errorf("verificationMethod JSONWebKey is nil")
-		}
+	// get verification method
+	pks, err := getSidetreePublicKeys(did.VerificationMethod)
+	if err != nil {
+		return nil, err
+	}
 
-		createOpt = append(createOpt, create.WithPublicKey(&doc.PublicKey{
-			ID:       vm.ID,
-			Type:     vm.Type,
-			Purposes: []string{doc.KeyPurposeAuthentication}, // TODO add did method option for Purposes
-			JWK:      vm.JSONWebKey().JSONWebKey,
-		}))
+	for i := range pks {
+		createOpt = append(createOpt, create.WithPublicKey(&pks[i]))
 	}
 
 	createOpt = append(createOpt, create.WithSidetreeEndpoint(getEndpoints),
@@ -251,6 +239,228 @@ func (v *VDRI) Create(keyManager kms.KeyManager, did *docdid.Doc,
 		create.WithRecoveryPublicKey(recoveryPublicKey))
 
 	return v.sidetreeClient.CreateDID(createOpt...)
+}
+
+// Update did doc.
+func (v *VDRI) Update(didDoc *docdid.Doc, opts ...vdrapi.DIDMethodOption) error { //nolint:funlen,gocyclo
+	didMethodOpts := &vdrapi.DIDMethodOpts{Values: make(map[string]interface{})}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(didMethodOpts)
+	}
+
+	var updateOpt []update.Option
+
+	getEndpoints := v.getSidetreeEndpoints(didMethodOpts)
+
+	// get sidetree config
+	endpoints, err := getEndpoints()
+	if err != nil {
+		return err
+	}
+
+	sidetreeConfig, err := v.configService.GetSidetreeConfig(endpoints[0])
+	if err != nil {
+		return err
+	}
+
+	docResolution, err := v.sidetreeResolve(endpoints[0]+"/identifiers", didDoc.ID)
+	if err != nil {
+		return err
+	}
+
+	// check recover option
+	if didMethodOpts.Values[RecoverOpt] != nil {
+		return v.recover(didDoc, sidetreeConfig, getEndpoints, docResolution.DocumentMetadata.Method.RecoveryCommitment)
+	}
+
+	// get services
+	for i := range didDoc.Service {
+		updateOpt = append(updateOpt, update.WithAddService(&didDoc.Service[i]))
+	}
+
+	updateOpt = append(updateOpt, getRemovedSvcKeysID(docResolution.DIDDocument.Service, didDoc.Service)...)
+
+	// get verification method
+	pks, err := getSidetreePublicKeys(didDoc.VerificationMethod)
+	if err != nil {
+		return err
+	}
+
+	for i := range pks {
+		updateOpt = append(updateOpt, update.WithAddPublicKey(&pks[i]))
+	}
+
+	// get keys
+	nextUpdatePublicKey, err := v.keyRetriever.GetNextUpdatePublicKey(didDoc.ID)
+	if err != nil {
+		return err
+	}
+
+	updateSigningKey, err := v.keyRetriever.GetSigningKey(didDoc.ID, Update)
+	if err != nil {
+		return err
+	}
+
+	updateOpt = append(updateOpt, getRemovedPKKeysID(docResolution.DIDDocument.VerificationMethod,
+		didDoc.VerificationMethod)...)
+
+	updateOpt = append(updateOpt, update.WithSidetreeEndpoint(getEndpoints),
+		update.WithNextUpdatePublicKey(nextUpdatePublicKey),
+		update.WithMultiHashAlgorithm(sidetreeConfig.MultiHashAlgorithm),
+		update.WithSigningKey(updateSigningKey),
+		update.WithOperationCommitment(docResolution.DocumentMetadata.Method.UpdateCommitment))
+
+	return v.sidetreeClient.UpdateDID(didDoc.ID, updateOpt...)
+}
+
+func (v *VDRI) recover(didDoc *docdid.Doc, sidetreeConfig *models.SidetreeConfig,
+	getEndpoints func() ([]string, error), recoveryCommitment string) error {
+	var recoveryOpt []recovery.Option
+
+	// get services
+	for i := range didDoc.Service {
+		recoveryOpt = append(recoveryOpt, recovery.WithService(&didDoc.Service[i]))
+	}
+
+	// get verification method
+	pks, err := getSidetreePublicKeys(didDoc.VerificationMethod)
+	if err != nil {
+		return err
+	}
+
+	for i := range pks {
+		recoveryOpt = append(recoveryOpt, recovery.WithPublicKey(&pks[i]))
+	}
+
+	// get keys
+	nextUpdatePublicKey, err := v.keyRetriever.GetNextUpdatePublicKey(didDoc.ID)
+	if err != nil {
+		return err
+	}
+
+	nextRecoveryPublicKey, err := v.keyRetriever.GetNextRecoveryPublicKey(didDoc.ID)
+	if err != nil {
+		return err
+	}
+
+	updateSigningKey, err := v.keyRetriever.GetSigningKey(didDoc.ID, Recover)
+	if err != nil {
+		return err
+	}
+
+	recoveryOpt = append(recoveryOpt, recovery.WithSidetreeEndpoint(getEndpoints),
+		recovery.WithNextUpdatePublicKey(nextUpdatePublicKey),
+		recovery.WithNextRecoveryPublicKey(nextRecoveryPublicKey),
+		recovery.WithMultiHashAlgorithm(sidetreeConfig.MultiHashAlgorithm),
+		recovery.WithSigningKey(updateSigningKey),
+		recovery.WithOperationCommitment(recoveryCommitment))
+
+	return v.sidetreeClient.RecoverDID(didDoc.ID, recoveryOpt...)
+}
+
+func getSidetreePublicKeys(verificationMethod []docdid.VerificationMethod) ([]doc.PublicKey, error) {
+	var pks []doc.PublicKey
+
+	for _, vm := range verificationMethod {
+		if vm.JSONWebKey() == nil {
+			return nil, fmt.Errorf("verificationMethod JSONWebKey is nil")
+		}
+
+		pks = append(pks, doc.PublicKey{
+			ID:       vm.ID,
+			Type:     vm.Type,
+			Purposes: []string{doc.KeyPurposeAuthentication}, // TODO add did method option for Purposes
+			JWK:      vm.JSONWebKey().JSONWebKey,
+		})
+	}
+
+	return pks, nil
+}
+
+func (v *VDRI) getSidetreeEndpoints(didMethodOpts *vdrapi.DIDMethodOpts) func() ([]string, error) {
+	if didMethodOpts.Values[EndpointsOpt] == nil {
+		return func() ([]string, error) {
+			var result []string
+
+			endpoints, err := v.endpointService.GetEndpoints(v.domain)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get endpoints: %w", err)
+			}
+
+			for _, v := range endpoints {
+				result = append(result, v.URL)
+			}
+
+			return result, nil
+		}
+	}
+
+	return func() ([]string, error) {
+		v, ok := didMethodOpts.Values[EndpointsOpt].([]string)
+		if !ok {
+			return nil, fmt.Errorf("endpointsOpt not array of string")
+		}
+
+		return v, nil
+	}
+}
+
+func getRemovedSvcKeysID(currentService, updatedService []docdid.Service) []update.Option {
+	var updateOpt []update.Option
+
+	for i := range currentService {
+		exist := false
+
+		for u := range updatedService {
+			if currentService[i].ID == updatedService[u].ID {
+				exist = true
+				break
+			}
+		}
+
+		if !exist {
+			s := strings.Split(currentService[i].ID, "#")
+
+			id := s[0]
+			if len(s) > 1 {
+				id = s[1]
+			}
+
+			updateOpt = append(updateOpt, update.WithRemoveService(id))
+		}
+	}
+
+	return updateOpt
+}
+
+func getRemovedPKKeysID(currentVM, updatedVM []docdid.VerificationMethod) []update.Option {
+	var updateOpt []update.Option
+
+	for _, curr := range currentVM {
+		exist := false
+
+		for _, updated := range updatedVM {
+			if curr.ID == updated.ID {
+				exist = true
+				break
+			}
+		}
+
+		if !exist {
+			s := strings.Split(curr.ID, "#")
+
+			id := s[0]
+			if len(s) > 1 {
+				id = s[1]
+			}
+
+			updateOpt = append(updateOpt, update.WithRemovePublicKey(id))
+		}
+	}
+
+	return updateOpt
 }
 
 func (v *VDRI) loadGenesisFiles() error {

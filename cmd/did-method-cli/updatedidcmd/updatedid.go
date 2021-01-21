@@ -6,18 +6,20 @@ SPDX-License-Identifier: Apache-2.0
 package updatedidcmd
 
 import (
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"strconv"
 
+	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/common"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/update"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 )
 
 const (
@@ -61,16 +63,6 @@ const (
 	addServiceFileEnvKey   = "DID_METHOD_CLI_ADD_SERVICE_FILE"
 	addServiceFlagUsage    = "publickey file include services to be added for TrustBloc DID " +
 		" Alternatively, this can be set with the following environment variable: " + addServiceFileEnvKey
-
-	removePublicKeyIDFlagName  = "remove-publickey-id"
-	removePublicKeyIDEnvKey    = "DID_METHOD_CLI_REMOVE_PUBLICKEY_ID"
-	removePublicKeyIDFlagUsage = "Comma-Separated list of public key id's to be removed from TrustBloc DID. " +
-		" Alternatively, this can be set with the following environment variable: " + removePublicKeyIDEnvKey
-
-	removeServiceIDFlagName  = "remove-service-id"
-	removeServiceIDEnvKey    = "DID_METHOD_CLI_REMOVE_SERVICE_ID"
-	removeServiceIDFlagUsage = "Comma-Separated list of service id's to be removed from TrustBloc DID. " +
-		" Alternatively, this can be set with the following environment variable: " + removeServiceIDEnvKey
 
 	signingKeyFlagName  = "signingkey"
 	signingKeyEnvKey    = "DID_METHOD_CLI_SIGNINGKEY"
@@ -132,15 +124,29 @@ func updateDIDCmd() *cobra.Command {
 			domain := cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName,
 				domainFileEnvKey)
 
-			client := did.New(did.WithAuthToken(sidetreeWriteToken),
-				did.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
-
-			opts, err := updateDIDOption(cmd)
+			didDoc, opts, err := updateDIDOption(didURI, cmd)
 			if err != nil {
 				return err
 			}
 
-			err = client.UpdateDID(didURI, domain, opts...)
+			signingKey, err := common.GetKey(cmd, signingKeyFlagName, signingKeyEnvKey, signingKeyFileFlagName,
+				signingKeyFileEnvKey, []byte(cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
+					signingKeyPasswordEnvKey)), true)
+			if err != nil {
+				return err
+			}
+
+			nextUpdateKey, err := common.GetKey(cmd, nextUpdateKeyFlagName, nextUpdateKeyEnvKey, nextUpdateKeyFileFlagName,
+				nextUpdateKeyFileEnvKey, nil, false)
+			if err != nil {
+				return err
+			}
+
+			vdr := trustbloc.New(&keyRetriever{nextUpdateKey: nextUpdateKey, signingKey: signingKey},
+				trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
+				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+
+			err = vdr.Update(didDoc, opts...)
 			if err != nil {
 				return fmt.Errorf("failed to update did: %w", err)
 			}
@@ -152,63 +158,40 @@ func updateDIDCmd() *cobra.Command {
 	}
 }
 
-func getSidetreeURL(cmd *cobra.Command) []update.Option {
-	var opts []update.Option
+func getSidetreeURL(cmd *cobra.Command) []vdrapi.DIDMethodOption {
+	var opts []vdrapi.DIDMethodOption
 
 	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
 		sidetreeURLEnvKey)
 
-	for _, v := range sidetreeURL {
-		opts = append(opts, update.WithSidetreeEndpoint(v))
+	if len(sidetreeURL) > 0 {
+		opts = append(opts, vdrapi.WithOption(trustbloc.EndpointsOpt, sidetreeURL))
 	}
 
 	return opts
 }
 
-func updateDIDOption(cmd *cobra.Command) ([]update.Option, error) {
-	opts, err := getPublicKeys(cmd)
+func updateDIDOption(didID string, cmd *cobra.Command) (*ariesdid.Doc, []vdrapi.DIDMethodOption, error) {
+	opts := getSidetreeURL(cmd)
+
+	pks, err := getPublicKeys(cmd)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	signingKey, err := common.GetKey(cmd, signingKeyFlagName, signingKeyEnvKey, signingKeyFileFlagName,
-		signingKeyFileEnvKey, []byte(cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
-			signingKeyPasswordEnvKey)), true)
+	services, err := getServices(cmd)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	opts = append(opts, update.WithSigningKey(signingKey))
-
-	nextUpdateKey, err := common.GetKey(cmd, nextUpdateKeyFlagName, nextUpdateKeyEnvKey, nextUpdateKeyFileFlagName,
-		nextUpdateKeyFileEnvKey, nil, false)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = append(opts, update.WithNextUpdatePublicKey(nextUpdateKey))
-
-	serviceOpts, err := getServices(cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = append(opts, serviceOpts...)
-
-	opts = append(opts, getSidetreeURL(cmd)...)
-
-	opts = append(opts, getRemovePublicKeyID(cmd)...)
-
-	opts = append(opts, getRemoveServiceID(cmd)...)
-
-	return opts, nil
+	return &ariesdid.Doc{ID: didID, VerificationMethod: pks, Service: services}, opts, nil
 }
 
-func getServices(cmd *cobra.Command) ([]update.Option, error) {
+func getServices(cmd *cobra.Command) ([]ariesdid.Service, error) {
 	serviceFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addServiceFileFlagName,
 		addServiceFileEnvKey)
 
-	var opts []update.Option
+	var svc []ariesdid.Service
 
 	if serviceFile != "" {
 		services, err := common.GetServices(serviceFile)
@@ -217,57 +200,22 @@ func getServices(cmd *cobra.Command) ([]update.Option, error) {
 		}
 
 		for i := range services {
-			opts = append(opts, update.WithAddService(&services[i]))
+			svc = append(svc, services[i])
 		}
 	}
 
-	return opts, nil
+	return svc, nil
 }
 
-func getPublicKeys(cmd *cobra.Command) ([]update.Option, error) {
+func getPublicKeys(cmd *cobra.Command) ([]ariesdid.VerificationMethod, error) {
 	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, addPublicKeyFileFlagName,
 		addPublicKeyFileEnvKey)
 
-	var opts []update.Option
-
 	if publicKeyFile != "" {
-		publicKeys, err := common.GetPublicKeysFromFile(publicKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get public keys from file %w", err)
-		}
-
-		for i := range publicKeys {
-			opts = append(opts, update.WithAddPublicKey(&publicKeys[i]))
-		}
+		return common.GetVDRPublicKeysFromFile(publicKeyFile)
 	}
 
-	return opts, nil
-}
-
-func getRemoveServiceID(cmd *cobra.Command) []update.Option {
-	var opts []update.Option
-
-	removeServices := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, removeServiceIDFlagName,
-		removeServiceIDEnvKey)
-
-	for _, v := range removeServices {
-		opts = append(opts, update.WithRemoveService(v))
-	}
-
-	return opts
-}
-
-func getRemovePublicKeyID(cmd *cobra.Command) []update.Option {
-	var opts []update.Option
-
-	removePublicKeys := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, removePublicKeyIDFlagName,
-		removePublicKeyIDEnvKey)
-
-	for _, v := range removePublicKeys {
-		opts = append(opts, update.WithRemovePublicKey(v))
-	}
-
-	return opts
+	return nil, nil
 }
 
 func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {
@@ -305,7 +253,22 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(nextUpdateKeyFlagName, "", "", nextUpdateKeyFlagUsage)
 	startCmd.Flags().StringP(nextUpdateKeyFileFlagName, "", "", nextUpdateKeyFileFlagUsage)
 	startCmd.Flags().StringArrayP(sidetreeURLFlagName, "", []string{}, sidetreeURLFlagUsage)
-	startCmd.Flags().StringArrayP(removePublicKeyIDFlagName, "", []string{}, removePublicKeyIDFlagUsage)
-	startCmd.Flags().StringArrayP(removeServiceIDFlagName, "", []string{}, removeServiceIDFlagUsage)
 	startCmd.Flags().StringP(signingKeyPasswordFlagName, "", "", signingKeyPasswordFlagUsage)
+}
+
+type keyRetriever struct {
+	nextUpdateKey crypto.PublicKey
+	signingKey    crypto.PublicKey
+}
+
+func (k *keyRetriever) GetNextRecoveryPublicKey(didID string) (crypto.PublicKey, error) {
+	return nil, nil
+}
+
+func (k *keyRetriever) GetNextUpdatePublicKey(didID string) (crypto.PublicKey, error) {
+	return k.nextUpdateKey, nil
+}
+
+func (k *keyRetriever) GetSigningKey(didID string, ot trustbloc.OperationType) (crypto.PrivateKey, error) {
+	return k.signingKey, nil
 }
