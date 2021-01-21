@@ -12,8 +12,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -56,9 +54,6 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^Resolve created DID and validate key type "([^"]*)", signature suite "([^"]*)"$`,                                               //nolint: lll
 		e.resolveCreatedDID)
 	s.Step(`^DID resolution fails, containing error "([^"]*)"$`, e.didResolutionError)
-	s.Step(`^Consortium config is updated with config file "([^"]*)"$`, e.updateConfig)
-	s.Step(`^Consortium config is generated with config file "([^"]*)"$`, e.generateConfig)
-	s.Step(`^Consortium config is deleted$`, e.deleteConfig)
 	s.Step(`^Bloc VDRI is initialized with genesis file "([^"]*)"$`, e.initBlocVDRIWithGenesisFile)
 	s.Step(`^Bloc VDRI is initialized with resolver URL "([^"]*)"$`, e.initBlocVDRIWithResolverURL)
 }
@@ -218,18 +213,6 @@ func (e *Steps) resolveCreatedDID(keyType, signatureSuite string) error {
 	return nil
 }
 
-func (e *Steps) generateConfig(config string) error {
-	return execCMD("./generate_config.sh", config)
-}
-
-func (e *Steps) updateConfig(config string) error {
-	return execCMD("./update_config.sh", config)
-}
-
-func (e *Steps) deleteConfig() error {
-	return os.RemoveAll("./fixtures/wellknown/jws")
-}
-
 func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {
 	var kt kms.KeyType
 
@@ -280,29 +263,6 @@ func (e *Steps) verifyPublicKeyAndType(didDoc *ariesdid.Doc, signatureSuite stri
 	if didDoc.VerificationMethod[0].Type != signatureSuite {
 		return fmt.Errorf("resolved did public key type %s not equal to %s",
 			didDoc.VerificationMethod[0].Type, signatureSuite)
-	}
-
-	return nil
-}
-
-func execCMD(command string, args ...string) error {
-	cmd := exec.Command(command, args...) // nolint: gosec
-
-	var out bytes.Buffer
-
-	var er bytes.Buffer
-
-	cmd.Stdout = &out
-	cmd.Stderr = &er
-
-	err := cmd.Start()
-	if err != nil {
-		return fmt.Errorf(er.String())
-	}
-
-	err = cmd.Wait()
-	if err != nil {
-		return fmt.Errorf(er.String())
 	}
 
 	return nil
