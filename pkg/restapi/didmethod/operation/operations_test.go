@@ -24,8 +24,6 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/stretchr/testify/require"
-
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 )
 
 func TestNew(t *testing.T) {
@@ -128,7 +126,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
-			PublicKey: []*PublicKey{{ID: "key2", KeyType: doc.Ed25519KeyType,
+			PublicKey: []*PublicKey{{ID: "key2", KeyType: Ed25519KeyType,
 				Type: "type", Value: base64.StdEncoding.EncodeToString(pubKey)}}}})
 		require.NoError(t, err)
 
@@ -200,11 +198,11 @@ func TestRegisterDIDHandler(t *testing.T) {
 		ecPubKeyBytes := elliptic.Marshal(ecPrivKey.PublicKey.Curve, ecPrivKey.PublicKey.X, ecPrivKey.PublicKey.Y)
 
 		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
-			PublicKey: []*PublicKey{{KeyType: doc.Ed25519KeyType,
+			PublicKey: []*PublicKey{{KeyType: Ed25519KeyType,
 				Value: base64.StdEncoding.EncodeToString(pubKey), Recovery: true},
-				{KeyType: doc.P256KeyType,
+				{KeyType: P256KeyType,
 					Value: base64.StdEncoding.EncodeToString(ecPubKeyBytes), Update: true},
-				{ID: "key2", KeyType: doc.Ed25519KeyType, Type: "type",
+				{ID: "key2", KeyType: Ed25519KeyType, Type: "type",
 					Value: base64.StdEncoding.EncodeToString(pubKey)}},
 			Service: []*Service{{ID: "serviceID"}}}})
 		require.NoError(t, err)

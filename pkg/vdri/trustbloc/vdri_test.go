@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/create"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/deactivate"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/recovery"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/update"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
@@ -242,6 +243,69 @@ func TestVDRI_Create(t *testing.T) {
 		_, err := v.Create(nil, &did.Doc{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to get sidetree config")
+	})
+}
+
+func TestVDRI_Deactivate(t *testing.T) {
+	t.Run("test success", func(t *testing.T) {
+		cServ := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-type", "application/did+ld+json")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, validDocResolution)
+		}))
+		defer cServ.Close()
+
+		v := New(&mockKeyRetriever{})
+
+		v.sidetreeClient = &mockSidetreeClient{}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		err := v.Deactivate("did:ex:123", vdrapi.WithOption(EndpointsOpt, []string{cServ.URL}))
+		require.NoError(t, err)
+	})
+
+	t.Run("test error from get endpoints", func(t *testing.T) {
+		v := New(&mockKeyRetriever{})
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return nil, fmt.Errorf("failed to get endpoints")
+			}}
+
+		v.configService = &mockconfig.MockConfigService{
+			GetSidetreeConfigFunc: func(s string) (*models.SidetreeConfig, error) {
+				return &models.SidetreeConfig{MultiHashAlgorithm: 18}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{}
+
+		err := v.Deactivate("")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to get endpoints")
+	})
+
+	t.Run("test error from get did doc", func(t *testing.T) {
+		cServ := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer cServ.Close()
+
+		v := New(&mockKeyRetriever{})
+
+		v.endpointService = &mockendpoint.MockEndpointService{
+			GetEndpointsFunc: func(domain string) (endpoints []*models.Endpoint, err error) {
+				return []*models.Endpoint{{URL: cServ.URL}}, nil
+			}}
+
+		v.sidetreeClient = &mockSidetreeClient{}
+
+		err := v.Deactivate("")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to resolve did")
 	})
 }
 
@@ -1373,6 +1437,10 @@ func (m *mockSidetreeClient) UpdateDID(didID string, opts ...update.Option) erro
 }
 
 func (m *mockSidetreeClient) RecoverDID(didID string, opts ...recovery.Option) error {
+	return nil
+}
+
+func (m *mockSidetreeClient) DeactivateDID(didID string, opts ...deactivate.Option) error {
 	return nil
 }
 

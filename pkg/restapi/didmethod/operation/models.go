@@ -10,6 +10,11 @@ const (
 	RegistrationStateFinished = "finished"
 	// RegistrationStateFailure registration state failure
 	RegistrationStateFailure = "failure"
+
+	// Ed25519KeyType defines ed25119 key type
+	Ed25519KeyType = "Ed25519"
+	// P256KeyType EC P-256 key type
+	P256KeyType = "P256"
 )
 
 // RegisterDIDRequest input data for register DID
@@ -61,7 +66,6 @@ type PublicKey struct {
 	// Value is always Base64
 	Value    string   `json:"value,omitempty"`
 	Purposes []string `json:"purposes,omitempty"`
-	Encoding string   `json:"encoding,omitempty"`
 	Recovery bool     `json:"recovery,omitempty"`
 	Update   bool     `json:"update,omitempty"`
 	KeyType  string   `json:"keyType,omitempty"`

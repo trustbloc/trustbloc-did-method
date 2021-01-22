@@ -20,14 +20,6 @@ import (
 )
 
 const (
-	jwkPrivateKeyData = `
-{
-  "kty": "OKP",
-  "d": "CSLczqR1ly2lpyBcWne9gFKnsjaKJw0dKfoSQu7lNvg",
-  "crv": "Ed25519",
-  "x": "bWRCy8DtNhRO3HdKTFB2eEG5Ac1J00D0DQPffOwtAD0"
-}`
-
 	jwk1Data = `
 {
   "kty":"OKP",
@@ -329,85 +321,6 @@ func TestGetVDRPublicKeys(t *testing.T) {
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()
 
 		keys, err := GetVDRPublicKeysFromFile(file.Name())
-		require.NoError(t, err)
-		require.Equal(t, len(keys), 2)
-	})
-}
-
-func TestGetPublicKeys(t *testing.T) {
-	t.Run("test public key invalid path", func(t *testing.T) {
-		_, err := GetPublicKeysFromFile("./wrongfile")
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "open wrongfile: no such file or directory")
-	})
-
-	t.Run("test public key invalid jwk path", func(t *testing.T) {
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(publicKeyData)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		_, err = GetPublicKeysFromFile(file.Name())
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to read jwk file ")
-	})
-
-	t.Run("test public key type not supported", func(t *testing.T) {
-		jwk1File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk1File.WriteString(jwkPrivateKeyData)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(jwk1File.Name())) }()
-
-		jwk2File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk2File.WriteString(jwk2Data)
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(jwk2File.Name())) }()
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(fmt.Sprintf(publicKeyData, jwk1File.Name(), jwk2File.Name()))
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		_, err = GetPublicKeysFromFile(file.Name())
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "key not supported")
-	})
-
-	t.Run("test public key success", func(t *testing.T) {
-		jwk1File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk1File.WriteString(jwk1Data)
-		require.NoError(t, err)
-
-		jwk2File, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = jwk2File.WriteString(jwk2Data)
-		require.NoError(t, err)
-
-		file, err := ioutil.TempFile("", "*.json")
-		require.NoError(t, err)
-
-		_, err = file.WriteString(fmt.Sprintf(publicKeyData, jwk1File.Name(), jwk2File.Name()))
-		require.NoError(t, err)
-
-		defer func() { require.NoError(t, os.Remove(file.Name())) }()
-
-		keys, err := GetPublicKeysFromFile(file.Name())
 		require.NoError(t, err)
 		require.Equal(t, len(keys), 2)
 	})

@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
@@ -29,7 +30,6 @@ import (
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/internal/configcommon"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/didconfiguration"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
