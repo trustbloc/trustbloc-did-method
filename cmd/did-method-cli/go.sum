@@ -496,6 +496,8 @@ github.com/hyperledger/aries-framework-go v0.1.6-0.20210120000618-bdf82385e9df h
 github.com/hyperledger/aries-framework-go v0.1.6-0.20210120000618-bdf82385e9df/go.mod h1:CB1aCGsuCC/U+mJ43aU5Nx7s6iCYOVquO7kCUn8tVhY=
 github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210120122509-18c6f2a030bd h1:Ls3MC12HLVUpSkeQ9h+iUFEylWTnm9cZmUZjwRft8j0=
 github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210120122509-18c6f2a030bd/go.mod h1:QbfFi1eodurSG8dvhPDWWLrYmNJBrbxeviUnQ/Y1lyo=
+github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210121210840-ee9984a4579c h1:4KLf7FrV0UCxK61nSEy+apL1BKJYK/SXiZYl4+MW2ps=
+github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210121210840-ee9984a4579c/go.mod h1:QbfFi1eodurSG8dvhPDWWLrYmNJBrbxeviUnQ/Y1lyo=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/igor-pavlenko/httpsignatures-go v0.0.21/go.mod h1:3LVsCi3evlfQSNDKMTg3uElxEP8SjK3/Q5N9I8GU9W0=
 github.com/imdario/mergo v0.3.6/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
@@ -809,6 +811,8 @@ github.com/trustbloc/edge-core v0.1.5-0.20201126210935-53388acb41fc h1:sGjZhZKuO
 github.com/trustbloc/edge-core v0.1.5-0.20201126210935-53388acb41fc/go.mod h1:iOoeeW5Jd6/hhEwaK0+lhBstV7yBWzJxckNU21V0+Vg=
 github.com/trustbloc/sidetree-core-go v0.1.6-0.20201217192009-0d2b4436912f h1:PHySA3TTpo8xChoP3XlTlrs2wHjkoX6K8A3mbdjVvrs=
 github.com/trustbloc/sidetree-core-go v0.1.6-0.20201217192009-0d2b4436912f/go.mod h1:prRWqxBavkSxgKtPmUriSxCemrvl47yStMbW4jMFuRs=
+github.com/trustbloc/sidetree-core-go v0.1.6-0.20210114211953-cf95801cfe3e h1:S7pUucUyXKETKuLPSCSgslBHPtwcUwAgK04aYaTFvfw=
+github.com/trustbloc/sidetree-core-go v0.1.6-0.20210114211953-cf95801cfe3e/go.mod h1:prRWqxBavkSxgKtPmUriSxCemrvl47yStMbW4jMFuRs=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=

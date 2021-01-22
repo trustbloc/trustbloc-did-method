@@ -14,9 +14,7 @@ update-did [flags]
 * `tls-systemcertpool ` _[boolean]_ - Flag whether to use system certificate pool.
 * `did-uri` _[string]_ - DID URI.
 * `add-publickey-file` _[string]_ - The file contains the DID public keys to be added or updated.
-* `remove-publickey-id` _[array|string]_ - Array of one or more public key IDs to be removed.
 * `add-service-file` _[string]_ - The file contains the DID services to be added or updated.
-* `remove-service-id` _[array|string]_ - Array of one or more service IDs to be removed.
 * `nextupdatekey` _[string]_ - The public key PEM used for validating the signature of the next update of the document.
 * `nextupdatekey-file` _[string]_ - The file that contains the public key PEM used for validating the signature of the next update of the document.
 * `signingkey` _[string]_ - The private key PEM used for signing the update of the document.
@@ -29,7 +27,7 @@ update-did [flags]
 ```
 update-did --domain testnet.trustbloc.local --did-uri did:trustbloc:3XvwJ:EiDnJwbKHkHdaco4khFeBzvSL1hZ4eBGQq3q1Yjrpi5d4g  
 --add-publickey-file ./publickeys.json --add-service-file ./services.json --signingkey-file ./keys/update/key_encrypted.pem --signingkey-password 123
---nextupdatekey-file ./keys/update2/public.pem --remove-publickey-id key1 --remove-service-id svc1 --remove-service-id svc2
+--nextupdatekey-file ./keys/update2/public.pem
 ```
 
 ### publickeys.json

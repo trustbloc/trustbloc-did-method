@@ -175,26 +175,19 @@ func TestRecoverDID(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to recover did")
 	})
+}
 
-	t.Run("success", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetRecoverDIDCmd()
+func TestKeyRetriever(t *testing.T) {
+	kr := keyRetriever{nextUpdateKey: []byte("key"), signingKey: []byte("key")}
 
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, sidetreeURLArg(serv.URL)...)
-		args = append(args, signingKeyPasswordArg()...)
-		args = append(args, nextRecoveryKeyFileFlagNameArg(file.Name())...)
-		args = append(args, nextUpdateKeyFileFlagNameArg(file.Name())...)
-		args = append(args, signingKeyFileFlagNameArg(privateKeyfile.Name())...)
-		args = append(args, servicesFileArg(servicesFile.Name())...)
-		args = append(args, publicKeyFileArg(publicKeyFile.Name())...)
+	_, err := kr.GetNextRecoveryPublicKey("")
+	require.NoError(t, err)
 
-		cmd.SetArgs(args)
-		err = cmd.Execute()
+	_, err = kr.GetSigningKey("", 1)
+	require.NoError(t, err)
 
-		require.NoError(t, err)
-	})
+	_, err = kr.GetNextUpdatePublicKey("")
+	require.NoError(t, err)
 }
 
 func TestKeys(t *testing.T) {
@@ -327,7 +320,7 @@ func TestGetPublicKeys(t *testing.T) {
 		err := cmd.Execute()
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to get public keys from file")
+		require.Contains(t, err.Error(), "failed to public key file")
 	})
 }
 

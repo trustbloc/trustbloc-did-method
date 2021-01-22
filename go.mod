@@ -13,9 +13,9 @@ require (
 	github.com/btcsuite/btcutil v1.0.1
 	github.com/gorilla/mux v1.7.4
 	github.com/hyperledger/aries-framework-go v0.1.6-0.20210120000618-bdf82385e9df
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210120122509-18c6f2a030bd
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210121210840-ee9984a4579c
 	github.com/sirupsen/logrus v1.4.2
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.6.1
-	github.com/trustbloc/sidetree-core-go v0.1.6-0.20201217192009-0d2b4436912f
+	github.com/trustbloc/sidetree-core-go v0.1.6-0.20210114211953-cf95801cfe3e
 )

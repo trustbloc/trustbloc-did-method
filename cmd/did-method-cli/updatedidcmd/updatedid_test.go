@@ -101,6 +101,19 @@ func TestMissingArg(t *testing.T) {
 	})
 }
 
+func TestKeyRetriever(t *testing.T) {
+	kr := keyRetriever{nextUpdateKey: []byte("key"), signingKey: []byte("key")}
+
+	_, err := kr.GetNextRecoveryPublicKey("")
+	require.NoError(t, err)
+
+	_, err = kr.GetSigningKey("", 1)
+	require.NoError(t, err)
+
+	_, err = kr.GetNextUpdatePublicKey("")
+	require.NoError(t, err)
+}
+
 func TestKeys(t *testing.T) {
 	t.Run("test signing key empty", func(t *testing.T) {
 		os.Clearenv()
@@ -245,8 +258,6 @@ func TestUpdateDID(t *testing.T) {
 		args = append(args, signingKeyFileFlagNameArg(privateKeyFile.Name())...)
 		args = append(args, nextUpdateKeyFileFlagNameArg(publicKeyFile.Name())...)
 		args = append(args, addServicesFileArg(servicesFile.Name())...)
-		args = append(args, removeServiceIDArg("svc1")...)
-		args = append(args, removePublicKeyIDArg("key1")...)
 		args = append(args, signingKeyPasswordArg()...)
 		args = append(args, addPublicKeyFileArg(file.Name())...)
 
@@ -255,27 +266,6 @@ func TestUpdateDID(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to update did")
-	})
-
-	t.Run("test success", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetUpdateDIDCmd()
-
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, sidetreeURLArg(serv.URL)...)
-		args = append(args, signingKeyFileFlagNameArg(privateKeyFile.Name())...)
-		args = append(args, nextUpdateKeyFileFlagNameArg(publicKeyFile.Name())...)
-		args = append(args, addServicesFileArg(servicesFile.Name())...)
-		args = append(args, removeServiceIDArg("svc1")...)
-		args = append(args, removePublicKeyIDArg("key1")...)
-		args = append(args, signingKeyPasswordArg()...)
-		args = append(args, addPublicKeyFileArg(file.Name())...)
-
-		cmd.SetArgs(args)
-		err = cmd.Execute()
-
-		require.NoError(t, err)
 	})
 }
 
@@ -343,12 +333,4 @@ func nextUpdateKeyFileFlagNameArg(value string) []string {
 
 func addServicesFileArg(value string) []string {
 	return []string{flag + addServiceFileFlagName, value}
-}
-
-func removeServiceIDArg(value string) []string {
-	return []string{flag + removeServiceIDFlagName, value}
-}
-
-func removePublicKeyIDArg(value string) []string {
-	return []string{flag + removePublicKeyIDFlagName, value}
 }
