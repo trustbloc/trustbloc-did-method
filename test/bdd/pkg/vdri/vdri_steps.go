@@ -18,10 +18,10 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/google/uuid"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
@@ -32,6 +32,8 @@ const (
 	serviceID = "service"
 	// P256KeyType EC P-256 key type
 	P256KeyType = "P256"
+	// Ed25519KeyType ed25519 key type
+	Ed25519KeyType = "Ed25519"
 )
 
 // Steps is steps for VC BDD tests
@@ -79,11 +81,11 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 	reqBytes, err := json.Marshal(operation.RegisterDIDRequest{JobID: jobID, DIDDocument: operation.DIDDocument{
 		PublicKey: []*operation.PublicKey{
 			{ID: kid, Type: signatureSuite, Value: base64.StdEncoding.EncodeToString(pubKey),
-				Encoding: doc.PublicKeyEncodingJwk, KeyType: keyType, Purposes: []string{doc.KeyPurposeAuthentication}},
+				KeyType: keyType, Purposes: []string{doc.KeyPurposeAuthentication}},
 			{Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(recoveryKey),
-				KeyType: keyType, Encoding: doc.PublicKeyEncodingJwk, Recovery: true},
+				KeyType: keyType, Recovery: true},
 			{Type: doc.JWSVerificationKey2020, Value: base64.StdEncoding.EncodeToString(updateKey),
-				KeyType: keyType, Encoding: doc.PublicKeyEncodingJwk, Update: true},
+				KeyType: keyType, Update: true},
 		},
 		Service: []*operation.Service{{ID: serviceID, Type: "type", Endpoint: "http://www.example.com/"}}}})
 	if err != nil {
@@ -217,7 +219,7 @@ func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {
 	var kt kms.KeyType
 
 	switch keyType {
-	case doc.Ed25519KeyType:
+	case Ed25519KeyType:
 		kt = kms.ED25519Type
 	case P256KeyType:
 		kt = kms.ECDSAP256TypeIEEEP1363
@@ -234,7 +236,7 @@ func (e *Steps) validatePublicKey(didDoc *ariesdid.Doc, keyType, signatureSuite 
 	expectedJwkKeyType := ""
 
 	switch keyType {
-	case doc.Ed25519KeyType:
+	case Ed25519KeyType:
 		expectedJwkKeyType = "OKP"
 	case P256KeyType:
 		expectedJwkKeyType = "EC"

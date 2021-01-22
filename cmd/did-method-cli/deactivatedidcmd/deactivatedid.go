@@ -6,18 +6,19 @@ SPDX-License-Identifier: Apache-2.0
 package deactivatedidcmd
 
 import (
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"strconv"
 
+	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
 	"github.com/trustbloc/trustbloc-did-method/cmd/did-method-cli/common"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did"
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/option/deactivate"
+	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 )
 
 const (
@@ -101,15 +102,18 @@ func deactivateDIDCmd() *cobra.Command {
 			domain := cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName,
 				domainFileEnvKey)
 
-			client := did.New(did.WithAuthToken(sidetreeWriteToken),
-				did.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
-
-			opts, err := deactivateDIDOption(cmd)
+			signingKey, err := common.GetKey(cmd, signingKeyFlagName, signingKeyEnvKey, signingKeyFileFlagName,
+				signingKeyFileEnvKey, []byte(cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
+					signingKeyPasswordEnvKey)), true)
 			if err != nil {
 				return err
 			}
 
-			err = client.DeactivateDID(didURI, domain, opts...)
+			vdr := trustbloc.New(&keyRetriever{signingKey: signingKey},
+				trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
+				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+
+			err = vdr.Deactivate(didURI, deactivateDIDOption(cmd)...)
 			if err != nil {
 				return fmt.Errorf("failed to deactivate did: %w", err)
 			}
@@ -121,34 +125,21 @@ func deactivateDIDCmd() *cobra.Command {
 	}
 }
 
-func getSidetreeURL(cmd *cobra.Command) []deactivate.Option {
-	var opts []deactivate.Option
+func getSidetreeURL(cmd *cobra.Command) []vdrapi.DIDMethodOption {
+	var opts []vdrapi.DIDMethodOption
 
 	sidetreeURL := cmdutils.GetUserSetOptionalVarFromArrayString(cmd, sidetreeURLFlagName,
 		sidetreeURLEnvKey)
 
-	for _, v := range sidetreeURL {
-		opts = append(opts, deactivate.WithSidetreeEndpoint(v))
+	if len(sidetreeURL) > 0 {
+		opts = append(opts, vdrapi.WithOption(trustbloc.EndpointsOpt, sidetreeURL))
 	}
 
 	return opts
 }
 
-func deactivateDIDOption(cmd *cobra.Command) ([]deactivate.Option, error) {
-	var opts []deactivate.Option
-
-	signingKey, err := common.GetKey(cmd, signingKeyFlagName, signingKeyEnvKey, signingKeyFileFlagName,
-		signingKeyFileEnvKey, []byte(cmdutils.GetUserSetOptionalVarFromString(cmd, signingKeyPasswordFlagName,
-			signingKeyPasswordEnvKey)), true)
-	if err != nil {
-		return nil, err
-	}
-
-	opts = append(opts, deactivate.WithSigningKey(signingKey))
-
-	opts = append(opts, getSidetreeURL(cmd)...)
-
-	return opts, nil
+func deactivateDIDOption(cmd *cobra.Command) []vdrapi.DIDMethodOption {
+	return getSidetreeURL(cmd)
 }
 
 func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {
@@ -183,4 +174,20 @@ func createFlags(startCmd *cobra.Command) {
 	startCmd.Flags().StringP(signingKeyFlagName, "", "", signingKeyFlagUsage)
 	startCmd.Flags().StringP(signingKeyFileFlagName, "", "", signingKeyFileFlagUsage)
 	startCmd.Flags().StringP(signingKeyPasswordFlagName, "", "", signingKeyPasswordFlagUsage)
+}
+
+type keyRetriever struct {
+	signingKey crypto.PublicKey
+}
+
+func (k *keyRetriever) GetNextRecoveryPublicKey(didID string) (crypto.PublicKey, error) {
+	return nil, nil
+}
+
+func (k *keyRetriever) GetNextUpdatePublicKey(didID string) (crypto.PublicKey, error) {
+	return nil, nil
+}
+
+func (k *keyRetriever) GetSigningKey(didID string, ot trustbloc.OperationType) (crypto.PrivateKey, error) {
+	return k.signingKey, nil
 }

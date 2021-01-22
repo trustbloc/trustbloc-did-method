@@ -12,7 +12,8 @@ require (
 	github.com/cucumber/godog v0.9.0
 	github.com/fsouza/go-dockerclient v1.6.0
 	github.com/google/uuid v1.1.2
-	github.com/hyperledger/aries-framework-go v0.1.6-0.20210120000618-bdf82385e9df
+	github.com/hyperledger/aries-framework-go v0.1.6-0.20210122151214-1a54003224a0
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210121210840-ee9984a4579c
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tidwall/gjson v1.6.7
 	github.com/trustbloc/edge-core v0.1.5-0.20201126210935-53388acb41fc

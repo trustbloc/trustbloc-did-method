@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/create"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/deactivate"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/recovery"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/option/update"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
@@ -75,6 +76,7 @@ type sidetreeClient interface {
 	CreateDID(opts ...create.Option) (*docdid.DocResolution, error)
 	UpdateDID(didID string, opts ...update.Option) error
 	RecoverDID(did string, opts ...recovery.Option) error
+	DeactivateDID(did string, opts ...deactivate.Option) error
 }
 
 type endpointService interface {
@@ -358,6 +360,41 @@ func (v *VDRI) recover(didDoc *docdid.Doc, sidetreeConfig *models.SidetreeConfig
 		recovery.WithOperationCommitment(recoveryCommitment))
 
 	return v.sidetreeClient.RecoverDID(didDoc.ID, recoveryOpt...)
+}
+
+// Deactivate did doc.
+func (v *VDRI) Deactivate(didID string, opts ...vdrapi.DIDMethodOption) error {
+	didMethodOpts := &vdrapi.DIDMethodOpts{Values: make(map[string]interface{})}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(didMethodOpts)
+	}
+
+	var deactivateOpt []deactivate.Option
+
+	getEndpoints := v.getSidetreeEndpoints(didMethodOpts)
+
+	endpoints, err := getEndpoints()
+	if err != nil {
+		return err
+	}
+
+	docResolution, err := v.sidetreeResolve(endpoints[0]+"/identifiers", didID)
+	if err != nil {
+		return err
+	}
+
+	signingKey, err := v.keyRetriever.GetSigningKey(didID, Recover)
+	if err != nil {
+		return err
+	}
+
+	deactivateOpt = append(deactivateOpt, deactivate.WithSidetreeEndpoint(getEndpoints),
+		deactivate.WithSigningKey(signingKey),
+		deactivate.WithOperationCommitment(docResolution.DocumentMetadata.Method.RecoveryCommitment))
+
+	return v.sidetreeClient.DeactivateDID(didID, deactivateOpt...)
 }
 
 func getSidetreePublicKeys(verificationMethod []docdid.VerificationMethod) ([]doc.PublicKey, error) {

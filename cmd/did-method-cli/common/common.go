@@ -9,7 +9,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -23,7 +22,6 @@ import (
 	gojose "github.com/square/go-jose/v3"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 )
 
@@ -187,53 +185,6 @@ func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]docdid.VerificationMe
 		}
 
 		keys = append(keys, *vm)
-	}
-
-	return keys, nil
-}
-
-// GetPublicKeysFromFile get public keys from file
-func GetPublicKeysFromFile(publicKeyFilePath string) ([]doc.PublicKey, error) {
-	pkData, err := ioutil.ReadFile(filepath.Clean(publicKeyFilePath))
-	if err != nil {
-		return nil, fmt.Errorf("failed to public key file '%s' : %w", publicKeyFilePath, err)
-	}
-
-	var publicKeys []PublicKey
-	if err := json.Unmarshal(pkData, &publicKeys); err != nil {
-		return nil, err
-	}
-
-	var keys []doc.PublicKey
-
-	for _, v := range publicKeys {
-		jwkData, err := ioutil.ReadFile(filepath.Clean(v.JWKPath))
-		if err != nil {
-			return nil, fmt.Errorf("failed to read jwk file '%s' : %w", v.JWKPath, err)
-		}
-
-		var jsonWebKey gojose.JSONWebKey
-		if err := jsonWebKey.UnmarshalJSON(jwkData); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal to jwk: %w", err)
-		}
-
-		keyType := ""
-
-		var value []byte
-
-		switch key := jsonWebKey.Key.(type) {
-		case ed25519.PublicKey:
-			keyType = doc.Ed25519KeyType
-			value = ed25519.PublicKey(fmt.Sprintf("%v", key))
-		case *ecdsa.PublicKey:
-			keyType = doc.P256KeyType
-			value = elliptic.Marshal(key.Curve, key.X, key.Y)
-		default:
-			return nil, fmt.Errorf("key not supported")
-		}
-
-		keys = append(keys, doc.PublicKey{ID: v.ID, Type: v.Type,
-			Value: value, Encoding: doc.PublicKeyEncodingJwk, Purposes: v.Purposes, KeyType: keyType})
 	}
 
 	return keys, nil

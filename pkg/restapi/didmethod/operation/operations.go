@@ -22,7 +22,6 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/did/doc"
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
 	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 )
@@ -196,9 +195,9 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 func getKey(keyType string, value []byte) (interface{}, error) {
 	switch keyType {
-	case doc.Ed25519KeyType:
+	case Ed25519KeyType:
 		return ed25519.PublicKey(value), nil
-	case doc.P256KeyType:
+	case P256KeyType:
 		x, y := elliptic.Unmarshal(elliptic.P256(), value)
 
 		return &ecdsa.PublicKey{X: x, Y: y, Curve: elliptic.P256()}, nil

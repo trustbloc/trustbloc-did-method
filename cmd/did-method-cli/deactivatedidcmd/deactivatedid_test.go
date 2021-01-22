@@ -47,6 +47,19 @@ func TestMissingArg(t *testing.T) {
 	})
 }
 
+func TestKeyRetriever(t *testing.T) {
+	kr := keyRetriever{signingKey: []byte("key")}
+
+	_, err := kr.GetNextRecoveryPublicKey("")
+	require.NoError(t, err)
+
+	_, err = kr.GetSigningKey("", 1)
+	require.NoError(t, err)
+
+	_, err = kr.GetNextUpdatePublicKey("")
+	require.NoError(t, err)
+}
+
 func TestDeactivateDID(t *testing.T) {
 	serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "{}")
@@ -67,7 +80,7 @@ func TestDeactivateDID(t *testing.T) {
 
 		var args []string
 		args = append(args, didURIArg()...)
-		args = append(args, sidetreeURLArg("wrongurl")...)
+		args = append(args, sidetreeURLArg(serv.URL)...)
 		args = append(args, signingKeyPasswordArg()...)
 		args = append(args, signingKeyFileFlagNameArg(privateKeyfile.Name())...)
 
@@ -76,22 +89,6 @@ func TestDeactivateDID(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to deactivate did")
-	})
-
-	t.Run("success", func(t *testing.T) {
-		os.Clearenv()
-		cmd := GetDeactivateDIDCmd()
-
-		var args []string
-		args = append(args, didURIArg()...)
-		args = append(args, sidetreeURLArg(serv.URL)...)
-		args = append(args, signingKeyPasswordArg()...)
-		args = append(args, signingKeyFileFlagNameArg(privateKeyfile.Name())...)
-
-		cmd.SetArgs(args)
-		err := cmd.Execute()
-
-		require.NoError(t, err)
 	})
 }
 
