@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc"
 	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 
-	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
 )
 

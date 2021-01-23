@@ -17,13 +17,13 @@ import (
 	"net/http"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
-	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 )
 
 const (

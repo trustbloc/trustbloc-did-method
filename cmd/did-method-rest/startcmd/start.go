@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc/models"
 	"github.com/spf13/cobra"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
@@ -22,7 +23,6 @@ import (
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/healthcheck"
-	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 const (

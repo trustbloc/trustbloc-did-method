@@ -19,11 +19,11 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/google/uuid"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc"
 	ariesdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/restapi/didmethod/operation"
-	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
 )
 
