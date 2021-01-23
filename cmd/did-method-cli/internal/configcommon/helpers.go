@@ -13,11 +13,10 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc/models"
 	"github.com/spf13/cobra"
 	gojose "github.com/square/go-jose/v3"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
-
-	"github.com/trustbloc/trustbloc-did-method/pkg/vdri/trustbloc/models"
 )
 
 // Config file parameter for CLI consortium config commands
