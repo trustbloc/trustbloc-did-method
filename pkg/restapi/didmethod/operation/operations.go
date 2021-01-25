@@ -17,6 +17,7 @@ import (
 	"net/http"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
@@ -163,7 +164,32 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			return
 		}
 
-		didDoc.VerificationMethod = append(didDoc.VerificationMethod, *vm)
+		for _, p := range v.Purposes {
+			switch p {
+			case doc.KeyPurposeAuthentication:
+				didDoc.Authentication = append(didDoc.Authentication,
+					*did.NewReferencedVerification(vm, did.Authentication))
+			case doc.KeyPurposeAssertionMethod:
+				didDoc.AssertionMethod = append(didDoc.AssertionMethod,
+					*did.NewReferencedVerification(vm, did.AssertionMethod))
+			case doc.KeyPurposeKeyAgreement:
+				didDoc.KeyAgreement = append(didDoc.KeyAgreement,
+					*did.NewReferencedVerification(vm, did.KeyAgreement))
+			case doc.KeyPurposeCapabilityDelegation:
+				didDoc.CapabilityDelegation = append(didDoc.CapabilityDelegation,
+					*did.NewReferencedVerification(vm, did.CapabilityDelegation))
+			case doc.KeyPurposeCapabilityInvocation:
+				didDoc.CapabilityInvocation = append(didDoc.CapabilityInvocation,
+					*did.NewReferencedVerification(vm, did.CapabilityInvocation))
+			default:
+				registerResponse.DIDState = DIDState{
+					Reason: fmt.Sprintf("public key purpose %s not supported", p), State: RegistrationStateFailure}
+
+				o.writeResponse(rw, registerResponse)
+
+				return
+			}
+		}
 
 		keysID[v.ID] = keyValue
 	}

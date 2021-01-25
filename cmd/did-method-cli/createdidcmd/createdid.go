@@ -147,7 +147,7 @@ func getSidetreeURL(cmd *cobra.Command) []vdrapi.DIDMethodOption {
 func createDIDOption(cmd *cobra.Command) (*did.Doc, []vdrapi.DIDMethodOption, error) {
 	opts := getSidetreeURL(cmd)
 
-	pks, err := getPublicKeys(cmd)
+	didDoc, err := getPublicKeys(cmd)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -173,7 +173,9 @@ func createDIDOption(cmd *cobra.Command) (*did.Doc, []vdrapi.DIDMethodOption, er
 		return nil, nil, err
 	}
 
-	return &did.Doc{VerificationMethod: pks, Service: services}, opts, nil
+	didDoc.Service = services
+
+	return didDoc, opts, nil
 }
 
 func getServices(cmd *cobra.Command) ([]did.Service, error) {
@@ -196,7 +198,7 @@ func getServices(cmd *cobra.Command) ([]did.Service, error) {
 	return svc, nil
 }
 
-func getPublicKeys(cmd *cobra.Command) ([]did.VerificationMethod, error) {
+func getPublicKeys(cmd *cobra.Command) (*did.Doc, error) {
 	publicKeyFile := cmdutils.GetUserSetOptionalVarFromString(cmd, publicKeyFileFlagName,
 		publicKeyFileEnvKey)
 
@@ -204,7 +206,7 @@ func getPublicKeys(cmd *cobra.Command) ([]did.VerificationMethod, error) {
 		return common.GetVDRPublicKeysFromFile(publicKeyFile)
 	}
 
-	return nil, nil
+	return &did.Doc{}, nil
 }
 
 func getRootCAs(cmd *cobra.Command) (*x509.CertPool, error) {

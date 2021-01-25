@@ -139,7 +139,7 @@ func (e *Steps) checkDeactivatedDID() error {
 	return nil
 }
 
-func (e *Steps) checkUpdatedDID() error {
+func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
 	const numberOfVerificationMethods = 2
 
 	const numberOfServices = 1
@@ -160,14 +160,13 @@ func (e *Steps) checkUpdatedDID() error {
 	key2Exist := false
 	key3Exist := false
 
-	// TODO enable it after figuring out way to pass Purposes
-	// if len(doc.CapabilityInvocation) != 1 {
-	//	return fmt.Errorf("did capability invocation is not equal to 1")
-	// }
-	//
-	// if !strings.Contains(doc.CapabilityInvocation[0].VerificationMethod.ID, key2ID) {
-	//	return fmt.Errorf("wrong capability invocation key")
-	// }
+	if len(doc.CapabilityInvocation) != 1 {
+		return fmt.Errorf("did capability invocation is not equal to 1")
+	}
+
+	if !strings.Contains(doc.CapabilityInvocation[0].VerificationMethod.ID, key2ID) {
+		return fmt.Errorf("wrong capability invocation key")
+	}
 
 	for _, v := range doc.VerificationMethod {
 		if strings.Contains(v.ID, key2ID) {
