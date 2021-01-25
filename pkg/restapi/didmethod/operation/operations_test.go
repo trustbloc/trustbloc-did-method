@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/hyperledger/aries-framework-go/pkg/kms"
@@ -182,6 +183,34 @@ func TestRegisterDIDHandler(t *testing.T) {
 		require.Contains(t, registerResponse.DIDState.Reason, "invalid key type: wrong")
 	})
 
+	t.Run("test unsupported key purpose", func(t *testing.T) {
+		handler := getHandler(t, &mockvdr.MockVDR{}, registerPath)
+
+		pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		req, err := json.Marshal(RegisterDIDRequest{JobID: "1", DIDDocument: DIDDocument{
+			PublicKey: []*PublicKey{{KeyType: Ed25519KeyType,
+				Value: base64.StdEncoding.EncodeToString(pubKey), Recovery: true},
+				{KeyType: Ed25519KeyType,
+					Value: base64.StdEncoding.EncodeToString(pubKey), Update: true},
+				{ID: "key2", KeyType: Ed25519KeyType, Type: "type", Purposes: []string{"wrong"},
+					Value: base64.StdEncoding.EncodeToString(pubKey)}},
+			Service: []*Service{{ID: "serviceID"}}}})
+		require.NoError(t, err)
+
+		body, status, err := handleRequest(handler, registerPath, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var registerResponse RegisterResponse
+		require.NoError(t, json.Unmarshal(body.Bytes(), &registerResponse))
+
+		require.Equal(t, "1", registerResponse.JobID)
+		require.Equal(t, RegistrationStateFailure, registerResponse.DIDState.State)
+		require.Contains(t, registerResponse.DIDState.Reason, "public key purpose wrong not supported")
+	})
+
 	t.Run("test success with provided public key", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
 			CreateFunc: func(keyManager kms.KeyManager, didDoc *did.Doc,
@@ -202,7 +231,9 @@ func TestRegisterDIDHandler(t *testing.T) {
 				Value: base64.StdEncoding.EncodeToString(pubKey), Recovery: true},
 				{KeyType: P256KeyType,
 					Value: base64.StdEncoding.EncodeToString(ecPubKeyBytes), Update: true},
-				{ID: "key2", KeyType: Ed25519KeyType, Type: "type",
+				{ID: "key2", KeyType: Ed25519KeyType, Type: "type", Purposes: []string{doc.KeyPurposeAuthentication,
+					doc.KeyPurposeCapabilityInvocation, doc.KeyPurposeCapabilityDelegation, doc.KeyPurposeAssertionMethod,
+					doc.KeyPurposeKeyAgreement},
 					Value: base64.StdEncoding.EncodeToString(pubKey)}},
 			Service: []*Service{{ID: "serviceID"}}}})
 		require.NoError(t, err)

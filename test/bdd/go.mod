@@ -13,8 +13,8 @@ require (
 	github.com/fsouza/go-dockerclient v1.6.0
 	github.com/google/uuid v1.1.2
 	github.com/hyperledger/aries-framework-go v0.1.6-0.20210122151214-1a54003224a0
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210122185154-e510c5a64eb7
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc v0.0.0-20210122185154-e510c5a64eb7
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210125133828-10c25f5d6d37
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc v0.0.0-20210125133828-10c25f5d6d37
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tidwall/gjson v1.6.7
 	github.com/trustbloc/edge-core v0.1.5-0.20201126210935-53388acb41fc

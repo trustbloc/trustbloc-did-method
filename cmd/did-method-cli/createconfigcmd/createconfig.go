@@ -385,7 +385,8 @@ func createDID(vdr vdr, sidetreeURL string, jsonWebKey *gojose.JSONWebKey,
 		return nil, err
 	}
 
-	docResolution, err := vdr.Create(nil, &docdid.Doc{VerificationMethod: []docdid.VerificationMethod{*vm}},
+	docResolution, err := vdr.Create(nil, &docdid.Doc{
+		Authentication: []docdid.Verification{*docdid.NewReferencedVerification(vm, docdid.Authentication)}},
 		didMethodOpt...)
 	if err != nil {
 		return nil, err

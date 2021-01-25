@@ -41,7 +41,7 @@ const (
  {
   "id": "key1",
   "type": "Ed25519VerificationKey2018",
-  "purposes": ["authentication"],
+  "purposes": ["authentication","assertionMethod","keyAgreement","capabilityDelegation","capabilityInvocation"],
   "jwkPath": "%s"
  },
  {
@@ -320,8 +320,8 @@ func TestGetVDRPublicKeys(t *testing.T) {
 
 		defer func() { require.NoError(t, os.Remove(file.Name())) }()
 
-		keys, err := GetVDRPublicKeysFromFile(file.Name())
+		didDoc, err := GetVDRPublicKeysFromFile(file.Name())
 		require.NoError(t, err)
-		require.Equal(t, len(keys), 2)
+		require.Equal(t, len(didDoc.Authentication), 2)
 	})
 }

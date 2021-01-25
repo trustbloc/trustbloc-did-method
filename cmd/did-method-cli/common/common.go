@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	"github.com/spf13/cobra"
@@ -150,7 +151,7 @@ func GetKey(cmd *cobra.Command, keyFlagName, keyEnvKey, keyFileFlagName, keyFile
 }
 
 // GetVDRPublicKeysFromFile get public keys from file
-func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]docdid.VerificationMethod, error) {
+func GetVDRPublicKeysFromFile(publicKeyFilePath string) (*docdid.Doc, error) { //nolint:gocyclo
 	pkData, err := ioutil.ReadFile(filepath.Clean(publicKeyFilePath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to public key file '%s' : %w", publicKeyFilePath, err)
@@ -161,7 +162,7 @@ func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]docdid.VerificationMe
 		return nil, err
 	}
 
-	var keys []docdid.VerificationMethod
+	didDoc := &docdid.Doc{}
 
 	for _, v := range publicKeys {
 		jwkData, err := ioutil.ReadFile(filepath.Clean(v.JWKPath))
@@ -184,10 +185,30 @@ func GetVDRPublicKeysFromFile(publicKeyFilePath string) ([]docdid.VerificationMe
 			return nil, err
 		}
 
-		keys = append(keys, *vm)
+		for _, p := range v.Purposes {
+			switch p {
+			case doc.KeyPurposeAuthentication:
+				didDoc.Authentication = append(didDoc.Authentication,
+					*docdid.NewReferencedVerification(vm, docdid.Authentication))
+			case doc.KeyPurposeAssertionMethod:
+				didDoc.AssertionMethod = append(didDoc.AssertionMethod,
+					*docdid.NewReferencedVerification(vm, docdid.AssertionMethod))
+			case doc.KeyPurposeKeyAgreement:
+				didDoc.KeyAgreement = append(didDoc.KeyAgreement,
+					*docdid.NewReferencedVerification(vm, docdid.KeyAgreement))
+			case doc.KeyPurposeCapabilityDelegation:
+				didDoc.CapabilityInvocation = append(didDoc.CapabilityInvocation,
+					*docdid.NewReferencedVerification(vm, docdid.CapabilityDelegation))
+			case doc.KeyPurposeCapabilityInvocation:
+				didDoc.CapabilityDelegation = append(didDoc.CapabilityDelegation,
+					*docdid.NewReferencedVerification(vm, docdid.CapabilityInvocation))
+			default:
+				return nil, fmt.Errorf("public key purpose %s not supported", p)
+			}
+		}
 	}
 
-	return keys, nil
+	return didDoc, nil
 }
 
 // GetServices get services
