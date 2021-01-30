@@ -11,6 +11,10 @@
 --config-file $1 --output-directory ./fixtures/wellknown/jws
 sleep 1
 
+mkdir -p ./fixtures/wellknown/jws/genesis-configs
+rm -rf ./fixtures/wellknown/jws/genesis-configs/*
+cp ./fixtures/wellknown/jws/did-trustbloc/testnet.trustbloc.local.json ./fixtures/wellknown/jws/genesis-configs
+
 rm -rf ./fixtures/wellknown/jws/stakeholder.one/*
 rm -rf ./fixtures/wellknown/jws/stakeholder.two/*
 
@@ -19,9 +23,3 @@ mkdir -p ./fixtures/wellknown/jws/stakeholder.two
 
 cp -r ./fixtures/wellknown/jws/stakeholder.one:8088/* ./fixtures/wellknown/jws/stakeholder.one
 cp -r ./fixtures/wellknown/jws/stakeholder.two:8089/* ./fixtures/wellknown/jws/stakeholder.two
-
-(cd fixtures/discovery-server ; docker-compose stop ; docker-compose up --force-recreate -d)
-(cd fixtures/stakeholder-server ; docker-compose stop ; docker-compose up --force-recreate -d)
-
-wait
-sleep 5

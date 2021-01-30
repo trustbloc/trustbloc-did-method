@@ -162,10 +162,15 @@ func getParameters(cmd *cobra.Command) (*parameters, error) {
 		return nil, err
 	}
 
+	vdr, err := trustbloc.New(nil, trustbloc.WithAuthToken(sidetreeWriteToken),
+		trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+	if err != nil {
+		return nil, err
+	}
+
 	parameters := &parameters{
-		sidetreeURL: strings.TrimSpace(sidetreeURL),
-		vdr: trustbloc.New(nil, trustbloc.WithAuthToken(sidetreeWriteToken),
-			trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12})),
+		sidetreeURL:     strings.TrimSpace(sidetreeURL),
+		vdr:             vdr,
 		config:          config,
 		recoveryKey:     recoveryKey,
 		updateKey:       updateKey,

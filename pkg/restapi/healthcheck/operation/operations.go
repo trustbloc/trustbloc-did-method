@@ -10,10 +10,13 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	logger "github.com/trustbloc/edge-core/pkg/log"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
 )
+
+// nolint:gochecknoglobals
+var log = logger.New("healthcheck/operation")
 
 // API endpoints.
 const (

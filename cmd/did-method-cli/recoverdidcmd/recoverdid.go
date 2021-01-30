@@ -157,17 +157,18 @@ func recoverDIDCmd() *cobra.Command {
 				return err
 			}
 
-			vdr := trustbloc.New(&keyRetriever{nextUpdateKey: nextUpdateKey, signingKey: signingKey,
+			vdr, err := trustbloc.New(&keyRetriever{nextUpdateKey: nextUpdateKey, signingKey: signingKey,
 				nextRecoveryKey: nextRecoveryKey}, trustbloc.WithAuthToken(sidetreeWriteToken),
 				trustbloc.WithDomain(cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName, domainFileEnvKey)),
 				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+			if err != nil {
+				return fmt.Errorf("failed to initialize vdr: %w", err)
+			}
 
 			err = vdr.Update(didDoc, opts...)
 			if err != nil {
 				return fmt.Errorf("failed to recover did: %w", err)
 			}
-
-			fmt.Printf("successfully recoverd DID %s", didURI)
 
 			return nil
 		},

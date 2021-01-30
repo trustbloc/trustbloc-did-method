@@ -13,18 +13,19 @@ import (
 
 	"github.com/cucumber/godog"
 
+	"github.com/trustbloc/trustbloc-did-method/test/bdd/dockerutil"
 	"github.com/trustbloc/trustbloc-did-method/test/bdd/pkg/context"
 )
 
 // Steps is steps for VC BDD tests
 type Steps struct {
 	bddContext *context.BDDContext
-	compose    string
+	compose    *dockerutil.ComposeProject
 }
 
 // NewSteps returns new agent from client SDK
-func NewSteps(ctx *context.BDDContext, composeProjectName string) *Steps {
-	return &Steps{bddContext: ctx, compose: composeProjectName}
+func NewSteps(ctx *context.BDDContext, composeProject *dockerutil.ComposeProject) *Steps {
+	return &Steps{bddContext: ctx, compose: composeProject}
 }
 
 // RegisterSteps registers agent steps
@@ -32,6 +33,8 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^Consortium config is updated with config file "([^"]*)"$`, e.updateConfig)
 	s.Step(`^Consortium config is generated with config file "([^"]*)"$`, e.generateConfig)
 	s.Step(`^Consortium config is deleted$`, e.deleteConfig)
+	s.Step(`^DID method service is restarted with genesis file "([^"]*)"$`, e.restartDIDMethod)
+	s.Step(`^Discovery services are restarted$`, e.restartDiscoveryServices)
 }
 
 func (e *Steps) generateConfig(config string) error {
@@ -44,6 +47,28 @@ func (e *Steps) updateConfig(config string) error {
 
 func (e *Steps) deleteConfig() error {
 	return os.RemoveAll("./fixtures/wellknown/jws")
+}
+
+const sleepDelay = 5
+
+// restarts did method as well as discovery services
+//  setting the DID method service's genesis file path to the given value
+func (e *Steps) restartDIDMethod(genesisFilePath string) error {
+	err := e.compose.RestartServices(sleepDelay, []string{"trustbloc.did.method.example.com"},
+		map[string]string{"GENESIS_FILES": genesisFilePath})
+	if err != nil {
+		return err
+	}
+
+	return e.restartDiscoveryServices()
+}
+
+func (e *Steps) restartDiscoveryServices() error {
+	return e.compose.RestartServices(
+		sleepDelay,
+		[]string{"testnet.trustbloc.local", "stakeholder.one", "stakeholder.two"},
+		nil,
+	)
 }
 
 func execCMD(command string, args ...string) error {

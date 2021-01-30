@@ -17,9 +17,3 @@ mkdir -p ./fixtures/wellknown/jws/stakeholder.two
 
 cp -r ./fixtures/wellknown/jws/stakeholder.one:8088/* ./fixtures/wellknown/jws/stakeholder.one
 cp -r ./fixtures/wellknown/jws/stakeholder.two:8089/* ./fixtures/wellknown/jws/stakeholder.two
-
-(cd fixtures/discovery-server ; docker-compose stop ; docker-compose up --force-recreate -d)
-(cd fixtures/stakeholder-server ; docker-compose stop ; docker-compose up --force-recreate -d)
-
-wait
-sleep 5

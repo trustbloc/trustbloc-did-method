@@ -73,12 +73,22 @@ func (c *Composition) GetContainerIDs(dir string) (containerIDs []string, err er
 	var cmdOutput []byte
 
 	if cmdOutput, err = c.issueCommand([]string{"ps", "-q"}, dir); err != nil {
-		return nil, fmt.Errorf("error getting container IDs for project '%s':  %s", c.ProjectName, err)
+		return nil, fmt.Errorf("error getting container IDs for dir '%s':  %s", dir, err)
 	}
 
 	containerIDs = splitDockerCommandResults(string(cmdOutput))
 
 	return containerIDs, err
+}
+
+// GetServices returns the names of the services in the composition
+func (c *Composition) GetServices() ([]string, error) {
+	services, err := c.issueCommand([]string{"ps", "--services"}, c.Dir)
+	if err != nil {
+		return nil, fmt.Errorf("error getting container IDs for dir '%s':  %s", c.Dir, err)
+	}
+
+	return splitDockerCommandResults(string(services)), err
 }
 
 func (c *Composition) refreshContainerList() (err error) {
@@ -124,30 +134,67 @@ func (c *Composition) issueCommand(args []string, dir string) (_ []byte, err err
 	return cmdOut, err
 }
 
+func (c *Composition) issueCommandWithEnvs(args []string, dir string, envs map[string]string) (_ []byte, err error) {
+	var cmdOut []byte
+
+	errRetFunc := func() error {
+		return fmt.Errorf("error issuing command to docker-compose with args '%s':  %s (%s)", args, err, string(cmdOut))
+	}
+
+	var cmdArgs []string
+	cmdArgs = append(cmdArgs, c.getFileArgs()...)
+	cmdArgs = append(cmdArgs, args...)
+	cmd := exec.Command(dockerComposeCommand, cmdArgs...) //nolint: gosec
+	cmd.Dir = dir
+
+	for key, val := range envs {
+		cmd.Env = append(cmd.Env, strings.TrimSpace(key)+"="+strings.TrimSpace(val))
+	}
+
+	if cmdOut, err = cmd.CombinedOutput(); err != nil {
+		return cmdOut, errRetFunc()
+	}
+
+	// Reparse Container list
+	if err = c.refreshContainerList(); err != nil {
+		return nil, errRetFunc()
+	}
+
+	return cmdOut, err
+}
+
 // Decompose decompose the composition.
-// Will also remove any containers with the same ProjectName prefix (eg. chaincode containers)
-func (c *Composition) Decompose(dir string) (output string, err error) {
+func (c *Composition) Decompose() (output string, err error) {
 	var outputBytes []byte
 
-	_, err = c.issueCommand([]string{"stop"}, dir)
+	_, err = c.issueCommand([]string{"stop"}, c.Dir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	outputBytes, err = c.issueCommand([]string{"rm", "-f"}, dir)
-	// Now remove associated chaincode containers if any
-	containerErr := c.DockerHelper.RemoveContainersWithNamePrefix(c.ProjectName)
-
-	if containerErr != nil {
-		log.Fatal(containerErr)
-	}
+	outputBytes, err = c.issueCommand([]string{"rm", "-f"}, c.Dir)
 
 	return string(outputBytes), err
 }
 
+// Restart restarts the composition, setting custom environment variables to the custom values
+func (c *Composition) Restart(envs map[string]string) error {
+	_, err := c.issueCommand([]string{"stop"}, c.Dir)
+	if err != nil {
+		return fmt.Errorf("error stopping composition for '%s': %w", c.Dir, err)
+	}
+
+	// environment variables passed to the command will take precedence over variables in .env
+	if _, err = c.issueCommandWithEnvs([]string{"up", "--force-recreate", "-d"}, c.Dir, envs); err != nil {
+		return fmt.Errorf("error restarting composition for '%s':  %w", c.Dir, err)
+	}
+
+	return nil
+}
+
 // GenerateLogs to file
-func (c *Composition) GenerateLogs(dir, logName string) error {
-	outputBytes, err := c.issueCommand([]string{"logs"}, dir)
+func (c *Composition) GenerateLogs(logName string) error {
+	outputBytes, err := c.issueCommand([]string{"logs"}, c.Dir)
 	if err != nil {
 		return err
 	}

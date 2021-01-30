@@ -18,11 +18,13 @@ services:
       - SIDETREE_READ_TOKEN=rw_token
       - SIDETREE_WRITE_TOKEN=rw_token
       - ENABLE_SIGNATURES=true
+      - GENESIS_FILES #=/etc/genesis-configs/testnet.trustbloc.local.json # pass-through from host environment
     ports:
       - 8070:8070
     command: start
     volumes:
       - ../keys/tls:/etc/tls
+      - ../wellknown/jws/genesis-configs:/etc/genesis-configs
     networks:
       - bdd_net
 

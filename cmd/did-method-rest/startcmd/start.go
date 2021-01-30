@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc/models"
 	"github.com/spf13/cobra"
+	loglib "github.com/trustbloc/edge-core/pkg/log"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
 	tlsutils "github.com/trustbloc/edge-core/pkg/utils/tls"
 
@@ -75,6 +76,9 @@ const (
 	genesisFileFlagUsage = "Comma-separated list of consortium config genesis file paths." +
 		" Alternatively, this can be set with the following environment variable: " + genesisFileEnvKey
 )
+
+// nolint:gochecknoglobals
+var log = loglib.New("did-method-rest/start")
 
 // mode in which to run the did-method service
 type mode string
@@ -300,6 +304,8 @@ func loadGenesisConfigs(genesisFilePaths []string) ([]operation.GenesisFileConfi
 			URL:  genesisFileData.Config.Domain,
 			Data: genesisFileBytes,
 		})
+
+		log.Warnf("loaded genesis file with url '%s'", genesisFileData.Config.Domain)
 	}
 
 	return configs, nil

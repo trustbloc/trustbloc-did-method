@@ -22,10 +22,13 @@ import (
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
-	log "github.com/sirupsen/logrus"
+	loglib "github.com/trustbloc/edge-core/pkg/log"
 
 	"github.com/trustbloc/trustbloc-did-method/pkg/internal/common/support"
 )
+
+// nolint:gochecknoglobals
+var log = loglib.New("didmethod/operation")
 
 const (
 	registerBasePath     = "/1.0"
@@ -71,7 +74,7 @@ type Config struct {
 }
 
 // New returns did method operation instance
-func New(config *Config) *Operation {
+func New(config *Config) (*Operation, error) {
 	var vdriOpts = []trustbloc.Option{
 		trustbloc.WithTLSConfig(config.TLSConfig),
 		trustbloc.WithAuthToken(config.SidetreeReadToken),
@@ -83,8 +86,13 @@ func New(config *Config) *Operation {
 		vdriOpts = append(vdriOpts, trustbloc.UseGenesisFile(genesisFile.URL, genesisFile.URL, genesisFile.Data))
 	}
 
-	return &Operation{blocVDRI: trustbloc.New(nil, vdriOpts...),
-		blocDomain: config.BlocDomain}
+	blocVDR, err := trustbloc.New(nil, vdriOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("init operation vdr: %w", err)
+	}
+
+	return &Operation{blocVDRI: blocVDR,
+		blocDomain: config.BlocDomain}, nil
 }
 
 func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen,gocyclo
@@ -203,7 +211,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 
 	docResolution, err := o.blocVDRI.Create(nil, &didDoc, didMethodOpt...)
 	if err != nil {
-		log.Errorf("failed to create did doc : %s", err.Error())
+		log.Errorf("failed to create did doc for domain  : %s", err.Error())
 
 		registerResponse.DIDState = DIDState{Reason: fmt.Sprintf("failed to create did doc : %s", err.Error()),
 			State: RegistrationStateFailure}

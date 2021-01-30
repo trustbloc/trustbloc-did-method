@@ -47,12 +47,13 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 func (e *Steps) resolveDID(did string) (*ariesdid.Doc, error) {
 	const maxRetry = 10
 
-	blocVDRI := trustbloc.New(nil, trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
+	blocVDRI, err := trustbloc.New(nil, trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
 		trustbloc.WithAuthToken("rw_token"), trustbloc.WithDomain("testnet.trustbloc.local"))
+	if err != nil {
+		return nil, err
+	}
 
 	var doc *ariesdid.DocResolution
-
-	var err error
 
 	for i := 1; i <= maxRetry; i++ {
 		doc, err = blocVDRI.Read(did)

@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -51,13 +50,16 @@ func TestMain(m *testing.M) {
 	os.Exit(status)
 }
 
-// nolint: gocognit,gocyclo
 func runBDDTests(tags, format string) int {
 	return godog.RunWithOptions("godogs", func(s *godog.Suite) {
-		var composition []*dockerutil.Composition
 		var composeFiles = []string{"./fixtures/did-method-rest", "./fixtures/universalresolver",
 			"./fixtures/sidetree-mock", "./fixtures/discovery-server", "./fixtures/stakeholder-server",
 			"./fixtures/universal-registrar"}
+
+		// generate a unique name, converting a uuid from bytes to a hex string without delimiters
+		composeProjectName := fmt.Sprintf("%x", dockerutil.GenerateBytesUUID())
+
+		composeProject := dockerutil.NewComposeProject(composeProjectName, composeFiles)
 
 		s.BeforeSuite(func() {
 			if os.Getenv("DISABLE_COMPOSITION") != "true" { // nolint: nestif
@@ -67,17 +69,6 @@ func runBDDTests(tags, format string) int {
 					panic(err.Error())
 				}
 
-				// Need a unique name, but docker does not allow '-' in names
-				composeProjectName := strings.ReplaceAll(generateUUID(), "-", "")
-
-				for _, v := range composeFiles {
-					newComposition, err := dockerutil.NewComposition(composeProjectName, "docker-compose.yml", v)
-					if err != nil {
-						panic(fmt.Sprintf("Error composing system in BDD context: %s", err))
-					}
-					composition = append(composition, newComposition)
-				}
-				fmt.Println("docker-compose up ... waiting for containers to start ...")
 				testSleep := 15
 				if os.Getenv("TEST_SLEEP") != "" {
 					var e error
@@ -87,28 +78,25 @@ func runBDDTests(tags, format string) int {
 						panic(fmt.Sprintf("Invalid value found in 'TEST_SLEEP': %s", e))
 					}
 				}
-				fmt.Printf("*** testSleep=%d \n", testSleep)
-				time.Sleep(time.Second * time.Duration(testSleep))
+
+				err = composeProject.Start(testSleep)
+				if err != nil {
+					panic(fmt.Sprintf("Error composing system in BDD context: %s", err))
+				}
 			}
 		})
 		s.AfterSuite(func() {
-			for _, c := range composition {
-				if c != nil {
-					if err := c.GenerateLogs(c.Dir, "docker-compose.log"); err != nil {
-						panic(err)
-					}
-					if _, err := c.Decompose(c.Dir); err != nil {
-						panic(err)
-					}
-				}
+			err := composeProject.Close()
+			if err != nil {
+				panic(err)
 			}
 
-			err := os.RemoveAll("./fixtures/wellknown/jws")
+			err = os.RemoveAll("./fixtures/wellknown/jws")
 			if err != nil {
 				panic(err)
 			}
 		})
-		FeatureContext(s)
+		FeatureContext(s, composeProject)
 	}, godog.Options{
 		Tags:          tags,
 		Format:        format,
@@ -151,13 +139,7 @@ func getCmdArg(argName string) string {
 	return ""
 }
 
-// generateUUID returns a UUID based on RFC 4122
-func generateUUID() string {
-	id := dockerutil.GenerateBytesUUID()
-	return fmt.Sprintf("%x-%x-%x-%x-%x", id[0:4], id[4:6], id[6:8], id[8:10], id[10:])
-}
-
-func FeatureContext(s *godog.Suite) {
+func FeatureContext(s *godog.Suite, cp *dockerutil.ComposeProject) {
 	bddContext, err := bddctx.NewBDDContext("fixtures/keys/tls/ec-cacert.pem", "fixtures/keys/tls/ec-pubCert.pem")
 	if err != nil {
 		panic(err.Error())
@@ -166,5 +148,5 @@ func FeatureContext(s *godog.Suite) {
 	vdri.NewSteps(bddContext).RegisterSteps(s)
 	common.NewSteps(bddContext).RegisterSteps(s)
 	cli.NewSteps(bddContext).RegisterSteps(s)
-	consortium_config.NewSteps(bddContext, "").RegisterSteps(s)
+	consortium_config.NewSteps(bddContext, cp).RegisterSteps(s)
 }

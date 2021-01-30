@@ -13,6 +13,9 @@ mkdir -p ./fixtures/wellknown/jws/did-trustbloc/
  > ./fixtures/wellknown/jws/did-trustbloc/stakeholder.one:8088.json
  > ./fixtures/wellknown/jws/did-trustbloc/stakeholder.two:8089.json
 
+mkdir -p ./fixtures/wellknown/jws/genesis-configs
+ > ./fixtures/wellknown/jws/genesis-configs/testnet.trustbloc.local.json
+
 # directories that cli will write to
 mkdir -p ./fixtures/wellknown/jws/stakeholder.one:8088/
 mkdir -p ./fixtures/wellknown/jws/stakeholder.two:8089/

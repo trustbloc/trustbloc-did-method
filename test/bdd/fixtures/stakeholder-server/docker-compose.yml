@@ -8,7 +8,7 @@ version: '3.2'
 
 services:
 
-  static-file-server:
+  stakeholder.one:
     container_name: stakeholder.one
     image: halverneus/static-file-server:latest
     environment:
@@ -27,7 +27,7 @@ services:
     networks:
       - did-method-rest_bdd_net
 
-  stakeholder-two:
+  stakeholder.two:
     container_name: stakeholder.two
     image: halverneus/static-file-server:latest
     environment:

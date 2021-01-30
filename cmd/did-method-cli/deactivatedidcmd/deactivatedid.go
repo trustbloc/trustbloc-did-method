@@ -109,9 +109,12 @@ func deactivateDIDCmd() *cobra.Command {
 				return err
 			}
 
-			vdr := trustbloc.New(&keyRetriever{signingKey: signingKey},
+			vdr, err := trustbloc.New(&keyRetriever{signingKey: signingKey},
 				trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
 				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+			if err != nil {
+				return fmt.Errorf("failed to initialize vdr: %w", err)
+			}
 
 			err = vdr.Deactivate(didURI, deactivateDIDOption(cmd)...)
 			if err != nil {
