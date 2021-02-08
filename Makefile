@@ -5,7 +5,8 @@
 
 DOCKER_OUTPUT_NS                 ?= ghcr.io
 # Namespace for the did method image
-DID_METHOD_REST_IMAGE_NAME       ?= trustbloc/driver-did-trustbloc
+DID_METHOD_REST_IMAGE_NAME       ?= trustbloc/trustbloc-did-method/did-method-rest
+DID_METHOD_CLI_IMAGE_NAME       ?= trustbloc/trustbloc-did-method/did-method-cli
 
 # Tool commands (overridable)
 ALPINE_VER ?= 3.12
@@ -54,10 +55,17 @@ generate-config-hash: did-method-cli
 
 .PHONY: did-method-rest-docker
 did-method-rest-docker:
-	@echo "Building did method docker image"
+	@echo "Building did method rest docker image"
 	@docker build -f ./images/did-method-rest/Dockerfile --no-cache -t $(DOCKER_OUTPUT_NS)/$(DID_METHOD_REST_IMAGE_NAME):latest \
 	--build-arg GO_VER=$(GO_VER) \
 	--build-arg ALPINE_VER=$(ALPINE_VER) .
+
+.PHONY: did-method-cli-docker
+did-method-cli-docker:
+	@echo "Building did method cli docker image"
+	@docker build -f ./images/did-method-cli/Dockerfile --no-cache -t $(DOCKER_OUTPUT_NS)/$(DID_METHOD_CLI_IMAGE_NAME):latest \
+	--build-arg GO_VER=$(GO_VER) \
+	--build-arg ALPINE_VER=$(ALPINE_VER) . || (echo "build failed $$?"; exit 1)
 
 .PHONY: generate-test-keys
 generate-test-keys:
