@@ -13,6 +13,7 @@ IS_RELEASE=false
 # Project Parameters
 SOURCE_REPO=trustbloc-did-method
 BASE_PKG_NAME=driver-did-trustbloc
+CLI_PKG_NAME=did-method-cli
 RELEASE_REPO=ghcr.io/trustbloc
 SNAPSHOT_REPO=ghcr.io/trustbloc-cicd
 
@@ -29,3 +30,4 @@ fi
 
 export TRUSTBLOC_DID_METHOD_TAG=${PROJECT_VERSION}
 export TRUSTBLOC_DID_METHOD_PKG=${PROJECT_PKG_REPO}/${BASE_PKG_NAME}
+export TRUSTBLOC_DID_METHOD_CLI_PKG=${PROJECT_PKG_REPO}/${CLI_PKG_NAME}

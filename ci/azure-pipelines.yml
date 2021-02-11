@@ -75,6 +75,9 @@ jobs:
           make did-method-rest-docker
           docker tag ghcr.io/trustbloc/driver-did-trustbloc:latest ${TRUSTBLOC_DID_METHOD_PKG}:${TRUSTBLOC_DID_METHOD_TAG}
           docker push ${TRUSTBLOC_DID_METHOD_PKG}:${TRUSTBLOC_DID_METHOD_TAG}
+          make did-method-cli-docker
+          docker tag ghcr.io/trustbloc/did-method-cli:latest ${TRUSTBLOC_DID_METHOD_CLI_PKG}:${TRUSTBLOC_DID_METHOD_TAG}
+          docker push ${TRUSTBLOC_DID_METHOD_CLI_PKG}:${TRUSTBLOC_DID_METHOD_TAG}
         env:
           DOCKER_USER: $(DOCKER_USER)
           DOCKER_PASSWORD: $(DOCKER_PASSWORD)
