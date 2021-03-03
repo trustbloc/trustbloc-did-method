@@ -44,7 +44,7 @@ func (e *Steps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^check cli updated DID$`, e.checkUpdatedDID)
 }
 
-func (e *Steps) resolveDID(did string) (*ariesdid.Doc, error) {
+func (e *Steps) resolveDID(did string) (*ariesdid.DocResolution, error) {
 	const maxRetry = 10
 
 	blocVDRI := trustbloc.New(nil, trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
@@ -64,7 +64,7 @@ func (e *Steps) resolveDID(did string) (*ariesdid.Doc, error) {
 		time.Sleep(1 * time.Second)
 	}
 
-	return doc.DIDDocument, nil
+	return doc, nil
 }
 
 func (e *Steps) checkCreatedDID() error {
@@ -77,20 +77,20 @@ func (e *Steps) checkCreatedDID() error {
 		return err
 	}
 
-	doc, err = e.resolveDID(doc.ID)
+	result, err := e.resolveDID(doc.ID)
 	if err != nil {
 		return err
 	}
 
-	if len(doc.VerificationMethod) != numberOfVerificationMethods {
+	if len(result.DIDDocument.VerificationMethod) != numberOfVerificationMethods {
 		return fmt.Errorf("did doc verification method is not equal to %d", numberOfVerificationMethods)
 	}
 
-	if len(doc.Service) != numberOfServices {
+	if len(result.DIDDocument.Service) != numberOfServices {
 		return fmt.Errorf("did doc services is not equal to %d", numberOfServices)
 	}
 
-	e.createdDID = doc
+	e.createdDID = result.DIDDocument
 
 	return nil
 }
@@ -100,10 +100,12 @@ func (e *Steps) checkRecoveredDID() error {
 
 	const numberOfServices = 1
 
-	doc, err := e.resolveDID(e.createdDID.ID)
+	result, err := e.resolveDID(e.createdDID.ID)
 	if err != nil {
 		return err
 	}
+
+	doc := result.DIDDocument
 
 	if len(doc.VerificationMethod) != numberOfVerificationMethods {
 		return fmt.Errorf("did doc verification method is not equal to %d", numberOfVerificationMethods)
@@ -125,15 +127,13 @@ func (e *Steps) checkRecoveredDID() error {
 }
 
 func (e *Steps) checkDeactivatedDID() error {
-	const errMsg = "unsupported response from DID resolver [410] header"
-
-	_, err := e.resolveDID(e.createdDID.ID)
-	if err == nil {
-		return fmt.Errorf("did %s is still active", e.createdDID.ID)
+	result, err := e.resolveDID(e.createdDID.ID)
+	if err != nil {
+		return err
 	}
 
-	if !strings.Contains(err.Error(), errMsg) {
-		return fmt.Errorf("expected err msg %s but receive %s", errMsg, err.Error())
+	if !result.DocumentMetadata.Deactivated {
+		return fmt.Errorf("document has not been deactivated - deactivated flag is false")
 	}
 
 	return nil
@@ -144,10 +144,12 @@ func (e *Steps) checkUpdatedDID() error { //nolint: gocyclo
 
 	const numberOfServices = 1
 
-	doc, err := e.resolveDID(e.createdDID.ID)
+	result, err := e.resolveDID(e.createdDID.ID)
 	if err != nil {
 		return err
 	}
+
+	doc := result.DIDDocument
 
 	if len(doc.VerificationMethod) != numberOfVerificationMethods {
 		return fmt.Errorf("did doc verification method is not equal to %d", numberOfVerificationMethods)
