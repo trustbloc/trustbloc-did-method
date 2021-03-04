@@ -23,7 +23,7 @@ Feature: Using DID method REST API
   Scenario Outline: create trustbloc did and resolve through sidetree-mock
     Given Consortium config is generated with config file "./fixtures/wellknown/config.json"
     Then TrustBloc DID is created through registrar "http://localhost:9080/1.0/register?driverId=driver-did-method-rest" with key type "<keyType>" with signature suite "<signatureSuite>"
-    Then Bloc VDRI is initialized with resolver URL "https://localhost:48326/sidetree/0.0.1/identifiers"
+    Then Bloc VDRI is initialized with resolver URL "https://localhost:48326/sidetree/v1/identifiers"
     Then Resolve created DID and validate key type "<keyType>", signature suite "<signatureSuite>"
     Examples:
       | keyType  |  signatureSuite             |
