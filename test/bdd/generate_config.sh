@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-../../.build/bin/cli create-config --sidetree-url https://localhost:48326/sidetree/0.0.1 \
+../../.build/bin/cli create-config --sidetree-url https://localhost:48326/sidetree/v1 \
 --tls-cacerts ./fixtures/keys/tls/ec-cacert.pem --sidetree-write-token rw_token \
 --recoverykey-file fixtures/keys/recover/public.pem --updatekey-file fixtures/keys/update/public.pem \
 --config-file $1 --output-directory ./fixtures/wellknown/jws

@@ -15,7 +15,7 @@
       "domain": "stakeholder.one:8088",
       "policy": {"cache": {"maxAge": 604800}},
       "endpoints": [
-        "https://localhost:48326/sidetree/0.0.1"
+        "https://localhost:48326/sidetree/v1"
       ],
       "privateKeyJwkPath": "../../test/bdd/fixtures/wellknown/wrong_jwk.json"
     }
