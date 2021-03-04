@@ -133,10 +133,11 @@ func (e *Steps) createDIDBloc(url, keyType, signatureSuite string) error { //nol
 }
 
 func (e *Steps) initBlocVDRIWithResolverURL(url string) error {
-	e.blocVDRI = trustbloc.New(nil, trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
+	var err error
+	e.blocVDRI, err = trustbloc.New(nil, trustbloc.WithResolverURL(url), trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
 		trustbloc.WithAuthToken("rw_token"), trustbloc.WithDomain("testnet.trustbloc.local"))
 
-	return nil
+	return err
 }
 
 func (e *Steps) initBlocVDRIWithGenesisFile(genesisFileName string) error {
@@ -145,11 +146,11 @@ func (e *Steps) initBlocVDRIWithGenesisFile(genesisFileName string) error {
 		return err
 	}
 
-	e.blocVDRI = trustbloc.New(nil, trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
+	e.blocVDRI, err = trustbloc.New(nil, trustbloc.WithTLSConfig(e.bddContext.TLSConfig),
 		trustbloc.WithAuthToken("rw_token"), trustbloc.WithDomain("testnet.trustbloc.local"),
 		trustbloc.UseGenesisFile("testnet.trustbloc.local", "testnet.trustbloc.local", genesisFile))
 
-	return nil
+	return err
 }
 
 func (e *Steps) didResolutionError(errorMessageContains string) error {

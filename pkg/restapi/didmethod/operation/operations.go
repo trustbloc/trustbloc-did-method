@@ -71,7 +71,7 @@ type Config struct {
 }
 
 // New returns did method operation instance
-func New(config *Config) *Operation {
+func New(config *Config) (*Operation, error) {
 	var vdriOpts = []trustbloc.Option{
 		trustbloc.WithTLSConfig(config.TLSConfig),
 		trustbloc.WithAuthToken(config.SidetreeReadToken),
@@ -83,8 +83,12 @@ func New(config *Config) *Operation {
 		vdriOpts = append(vdriOpts, trustbloc.UseGenesisFile(genesisFile.URL, genesisFile.URL, genesisFile.Data))
 	}
 
-	return &Operation{blocVDRI: trustbloc.New(nil, vdriOpts...),
-		blocDomain: config.BlocDomain}
+	blocVDR, err := trustbloc.New(nil, vdriOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Operation{blocVDRI: blocVDR, blocDomain: config.BlocDomain}, nil
 }
 
 func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request) { //nolint: funlen,gocyclo

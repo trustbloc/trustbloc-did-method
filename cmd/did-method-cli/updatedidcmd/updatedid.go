@@ -142,9 +142,12 @@ func updateDIDCmd() *cobra.Command {
 				return err
 			}
 
-			vdr := trustbloc.New(&keyRetriever{nextUpdateKey: nextUpdateKey, signingKey: signingKey},
+			vdr, err := trustbloc.New(&keyRetriever{nextUpdateKey: nextUpdateKey, signingKey: signingKey},
 				trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
 				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+			if err != nil {
+				return err
+			}
 
 			err = vdr.Update(didDoc, opts...)
 			if err != nil {
