@@ -106,8 +106,11 @@ func createDIDCmd() *cobra.Command {
 			domain := cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName,
 				domainFileEnvKey)
 
-			vdr := trustbloc.New(nil, trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
+			vdr, err := trustbloc.New(nil, trustbloc.WithAuthToken(sidetreeWriteToken), trustbloc.WithDomain(domain),
 				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+			if err != nil {
+				return err
+			}
 
 			didDoc, opts, err := createDIDOption(cmd)
 			if err != nil {

@@ -13,7 +13,10 @@ import (
 func New(config *operation.Config) (*Controller, error) {
 	var allHandlers []operation.Handler
 
-	didMethodService := operation.New(config)
+	didMethodService, err := operation.New(config)
+	if err != nil {
+		return nil, err
+	}
 
 	handlers, err := didMethodService.GetRESTHandlers(config.Mode)
 	if err != nil {

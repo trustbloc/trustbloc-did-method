@@ -29,7 +29,8 @@ import (
 
 func TestNew(t *testing.T) {
 	t.Run("test combined mode", func(t *testing.T) {
-		svc := New(&Config{})
+		svc, err := New(&Config{})
+		require.NoError(t, err)
 		require.NotNil(t, svc)
 		handlers, err := svc.GetRESTHandlers(combinedMode)
 		require.NoError(t, err)
@@ -40,7 +41,8 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("test registrar mode", func(t *testing.T) {
-		svc := New(&Config{})
+		svc, err := New(&Config{})
+		require.NoError(t, err)
 		require.NotNil(t, svc)
 		handlers, err := svc.GetRESTHandlers(registrarMode)
 		require.NoError(t, err)
@@ -50,7 +52,8 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("test resolver mode", func(t *testing.T) {
-		svc := New(&Config{})
+		svc, err := New(&Config{})
+		require.NoError(t, err)
 		require.NotNil(t, svc)
 		handlers, err := svc.GetRESTHandlers(resolverMode)
 		require.NoError(t, err)
@@ -60,9 +63,10 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("test invalid mode", func(t *testing.T) {
-		svc := New(&Config{})
+		svc, err := New(&Config{})
+		require.NoError(t, err)
 		require.NotNil(t, svc)
-		_, err := svc.GetRESTHandlers("invalid")
+		_, err = svc.GetRESTHandlers("invalid")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid operation mode")
 	})
@@ -307,7 +311,8 @@ func handleRequest(handler Handler, path string, body []byte) (*bytes.Buffer, in
 }
 
 func getHandler(t *testing.T, blocVDRI vdrapi.VDR, lookup string) Handler {
-	svc := New(&Config{})
+	svc, err := New(&Config{})
+	require.NoError(t, err)
 	require.NotNil(t, svc)
 
 	if blocVDRI != nil {

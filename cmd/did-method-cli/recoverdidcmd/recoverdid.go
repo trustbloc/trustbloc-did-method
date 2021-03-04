@@ -113,7 +113,7 @@ func GetRecoverDIDCmd() *cobra.Command {
 	return recoverDIDCmd
 }
 
-func recoverDIDCmd() *cobra.Command {
+func recoverDIDCmd() *cobra.Command { //nolint: funlen
 	return &cobra.Command{
 		Use:   "recover-did",
 		Short: "Recover TrustBloc DID",
@@ -157,10 +157,13 @@ func recoverDIDCmd() *cobra.Command {
 				return err
 			}
 
-			vdr := trustbloc.New(&keyRetriever{nextUpdateKey: nextUpdateKey, signingKey: signingKey,
+			vdr, err := trustbloc.New(&keyRetriever{nextUpdateKey: nextUpdateKey, signingKey: signingKey,
 				nextRecoveryKey: nextRecoveryKey}, trustbloc.WithAuthToken(sidetreeWriteToken),
 				trustbloc.WithDomain(cmdutils.GetUserSetOptionalVarFromString(cmd, domainFlagName, domainFileEnvKey)),
 				trustbloc.WithTLSConfig(&tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12}))
+			if err != nil {
+				return err
+			}
 
 			err = vdr.Update(didDoc, opts...)
 			if err != nil {
