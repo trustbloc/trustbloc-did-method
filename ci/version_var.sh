@@ -8,10 +8,9 @@
 
 # Release Parameters
 BASE_VERSION=0.1.6
-IS_RELEASE=false
+IS_RELEASE=true
 
 # Project Parameters
-SOURCE_REPO=trustbloc-did-method
 BASE_PKG_NAME=driver-did-trustbloc
 CLI_PKG_NAME=did-method-cli
 RELEASE_REPO=ghcr.io/trustbloc
