@@ -26,7 +26,6 @@ import (
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
-	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	"github.com/spf13/cobra"
 	gojose "github.com/square/go-jose/v3"
 	cmdutils "github.com/trustbloc/edge-core/pkg/utils/cmd"
@@ -85,7 +84,7 @@ const (
 )
 
 type vdr interface {
-	Create(keyManager kms.KeyManager, didDoc *docdid.Doc, opts ...vdrapi.DIDMethodOption) (*docdid.DocResolution, error)
+	Create(didDoc *docdid.Doc, opts ...vdrapi.DIDMethodOption) (*docdid.DocResolution, error)
 }
 
 type parameters struct {
@@ -390,7 +389,7 @@ func createDID(vdr vdr, sidetreeURL string, jsonWebKey *gojose.JSONWebKey,
 		return nil, err
 	}
 
-	docResolution, err := vdr.Create(nil, &docdid.Doc{
+	docResolution, err := vdr.Create(&docdid.Doc{
 		Authentication: []docdid.Verification{*docdid.NewReferencedVerification(vm, docdid.Authentication)}},
 		didMethodOpt...)
 	if err != nil {

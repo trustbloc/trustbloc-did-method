@@ -22,7 +22,6 @@ import (
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
-	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/stretchr/testify/require"
 )
@@ -122,7 +121,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 	t.Run("test error from create did", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			CreateFunc: func(keyManager kms.KeyManager, did *did.Doc,
+			CreateFunc: func(did *did.Doc,
 				opts ...vdrapi.DIDMethodOption) (*did.DocResolution, error) {
 				return nil, fmt.Errorf("error create did")
 			}}, registerPath)
@@ -217,7 +216,7 @@ func TestRegisterDIDHandler(t *testing.T) {
 
 	t.Run("test success with provided public key", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			CreateFunc: func(keyManager kms.KeyManager, didDoc *did.Doc,
+			CreateFunc: func(didDoc *did.Doc,
 				opts ...vdrapi.DIDMethodOption) (*did.DocResolution, error) {
 				return &did.DocResolution{DIDDocument: &did.Doc{ID: "did1"}}, nil
 			}}, registerPath)
