@@ -13,7 +13,6 @@ import (
 
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
-	"github.com/hyperledger/aries-framework-go/pkg/kms"
 	mockvdr "github.com/hyperledger/aries-framework-go/pkg/mock/vdr"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
@@ -310,7 +309,7 @@ func TestCreateConfigCmd(t *testing.T) {
 
 		filesData, didConfData, err := createConfig(&parameters{config: c,
 			vdr: &mockvdr.MockVDR{
-				CreateFunc: func(keyManager kms.KeyManager, did *docdid.Doc,
+				CreateFunc: func(did *docdid.Doc,
 					opts ...vdrapi.DIDMethodOption) (*docdid.DocResolution, error) {
 					return &docdid.DocResolution{DIDDocument: &docdid.Doc{ID: "did1"}}, nil
 				}}})

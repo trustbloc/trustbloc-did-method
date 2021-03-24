@@ -205,7 +205,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			ServiceEndpoint: service.Endpoint})
 	}
 
-	docResolution, err := o.blocVDRI.Create(nil, &didDoc, didMethodOpt...)
+	docResolution, err := o.blocVDRI.Create(&didDoc, didMethodOpt...)
 	if err != nil {
 		log.Errorf("failed to create did doc : %s", err.Error())
 

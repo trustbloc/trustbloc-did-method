@@ -117,7 +117,7 @@ func createDIDCmd() *cobra.Command {
 				return err
 			}
 
-			docResolution, err := vdr.Create(nil, didDoc, opts...)
+			docResolution, err := vdr.Create(didDoc, opts...)
 			if err != nil {
 				return fmt.Errorf("failed to create did: %w", err)
 			}
