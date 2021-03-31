@@ -42,7 +42,7 @@ type Steps struct {
 	createdDID string
 	kid        string
 	httpClient *http.Client
-	blocVDRI   *trustbloc.VDRI
+	blocVDRI   *trustbloc.VDR
 }
 
 // NewSteps returns new agent from client SDK
