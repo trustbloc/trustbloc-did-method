@@ -268,7 +268,7 @@ func TestResolveDIDHandler(t *testing.T) {
 
 	t.Run("test error from bloc vdri read", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			ReadFunc: func(didID string, opts ...vdrapi.ResolveOption) (doc *did.DocResolution, err error) {
+			ReadFunc: func(didID string, opts ...vdrapi.DIDMethodOption) (doc *did.DocResolution, err error) {
 				return nil, fmt.Errorf("read error")
 			}}, resolveDIDEndpoint)
 
@@ -280,7 +280,7 @@ func TestResolveDIDHandler(t *testing.T) {
 
 	t.Run("test success", func(t *testing.T) {
 		handler := getHandler(t, &mockvdr.MockVDR{
-			ReadFunc: func(didID string, opts ...vdrapi.ResolveOption) (doc *did.DocResolution, err error) {
+			ReadFunc: func(didID string, opts ...vdrapi.DIDMethodOption) (doc *did.DocResolution, err error) {
 				return &did.DocResolution{DIDDocument: &did.Doc{ID: "didID", Context: []string{"context"}}}, nil
 			}}, resolveDIDEndpoint)
 
