@@ -8,9 +8,9 @@ go 1.16
 
 require (
 	github.com/btcsuite/btcutil v1.0.2
-	github.com/hyperledger/aries-framework-go v0.1.7-0.20210421205521-3974f6708723
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210423164427-96362080a25e
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc v0.0.0-20210430083607-6d6ad7835767
+	github.com/hyperledger/aries-framework-go v0.1.7-0.20210429205242-c5e97865879c
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210430213153-6c349de21198
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc v0.0.0-20210430213153-6c349de21198
 	github.com/spf13/cobra v1.0.0
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.7.0
