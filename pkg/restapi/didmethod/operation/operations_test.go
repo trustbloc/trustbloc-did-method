@@ -291,7 +291,7 @@ func TestResolveDIDHandler(t *testing.T) {
 	})
 }
 
-func handleRequest(handler Handler, path string, body []byte) (*bytes.Buffer, int, error) { //nolint:lll
+func handleRequest(handler Handler, path string, body []byte) (*bytes.Buffer, int, error) {
 	req, err := http.NewRequest(handler.Method(), path, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, 0, err

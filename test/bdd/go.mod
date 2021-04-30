@@ -4,7 +4,7 @@
 
 module github.com/trustbloc/trustbloc-did-method/test/bdd
 
-go 1.15
+go 1.16
 
 require (
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
@@ -12,11 +12,11 @@ require (
 	github.com/fsouza/go-dockerclient v1.6.0
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/uuid v1.2.0
-	github.com/hyperledger/aries-framework-go v0.1.7-0.20210330153939-7ec3a2c4697c
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210330163233-9482b4291d8e
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc v0.0.0-20210331105523-60637a465684
-	github.com/hyperledger/aries-framework-go/component/storageutil v0.0.0-20210330153939-7ec3a2c4697c
-	github.com/hyperledger/aries-framework-go/spi v0.0.0-20210330153939-7ec3a2c4697c
+	github.com/hyperledger/aries-framework-go v0.1.7-0.20210421205521-3974f6708723
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210423164427-96362080a25e
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc v0.0.0-20210430083607-6d6ad7835767
+	github.com/hyperledger/aries-framework-go/component/storageutil v0.0.0-20210421205521-3974f6708723
+	github.com/hyperledger/aries-framework-go/spi v0.0.0-20210421205521-3974f6708723
 	github.com/kilic/bls12-381 v0.1.0 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect

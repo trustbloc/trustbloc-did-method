@@ -318,8 +318,7 @@ func execCMD(args ...string) (string, error) {
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf(fmt.Sprint(err) + ": " + stderr.String())
 	}
 

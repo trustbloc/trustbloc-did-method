@@ -150,7 +150,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			continue
 		}
 
-		jwk, err := ariesjose.JWKFromPublicKey(k)
+		jwk, err := ariesjose.JWKFromKey(k)
 		if err != nil {
 			registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
 
