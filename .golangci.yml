@@ -82,6 +82,16 @@ linters:
     - godot
     - gofumpt
     - noctx
+    - exhaustivestruct
+    - paralleltest
+    - cyclop # TODO consider replacing gocyclo with cyclop
+    - thelper # TODO enable
+    - wrapcheck # TODO enable
+    - interfacer # deprecated by the author https://github.com/mvdan/interfacer#interfacer
+    - scopelint # deprecated by the author https://github.com/kyoh86/scopelint#obsoleted
+    - forbidigo
+    - gomoddirectives
+
 
 issues:
   exclude-use-default: false

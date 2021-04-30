@@ -379,7 +379,7 @@ func createDID(vdr vdr, sidetreeURL string, jsonWebKey *gojose.JSONWebKey,
 		vdrapi.WithOption(trustbloc.UpdatePublicKeyOpt, updateKey),
 		vdrapi.WithOption(trustbloc.EndpointsOpt, []string{sidetreeURL}))
 
-	jwk, err := ariesjose.JWKFromPublicKey(jsonWebKey.Public().Key)
+	jwk, err := ariesjose.JWKFromKey(jsonWebKey.Public().Key)
 	if err != nil {
 		return nil, err
 	}

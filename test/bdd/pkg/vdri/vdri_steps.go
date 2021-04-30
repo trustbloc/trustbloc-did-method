@@ -209,11 +209,7 @@ func (e *Steps) resolveCreatedDID(keyType, signatureSuite string) error {
 			docResolution.DIDDocument.Service[0].ID, docResolution.DIDDocument.ID+"#"+serviceID)
 	}
 
-	if err := e.validatePublicKey(docResolution.DIDDocument, keyType, signatureSuite); err != nil {
-		return err
-	}
-
-	return nil
+	return e.validatePublicKey(docResolution.DIDDocument, keyType, signatureSuite)
 }
 
 func (e *Steps) getPublicKey(keyType string) (string, []byte, error) {

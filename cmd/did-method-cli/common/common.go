@@ -85,7 +85,9 @@ func PrivateKeyFromPEM(privateKeyPEM, password []byte) (crypto.PrivateKey, error
 
 	if len(password) != 0 {
 		var err error
-		bytes, err = x509.DecryptPEMBlock(privBlock, password)
+		// FIXME: x509.DecryptPEMBlock deprecated in go1.16 due to security flaws.
+		//   this should be replaced by a different infrastructure for configuring keys before this goes into prod.
+		bytes, err = x509.DecryptPEMBlock(privBlock, password) //nolint:staticcheck
 
 		if err != nil {
 			return nil, err
@@ -175,7 +177,7 @@ func GetVDRPublicKeysFromFile(publicKeyFilePath string) (*docdid.Doc, error) { /
 			return nil, fmt.Errorf("failed to unmarshal to jwk: %w", errUnmarshal)
 		}
 
-		jwk, err := jose.JWKFromPublicKey(jsonWebKey.Key)
+		jwk, err := jose.JWKFromKey(jsonWebKey.Key)
 		if err != nil {
 			return nil, err
 		}
