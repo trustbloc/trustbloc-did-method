@@ -142,7 +142,7 @@ func TestCreateDID(t *testing.T) {
 	}
 
 	serv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, err := (&did.Doc{ID: "did1", Context: []string{did.Context}}).JSONBytes()
+		bytes, err := (&did.Doc{ID: "did1", Context: []string{did.ContextV1}}).JSONBytes()
 		require.NoError(t, err)
 		b, err := json.Marshal(didResolution{Context: "https://www.w3.org/ns/did-resolution/v1",
 			DIDDocument: bytes})
