@@ -12,9 +12,9 @@ require (
 	github.com/fsouza/go-dockerclient v1.6.0
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/uuid v1.2.0
-	github.com/hyperledger/aries-framework-go v0.1.7-0.20210429205242-c5e97865879c
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210430213153-6c349de21198
-	github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc v0.0.0-20210430213153-6c349de21198
+	github.com/hyperledger/aries-framework-go v0.1.7-0.20210512223230-d4aa62b079bc
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree v0.0.0-20210514172744-92d9a7ecd44d
+	github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc v0.0.0-20210514172744-92d9a7ecd44d
 	github.com/hyperledger/aries-framework-go/component/storageutil v0.0.0-20210429205242-c5e97865879c
 	github.com/hyperledger/aries-framework-go/spi v0.0.0-20210429205242-c5e97865879c
 	github.com/kilic/bls12-381 v0.1.0 // indirect
@@ -25,7 +25,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/teserakt-io/golang-ed25519 v0.0.0-20210104091850-3888c087a4c8 // indirect
 	github.com/tidwall/gjson v1.6.7
-	github.com/trustbloc/edge-core v0.1.7-0.20210429222332-96b987820e63
+	github.com/trustbloc/edge-core v0.1.7-0.20210514182200-47eb0f3a6b95
 	github.com/trustbloc/trustbloc-did-method v0.0.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb // indirect
