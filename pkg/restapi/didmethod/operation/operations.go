@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/sidetree/doc"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc"
 	"github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
+	"github.com/hyperledger/aries-framework-go/pkg/doc/jose/jwk/jwksupport"
 	"github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	log "github.com/sirupsen/logrus"
 
@@ -150,7 +150,7 @@ func (o *Operation) registerDIDHandler(rw http.ResponseWriter, req *http.Request
 			continue
 		}
 
-		jwk, err := ariesjose.JWKFromKey(k)
+		jwk, err := jwksupport.JWKFromKey(k)
 		if err != nil {
 			registerResponse.DIDState = DIDState{Reason: err.Error(), State: RegistrationStateFailure}
 
