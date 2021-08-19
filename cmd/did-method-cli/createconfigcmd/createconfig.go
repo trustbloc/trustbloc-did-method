@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc/didconfiguration"
 	"github.com/hyperledger/aries-framework-go-ext/component/vdr/trustbloc/models"
 	docdid "github.com/hyperledger/aries-framework-go/pkg/doc/did"
-	ariesjose "github.com/hyperledger/aries-framework-go/pkg/doc/jose"
+	"github.com/hyperledger/aries-framework-go/pkg/doc/jose/jwk/jwksupport"
 	vdrapi "github.com/hyperledger/aries-framework-go/pkg/framework/aries/api/vdr"
 	"github.com/spf13/cobra"
 	gojose "github.com/square/go-jose/v3"
@@ -379,7 +379,7 @@ func createDID(vdr vdr, sidetreeURL string, jsonWebKey *gojose.JSONWebKey,
 		vdrapi.WithOption(trustbloc.UpdatePublicKeyOpt, updateKey),
 		vdrapi.WithOption(trustbloc.EndpointsOpt, []string{sidetreeURL}))
 
-	jwk, err := ariesjose.JWKFromKey(jsonWebKey.Public().Key)
+	jwk, err := jwksupport.JWKFromKey(jsonWebKey.Public().Key)
 	if err != nil {
 		return nil, err
 	}
